@@ -1,5 +1,6 @@
 // Server-only GitHub API helpers for the Contribution Mask.
-// Creates Issues + polls for a matching Pull Request. Can merge PRs (auto-merge path).
+// Creates branches/PRs + polls PR state. The engine never merges: the target
+// repo's bdc-ship workflow validates, merges, and ships.
 
 const GH = "https://api.github.com";
 
@@ -51,6 +52,7 @@ export type PullState = {
   state: "open" | "closed";
   merged: boolean;
   merged_at: string | null;
+  labels: string[];
 };
 
 // ---------- repo read helpers (for the engine to gather context) ----------
@@ -179,8 +181,9 @@ export async function openPullRequest(input: {
   });
 }
 
-// Merge a PR using the squash strategy. Returns true on success, false if the
-// repo has protection rules that block the merge (caller falls back to "sent").
+// Merge a PR using the squash strategy. NOT called by the engine anymore (the
+// bdc-ship workflow merges after its validate passed); kept for the planned
+// Maindev release button (roles feature, post go-live).
 export async function mergePullRequest(prNumber: number): Promise<boolean> {
   const r = repo();
   const res = await fetch(`${GH}/repos/${r.path}/pulls/${prNumber}/merge`, {
@@ -218,6 +221,7 @@ export async function findPullRequestByReqId(
       state: "open" | "closed";
       merged: boolean;
       merged_at: string | null;
+      labels?: Array<{ name: string }>;
     }>(`/repos/${r.path}/pulls/${hit.number}`);
     return {
       number: pr.number,
@@ -225,6 +229,7 @@ export async function findPullRequestByReqId(
       state: pr.state,
       merged: pr.merged,
       merged_at: pr.merged_at,
+      labels: (pr.labels ?? []).map((l) => l.name),
     };
   } catch {
     return null;

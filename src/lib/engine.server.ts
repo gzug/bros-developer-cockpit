@@ -3,8 +3,10 @@
 // 'failed'/'blocked' state with a reason, never a half-open PR path.
 //
 // Flow: load config -> kill-switch -> gather repo context -> PLANNER (which files)
-// -> fetch files -> EDITOR (full new contents) -> path-validate -> branch/commit/PR
-// -> log provenance. On parse/path failure, escalate one model tier and retry.
+// -> fetch files -> EDITOR (full new contents) -> path-validate -> JUDGE (lane pick)
+// -> branch/commit/PR -> log provenance. The engine does NOT merge: the target
+// repo's bdc-ship workflow runs the full validate chain on the PR, merges only on
+// green, and publishes the OTA. On parse/path failure, escalate one tier and retry.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
@@ -18,7 +20,6 @@ import {
   createBranch,
   commitFiles,
   openPullRequest,
-  mergePullRequest,
   type FileEdit,
 } from "./github.server";
 
@@ -196,9 +197,12 @@ async function runEditor(
 
 type JudgeOut = { verdict: "ok" | "risky"; reason: string };
 
-// Quick post-PR sanity check: tier0 (cheapest model) reads the wish + summary
-// and flags anything obviously wrong BEFORE the owner's brother sees the PR.
-// Non-blocking: if the judge errors we log null and continue.
+// Pre-PR sanity check: tier0 (cheapest model) reads the wish + summary and picks
+// the ship lane BEFORE anything reaches GitHub: "ok" -> bdc/* branch (auto-ship
+// via the target repo's bdc-ship workflow), "risky" -> bdc-hold/* branch (the
+// workflow ignores it; the owner reviews and merges by hand).
+// Fail-open: if the judge errors we log null and use the auto-ship lane — the
+// bdc-ship workflow's full validate is the hard gate either way.
 async function runJudge(
   wish: string,
   summary: string,
@@ -384,8 +388,15 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
         continue;
       }
 
-      // OPEN PR
-      const branch = `bdc/${reqId.toLowerCase()}`;
+      // JUDGE (pre-PR): decides the ship lane before anything reaches GitHub.
+      const judge = await runJudge(wish, edited.out.summary, editList.map((e) => e.path));
+      const judgeRisky = judge?.verdict === "risky";
+
+      // OPEN PR — the branch prefix is the machine-readable ship signal:
+      //   bdc/*      -> the target repo's bdc-ship workflow validates, merges on
+      //                 green, and publishes the OTA
+      //   bdc-hold/* -> the workflow ignores it; the owner reviews + merges by hand
+      const branch = `${judgeRisky ? "bdc-hold" : "bdc"}/${reqId.toLowerCase()}`;
       await createBranch(branch, baseSha);
       const commitMsg = `bdc: ${idea.title ?? reqId}\n\n${edited.out.summary}\n\n${reqId}`;
       await commitFiles(branch, baseSha, editList, commitMsg);
@@ -399,7 +410,9 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
         `**Files**: ${editList.map((e) => e.path).join(", ")}`,
         `**Model tier**: ${thisTier} (${edited.modelServed})`,
         ``,
-        `> Must pass the reviewer lane before it can ship. Token: ${reqId}`,
+        judgeRisky
+          ? `> HELD for manual review (judge: ${judge!.reason}). Token: ${reqId}`
+          : `> Ships automatically once the bdc-ship check (full validate) is green. Token: ${reqId}`,
       ].join("\n");
       const pr = await openPullRequest({
         head: branch,
@@ -408,28 +421,20 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
         body: prBody,
       });
 
-      // Post-PR judge: cheap sanity check — now actively blocks risky PRs.
-      const judge = await runJudge(wish, edited.out.summary, editList.map((e) => e.path));
-      const judgeRisky = judge?.verdict === "risky";
-
       if (judgeRisky) {
-        // Judge flagged a risk → hold for owner review, do NOT merge.
-        const blockReason = `Judge: ${judge!.reason} (PR #${pr.number} offen, aber nicht gemergt — Don muss reviewen).`;
+        // Judge flagged a risk → PR exists for the owner to inspect, but on the
+        // bdc-hold/* branch the ship workflow never touches.
+        const blockReason = `Judge: ${judge!.reason} (PR #${pr.number} offen, aber angehalten — Don muss reviewen).`;
         await setIdea(ideaId, { status: "blocked", github_pr_number: pr.number, github_pr_url: pr.html_url, block_reason: blockReason, error_message: null });
         await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: "risky", review_reason: judge!.reason });
         return { ok: false, status: "blocked", reason: blockReason };
       }
 
-      // Judge ok (or unavailable) → auto-merge the PR immediately.
-      let merged = false;
-      try {
-        merged = await mergePullRequest(pr.number);
-      } catch {
-        // Non-fatal: PR stays open, status falls back to "sent".
-      }
-
-      const finalStatus = merged ? "shipped" : "sent";
-      await setIdea(ideaId, { status: finalStatus, github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
+      // Judge ok (or unavailable) → hand over to the bdc-ship workflow, which
+      // runs the full validate chain on the PR, merges only on green, and then
+      // publishes the OTA. "sent" = PR open, cloud check running;
+      // refreshContributionStatus flips it to "live" once the workflow merged.
+      await setIdea(ideaId, { status: "sent", github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
       await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: judge?.verdict ?? null, review_reason: judge?.reason ?? null });
       return { ok: true, prNumber: pr.number, prUrl: pr.html_url };
     } catch (e) {

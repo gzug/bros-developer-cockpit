@@ -147,7 +147,7 @@ export const refreshContributionStatus = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: idea, error } = await supabase
       .from("ideas")
-      .select("id, status, req_id, github_pr_url, github_pr_number")
+      .select("id, status, req_id, github_pr_url, github_pr_number, block_reason")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -159,9 +159,17 @@ export const refreshContributionStatus = createServerFn({ method: "POST" })
       return { changed: false };
     }
 
+    // PR state -> idea status. The bdc-ship workflow merges on green (-> live),
+    // labels the PR `bdc-failed` when its validate failed (-> blocked), and a
+    // judge-held idea stays blocked while its bdc-hold/* PR is open.
     let nextStatus: Database["public"]["Enums"]["idea_status"] = "reviewing";
+    let nextBlockReason: string | null = idea.block_reason ?? null;
     if (pr.merged) nextStatus = "live";
     else if (pr.state === "closed") nextStatus = "reverted";
+    else if (pr.labels.includes("bdc-failed")) {
+      nextStatus = "blocked";
+      nextBlockReason = "Automatische Prüfung fehlgeschlagen — nichts wurde verändert. Dein Bruder schaut es sich an.";
+    } else if (idea.status === "blocked") nextStatus = "blocked";
 
     const changed =
       idea.status !== nextStatus ||
@@ -173,6 +181,7 @@ export const refreshContributionStatus = createServerFn({ method: "POST" })
         .from("ideas")
         .update({
           status: nextStatus,
+          block_reason: nextStatus === "blocked" ? nextBlockReason : null,
           github_pr_number: pr.number,
           github_pr_url: pr.html_url,
           last_polled_at: new Date().toISOString(),

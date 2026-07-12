@@ -24,7 +24,8 @@
 5. Permissions:
    - **Contents**: Read and write
    - **Pull requests**: Read and write
-   - Sonst alles aus
+   - Sonst alles aus — **wichtig: KEINE "Workflows"-Berechtigung.** Dadurch kann der
+     DC-Token die Prüf-Workflows in 01-One-L1fe technisch nicht verändern (Sicherheitsanker).
 6. Generate > kopiere den Token
 
 ## 4. OpenRouter
@@ -59,16 +60,25 @@
 - Owner + Bruder tippen denselben PIN
 - KPI-Seite (nur du): `/owner-kpi`
 
-## Kill-Switch-Kriterien (was reviewed werden muss, nicht auto-mergt)
+## Ship-Lane (Owner-Entscheidung 2026-07-12: Check VOR dem Merge)
+
+Die Engine mergt nie selbst. Ablauf pro Idee:
+
+1. Engine baut den Code und öffnet einen PR auf `gzug/01-One-L1fe`
+2. Der `bdc-ship`-Workflow dort prüft automatisch: Pfad-Guard + volle validate-Kette
+3. **Grün:** Workflow mergt + schickt das OTA aufs Gerät (ca. 15 bis 25 Min. gesamt)
+4. **Rot:** nichts wird gemergt, PR bekommt Label `bdc-failed`, Idee zeigt "blocked"
+
+## Kill-Switch-Kriterien (was reviewed werden muss, nicht auto-shippt)
 
 Die Engine klassifiziert jede Idee automatisch:
 
 | Intent | Routing | Was passiert |
 |--------|---------|-------------|
-| **Wording** (Text) | auto (tier0) | Günstigstes Modell, auto-merge wenn Judge ok |
-| **Look** (Design) | auto (tier1) | Besseres Modell, auto-merge wenn Judge ok |
-| **Wrong** (Bug) | auto (tier1) | Besseres Modell, auto-merge wenn Judge ok |
-| **Idea** (Neue Funktion) | **Review-Hold** | Wird NICHT gemergt — du schaust zuerst drüber |
-| **Judge sagt "risky"** | immer Hold | PR ist offen, aber gesperrt — du entscheidest |
+| **Wording** (Text) | auto (tier0) | Günstigstes Modell, auto-ship wenn Judge ok + Check grün |
+| **Look** (Design) | auto (tier1) | Besseres Modell, auto-ship wenn Judge ok + Check grün |
+| **Wrong** (Bug) | auto (tier1) | Besseres Modell, auto-ship wenn Judge ok + Check grün |
+| **Idea** (Neue Funktion) | **Review-Hold** | Engine läuft gar nicht — du schaust zuerst drüber |
+| **Judge sagt "risky"** | immer Hold | PR liegt auf `bdc-hold/*`, Workflow ignoriert ihn — du entscheidest |
 
 Auto-Pause greift wenn ≥2 von 10 letzten PRs reverted wurden.
