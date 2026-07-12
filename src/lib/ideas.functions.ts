@@ -288,5 +288,53 @@ export const getOwnerKpis = createServerFn({ method: "GET" })
     };
   });
 
+// ---------- OpenRouter live credit balance (owner-only) ----------
+
+type OrKeyInfo = {
+  label: string | null;
+  usageCents: number | null;     // total spend in USD cents
+  limitCents: number | null;     // null = no limit set
+  remainingCents: number | null; // null if no limit set
+};
+
+async function fetchOrBalance(): Promise<OrKeyInfo | null> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/auth/key", {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      data?: {
+        label?: string;
+        usage?: number;   // credits used (1 credit = $0.000001)
+        limit?: number | null;
+        is_free_tier?: boolean;
+      };
+    };
+    const d = json.data;
+    if (!d) return null;
+    const usageCents = typeof d.usage === "number" ? d.usage / 10 : null; // credits → cents
+    const limitCents = typeof d.limit === "number" ? d.limit / 10 : null;
+    const remainingCents = limitCents != null && usageCents != null ? limitCents - usageCents : null;
+    return {
+      label: d.label ?? null,
+      usageCents,
+      limitCents,
+      remainingCents,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export const getOpenRouterBalance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    assertAllowedEmail(context.claims as { email?: string | null });
+    return fetchOrBalance();
+  });
+
 // Convenience re-export for UI labels.
 export const INTENT_LABELS = INTENT_LABEL;

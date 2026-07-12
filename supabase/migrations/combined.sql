@@ -178,7 +178,7 @@ CREATE TRIGGER app_config_updated_at BEFORE UPDATE ON public.app_config
 INSERT INTO public.app_config (id, routing_map, allowed_paths, forbidden_paths, template_version, bdc_paused)
 VALUES (
   true,
-  '{"wording":"tier0","look":"tier1","wrong":"tier1","idea":"tier1"}'::jsonb,
+  '{"wording":"tier0","look":"tier1","wrong":"tier1","idea":"review"}'::jsonb,
   ARRAY[
     'apps/mobile/src/**'
   ]::text[],
@@ -410,7 +410,7 @@ CREATE TRIGGER app_config_updated_at BEFORE UPDATE ON public.app_config
 INSERT INTO public.app_config (id, routing_map, allowed_paths, forbidden_paths, template_version, bdc_paused)
 VALUES (
   true,
-  '{"wording":"tier0","look":"tier1","wrong":"tier1","idea":"tier1"}'::jsonb,
+  '{"wording":"tier0","look":"tier1","wrong":"tier1","idea":"review"}'::jsonb,
   ARRAY[
     'apps/mobile/src/**'
   ]::text[],

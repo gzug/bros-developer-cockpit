@@ -4,55 +4,71 @@
 
 1. supabase.com > New Project > Name: `bros-cockpit` > Region: Sydney (oder egal)
 2. Settings > API > kopiere:
-   - **Project URL** = `SUPABASE_URL`
-   - **anon/public key** = `SUPABASE_PUBLISHABLE_KEY`
-   - **service_role key** = `SUPABASE_SECRET_KEY`
+   - **Project URL** → `SUPABASE_URL` + `VITE_SUPABASE_URL`
+   - **anon/public key** → `SUPABASE_PUBLISHABLE_KEY` + `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - **service_role key** → `SUPABASE_SERVICE_ROLE_KEY`
 3. SQL Editor > New Query > paste den Inhalt von `supabase/migrations/combined.sql` > Run
 
 ## 2. Login-User anlegen
 
 1. Authentication > Users > "Add user" (Email)
-2. Email = die Adresse deines Bruders (wird auch ALLOWED_EMAIL)
-3. Password = sein PIN (z.B. `1234` oder was Laengeres)
+2. Email = eine beliebige Adresse (Owner oder Bruder — wird `ALLOWED_EMAIL`)
+3. Password = der gemeinsame PIN (z.B. `1234` oder länger)
 
 ## 3. GitHub Fine-grained Token
 
 1. github.com > Settings > Developer settings > Personal access tokens > Fine-grained
 2. Token name: `bdc-engine`
 3. Resource owner: `gzug`
-4. Repository access: Only select > `gzug/One-L1fe`
+4. Repository access: Only select > `gzug/01-One-L1fe`
 5. Permissions:
    - **Contents**: Read and write
    - **Pull requests**: Read and write
-   - Sonst alles aus (kein Admin, kein Merge)
+   - Sonst alles aus
 6. Generate > kopiere den Token
 
 ## 4. OpenRouter
 
-- openrouter.ai > Keys > neuen Key > kopiere
-- Credits > mit $10-20 aufladen
+- Der Key `sk-or-v1-…` liegt bereits in der lokalen `.env`
+- Credits > mit $10-20 aufladen (openrouter.ai/credits)
 
 ## 5. Deploy auf Vercel
 
 1. vercel.com > Add New Project > Import `gzug/bros-developer-cockpit`
-2. Framework Preset: Vite (auto-detected)
-3. Environment Variables (ALLE eintragen):
+2. Framework Preset: Other (oder Vite — egal, Build Command aus vercel.json wird genutzt)
+3. Environment Variables (ALLE 10 eintragen):
 
 | Variable | Wert |
 |----------|------|
-| `SUPABASE_URL` | aus Schritt 1 |
-| `SUPABASE_PUBLISHABLE_KEY` | aus Schritt 1 |
-| `SUPABASE_SECRET_KEY` | aus Schritt 1 |
-| `ALLOWED_EMAIL` | Bruders Email aus Schritt 2 |
-| `OPENROUTER_API_KEY` | aus Schritt 4 |
-| `GITHUB_TOKEN` | aus Schritt 3 |
+| `VITE_SUPABASE_URL` | Project URL aus Schritt 1 |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | anon key aus Schritt 1 |
+| `SUPABASE_URL` | Project URL aus Schritt 1 (gleich) |
+| `SUPABASE_PUBLISHABLE_KEY` | anon key aus Schritt 1 (gleich) |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role key aus Schritt 1 |
+| `ALLOWED_EMAIL` | Email aus Schritt 2 |
+| `OPENROUTER_API_KEY` | `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` |
+| `GITHUB_TOKEN` | Token aus Schritt 3 |
 | `GITHUB_REPO_OWNER` | `gzug` |
-| `GITHUB_REPO_NAME` | `One-L1fe` |
+| `GITHUB_REPO_NAME` | `01-One-L1fe` |
 
 4. Deploy klicken
 
 ## Fertig
 
 - Login-URL: `https://dein-projekt.vercel.app/auth`
-- Bruder tippt seinen PIN ein
-- KPI-Seite: `/owner-kpi`
+- Owner + Bruder tippen denselben PIN
+- KPI-Seite (nur du): `/owner-kpi`
+
+## Kill-Switch-Kriterien (was reviewed werden muss, nicht auto-mergt)
+
+Die Engine klassifiziert jede Idee automatisch:
+
+| Intent | Routing | Was passiert |
+|--------|---------|-------------|
+| **Wording** (Text) | auto (tier0) | Günstigstes Modell, auto-merge wenn Judge ok |
+| **Look** (Design) | auto (tier1) | Besseres Modell, auto-merge wenn Judge ok |
+| **Wrong** (Bug) | auto (tier1) | Besseres Modell, auto-merge wenn Judge ok |
+| **Idea** (Neue Funktion) | **Review-Hold** | Wird NICHT gemergt — du schaust zuerst drüber |
+| **Judge sagt "risky"** | immer Hold | PR ist offen, aber gesperrt — du entscheidest |
+
+Auto-Pause greift wenn ≥2 von 10 letzten PRs reverted wurden.

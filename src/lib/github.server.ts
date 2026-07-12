@@ -1,5 +1,5 @@
 // Server-only GitHub API helpers for the Contribution Mask.
-// Creates Issues + polls for a matching Pull Request. Never pushes code.
+// Creates Issues + polls for a matching Pull Request. Can merge PRs (auto-merge path).
 
 const GH = "https://api.github.com";
 
@@ -177,6 +177,21 @@ export async function openPullRequest(input: {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+// Merge a PR using the squash strategy. Returns true on success, false if the
+// repo has protection rules that block the merge (caller falls back to "sent").
+export async function mergePullRequest(prNumber: number): Promise<boolean> {
+  const r = repo();
+  const res = await fetch(`${GH}/repos/${r.path}/pulls/${prNumber}/merge`, {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify({ merge_method: "squash" }),
+  });
+  if (res.status === 200 || res.status === 204) return true;
+  if (res.status === 405 || res.status === 422) return false; // protected or not mergeable
+  const body = await res.text();
+  throw new Error(`GitHub merge ${res.status}: ${body.slice(0, 200)}`);
 }
 
 // Search for a PR that references our REQ-<id> in title or body.

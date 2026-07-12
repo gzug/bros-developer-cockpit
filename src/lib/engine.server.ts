@@ -18,13 +18,18 @@ import {
   createBranch,
   commitFiles,
   openPullRequest,
+  mergePullRequest,
   type FileEdit,
 } from "./github.server";
 
 type Intent = Database["public"]["Enums"]["contribution_intent"];
 
+// "review" is a sentinel value (not a model tier) that causes the engine to
+// skip processing entirely and hold the idea for the owner's manual review.
+type RoutingValue = Tier | "review";
+
 type Config = {
-  routingMap: Record<string, Tier>;
+  routingMap: Record<string, RoutingValue>;
   allowed: string[];
   forbidden: string[];
   promptTemplate: string;
@@ -45,9 +50,9 @@ async function loadConfig(): Promise<Config> {
   if (error) throw new Error(`app_config load failed: ${error.message}`);
   if (!data) throw new Error("app_config row missing (run the engine migration)");
   const rm = (data.routing_map ?? {}) as Record<string, string>;
-  const routingMap: Record<string, Tier> = {};
+  const routingMap: Record<string, RoutingValue> = {};
   for (const [k, v] of Object.entries(rm)) {
-    if (v === "tier0" || v === "tier1" || v === "tier2") routingMap[k] = v;
+    if (v === "tier0" || v === "tier1" || v === "tier2" || v === "review") routingMap[k] = v;
   }
   return {
     routingMap,
@@ -298,8 +303,17 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
     return { ok: false, status: "failed", reason };
   }
 
+  // "review" intent: skip the engine, hold for the owner to assess manually.
+  const intentRoute = config.routingMap[intent] ?? "tier1";
+  if (intentRoute === "review") {
+    const reason = `Intent '${intent}' ist für manuelles Review vorgemerkt. Dein Bruder (Don) schaut sich das zuerst an.`;
+    await setIdea(ideaId, { status: "blocked", block_reason: reason });
+    await logTask({ idea_id: ideaId, req_id: reqId, intent, validate_result: "review_hold", blocked_reason: reason, template_version: config.templateVersion });
+    return { ok: false, status: "blocked", reason };
+  }
+
   const wish = wishText(idea);
-  const startTier: Tier = config.routingMap[intent] ?? "tier1";
+  const startTier: Tier = intentRoute;
 
   let tier: Tier | null = startTier;
   let escalatedFrom: string | null = null;
@@ -394,10 +408,28 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
         body: prBody,
       });
 
-      // Post-PR judge: non-blocking cheap sanity check.
+      // Post-PR judge: cheap sanity check — now actively blocks risky PRs.
       const judge = await runJudge(wish, edited.out.summary, editList.map((e) => e.path));
+      const judgeRisky = judge?.verdict === "risky";
 
-      await setIdea(ideaId, { status: "sent", github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
+      if (judgeRisky) {
+        // Judge flagged a risk → hold for owner review, do NOT merge.
+        const blockReason = `Judge: ${judge!.reason} (PR #${pr.number} offen, aber nicht gemergt — Don muss reviewen).`;
+        await setIdea(ideaId, { status: "blocked", github_pr_number: pr.number, github_pr_url: pr.html_url, block_reason: blockReason, error_message: null });
+        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: "risky", review_reason: judge!.reason });
+        return { ok: false, status: "blocked", reason: blockReason };
+      }
+
+      // Judge ok (or unavailable) → auto-merge the PR immediately.
+      let merged = false;
+      try {
+        merged = await mergePullRequest(pr.number);
+      } catch {
+        // Non-fatal: PR stays open, status falls back to "sent".
+      }
+
+      const finalStatus = merged ? "shipped" : "sent";
+      await setIdea(ideaId, { status: finalStatus, github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
       await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: judge?.verdict ?? null, review_reason: judge?.reason ?? null });
       return { ok: true, prNumber: pr.number, prUrl: pr.html_url };
     } catch (e) {

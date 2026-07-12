@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
-import { getOwnerKpis } from "@/lib/ideas.functions";
+import { getOwnerKpis, getOpenRouterBalance } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/owner-kpi")({
   component: OwnerKpiPage,
@@ -197,11 +197,60 @@ function WhatIfTable({
   );
 }
 
+function fmtCents(cents: number | null): string {
+  if (cents == null) return "—";
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+function OrBalanceCard({ label, usageCents, limitCents, remainingCents }: {
+  label: string | null;
+  usageCents: number | null;
+  limitCents: number | null;
+  remainingCents: number | null;
+}) {
+  const pct = limitCents && usageCents != null ? Math.min(100, (usageCents / limitCents) * 100) : null;
+  return (
+    <div className="rounded-md border border-border bg-card p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">OpenRouter Guthaben (live)</span>
+        {label && <span className="text-xs font-mono text-muted-foreground">{label}</span>}
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+        <div>
+          <div className="text-xs text-muted-foreground">Verbraucht</div>
+          <div className="text-base font-semibold tabular-nums">{fmtCents(usageCents)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Limit</div>
+          <div className="text-base font-semibold tabular-nums">{limitCents != null ? fmtCents(limitCents) : "∞"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Verfügbar</div>
+          <div className="text-base font-semibold tabular-nums">{remainingCents != null ? fmtCents(remainingCents) : "∞"}</div>
+        </div>
+      </div>
+      {pct != null && (
+        <div className="mt-2 h-1.5 w-full rounded bg-muted">
+          <div
+            className={`h-1.5 rounded transition-all ${pct > 80 ? "bg-red-500" : pct > 50 ? "bg-amber-500" : "bg-emerald-500"}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OwnerKpiPage() {
   const q = useQuery({
     queryKey: ["owner-kpi"],
     queryFn: () => getOwnerKpis(),
     refetchInterval: 30_000,
+  });
+  const orQ = useQuery({
+    queryKey: ["or-balance"],
+    queryFn: () => getOpenRouterBalance(),
+    refetchInterval: 60_000,
   });
 
   return (
@@ -218,6 +267,15 @@ function OwnerKpiPage() {
 
         {q.data && (
           <div className="mt-6 space-y-6">
+            {orQ.data && (
+              <OrBalanceCard
+                label={orQ.data.label}
+                usageCents={orQ.data.usageCents}
+                limitCents={orQ.data.limitCents}
+                remainingCents={orQ.data.remainingCents}
+              />
+            )}
+
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Stat label="Total Ideas" value={q.data.totalIdeas} />
               <Stat label="Engine Runs" value={q.data.totalTasks} />
@@ -226,7 +284,7 @@ function OwnerKpiPage() {
               <Stat label="Shipped" value={q.data.shippedCount} />
               <Stat label="Reverted" value={q.data.revertedCount} />
               <Stat label="Escalated" value={q.data.escalated} />
-              <Stat label="Total Spend" value={fmtUsd(q.data.totalCostUsd)} />
+              <Stat label="Total Spend (DB)" value={fmtUsd(q.data.totalCostUsd)} />
               <Stat label="Prompt Tokens" value={q.data.totalTokensPrompt.toLocaleString()} />
               <Stat label="Completion Tokens" value={q.data.totalTokensCompletion.toLocaleString()} />
             </div>
