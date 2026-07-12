@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
+import { logout } from "@/lib/auth.server";
 
 export function AppHeader() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ export function AppHeader() {
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    await logout();
     router.invalidate();
     navigate({ to: "/", replace: true });
   }
@@ -31,14 +31,14 @@ export function AppHeader() {
             Meine
           </Link>
           <Link
-            to="/submit"
+            to="/chat"
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
           >
             Neu
           </Link>
           <Button variant="ghost" size="sm" onClick={signOut}>
-            Logout
+            Ausloggen
           </Button>
         </nav>
       </div>

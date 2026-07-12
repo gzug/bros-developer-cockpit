@@ -1,12 +1,12 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { checkAuth } from "@/lib/auth.server";
 
 export const Route = createFileRoute("/")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    const result = await checkAuth();
+    if (result.authenticated) throw redirect({ to: "/dashboard" });
   },
   component: Landing,
 });
@@ -27,7 +27,7 @@ function Landing() {
         </p>
         <div className="mt-8">
           <Button asChild size="lg" className="w-full">
-            <Link to="/auth">Login per E-Mail-Link</Link>
+            <Link to="/auth">Mit Code einloggen</Link>
           </Button>
         </div>
       </div>
