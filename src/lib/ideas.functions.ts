@@ -74,6 +74,7 @@ export const processContribution = createServerFn({ method: "POST" })
       .from("ideas")
       .select("id, status")
       .eq("id", data.id)
+      .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!idea) throw new Error("Nicht gefunden.");

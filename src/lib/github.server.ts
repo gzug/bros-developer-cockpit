@@ -107,10 +107,18 @@ export async function getFileContent(
 
 export async function createBranch(name: string, fromSha: string): Promise<void> {
   const r = repo();
-  await gh(`/repos/${r.path}/git/refs`, {
-    method: "POST",
-    body: JSON.stringify({ ref: `refs/heads/${name}`, sha: fromSha }),
-  });
+  try {
+    await gh(`/repos/${r.path}/git/refs`, {
+      method: "POST",
+      body: JSON.stringify({ ref: `refs/heads/${name}`, sha: fromSha }),
+    });
+  } catch (e) {
+    // Idempotent: if the engine-owned branch already exists (e.g. a retry after
+    // a transient failure), that's fine — commitFiles force-updates it.
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("already exists") || msg.includes(" 422 ")) return;
+    throw e;
+  }
 }
 
 export type FileEdit = { path: string; content: string };
@@ -148,9 +156,11 @@ export async function commitFiles(
     body: JSON.stringify({ message, tree: newTree.sha, parents: [baseSha] }),
   });
 
+  // force: the bdc/* branch is engine-owned + single-purpose, so a retry that
+  // rebuilds the commit off baseSha may overwrite a prior partial attempt.
   await gh(`/repos/${r.path}/git/refs/heads/${encodeURIComponent(branch)}`, {
     method: "PATCH",
-    body: JSON.stringify({ sha: commit.sha, force: false }),
+    body: JSON.stringify({ sha: commit.sha, force: true }),
   });
 
   return commit.sha;

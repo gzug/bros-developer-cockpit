@@ -146,8 +146,8 @@ function IdeaPage() {
               </div>
             )}
 
-            {/* Generating — engine is building the change */}
-            {q.data.status === "generating" && (
+            {/* Generating — engine is building the change (incl. the 'shipping' claim) */}
+            {(q.data.status === "generating" || q.data.status === "shipping") && (
               <div className="mt-6 rounded-md border border-border bg-card p-4 text-sm">
                 <div className="flex items-center gap-3">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />

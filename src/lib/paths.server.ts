@@ -14,7 +14,8 @@ export function isGlob(pattern: string): boolean {
 }
 
 // Minimal, dependency-free glob: supports ** (any depth incl. /) and * (any run
-// of non-slash chars). Anchored to the full path.
+// of non-slash chars). Anchored to the full path. CASE-INSENSITIVE — the forbid
+// rules must not be evadable by changing the case of a path segment.
 export function globMatch(path: string, pattern: string): boolean {
   const p = normalize(path);
   const re = globToRegExp(pattern);
@@ -23,6 +24,12 @@ export function globMatch(path: string, pattern: string): boolean {
 
 function normalize(path: string): string {
   return path.replace(/^\/+/, "");
+}
+
+// A path with any "." / ".." / empty segment is a traversal attempt and is
+// never valid — reject outright rather than trusting the glob rules to catch it.
+function hasUnsafeSegment(p: string): boolean {
+  return p.split("/").some((s) => s === "" || s === "." || s === "..");
 }
 
 function globToRegExp(glob: string): RegExp {
@@ -48,7 +55,8 @@ function globToRegExp(glob: string): RegExp {
       re += c;
     }
   }
-  return new RegExp("^" + re + "$");
+  // 'i' flag: forbid/allow globs match regardless of path-segment case.
+  return new RegExp("^" + re + "$", "i");
 }
 
 export function setPathRules(allowed: string[], forbidden: string[]) {
@@ -62,12 +70,17 @@ export function isPathAllowed(
   const p = normalize(path);
   const { allowed, forbidden } = rules;
 
+  // 0. Traversal / malformed segments are never valid.
+  if (!p || hasUnsafeSegment(p)) return false;
+
+  const eq = (a: string, b: string) => a.toLowerCase() === normalize(b).toLowerCase();
+
   // 1. Exact-literal allow wins over everything.
-  if (allowed.some((g) => !isGlob(g) && p === normalize(g))) return true;
+  if (allowed.some((g) => !isGlob(g) && eq(p, g))) return true;
 
   // 2. Any forbidden match => reject.
   if (forbidden.some((g) => globMatch(p, g))) return false;
 
   // 3. Allowed only if an allow entry matches.
-  return allowed.some((g) => (isGlob(g) ? globMatch(p, g) : p === normalize(g)));
+  return allowed.some((g) => (isGlob(g) ? globMatch(p, g) : eq(p, g)));
 }

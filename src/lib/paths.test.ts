@@ -49,6 +49,22 @@ test("leading slashes are normalized", () => {
   expect(isPathAllowed("/apps/mobile/src/screens/Home.tsx", rules)).toBe(true);
 });
 
+test("case-evasion of a forbidden tree is rejected", () => {
+  // capital D must not slip past apps/mobile/src/data/**
+  expect(isPathAllowed("apps/mobile/src/Data/secrets.ts", rules)).toBe(false);
+});
+
+test("case-evasion of a forbidden extension is rejected", () => {
+  expect(isPathAllowed("apps/mobile/src/schema.SQL", rules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/schema.Sql", rules)).toBe(false);
+});
+
+test("path traversal segments are rejected", () => {
+  expect(isPathAllowed("apps/mobile/src/../data/x.ts", rules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/./x.ts", rules)).toBe(false);
+  expect(isPathAllowed("apps/mobile//src/x.ts", rules)).toBe(false);
+});
+
 test("empty rules reject everything", () => {
   expect(isPathAllowed("apps/mobile/src/x.tsx", { allowed: [], forbidden: [] })).toBe(false);
 });

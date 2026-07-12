@@ -201,6 +201,19 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
     return { ok: false, status: "blocked", reason };
   }
 
+  // Claim the idea atomically (generating -> shipping) so a second concurrent
+  // run (double tab / reload) cannot start a duplicate PR on the same branch.
+  const { data: claimed, error: claimErr } = await supabaseAdmin
+    .from("ideas")
+    .update({ status: "shipping" })
+    .eq("id", ideaId)
+    .eq("status", "generating")
+    .select("id");
+  if (claimErr) throw new Error(claimErr.message);
+  if (!claimed || claimed.length === 0) {
+    return { ok: false, status: "blocked", reason: "Wird bereits bearbeitet." };
+  }
+
   // Repo context.
   const base = await getDefaultBranch();
   const baseSha = await getBranchHeadSha(base);
@@ -263,11 +276,19 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
         continue;
       }
 
-      // PATH-VALIDATE every edit (security boundary).
+      // PATH-VALIDATE every edit (security boundary). An edit must (a) pass the
+      // allow/forbid rules AND (b) be one of the files we actually fetched — the
+      // editor may only change files it was given, never introduce a new path.
+      const fetchedSet = new Set(files.map((f) => f.path));
       const editList: FileEdit[] = [];
       let pathReject = false;
       for (const e of edited.out.edits) {
-        if (!e.path || typeof e.content !== "string" || !isPathAllowed(e.path, rules)) {
+        if (
+          !e.path ||
+          typeof e.content !== "string" ||
+          !fetchedSet.has(e.path) ||
+          !isPathAllowed(e.path, rules)
+        ) {
           pathReject = true;
           break;
         }
@@ -316,6 +337,10 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
     }
   }
 
-  await setIdea(ideaId, { status: "failed", error_message: lastReason.slice(0, 400) });
+  // User-facing message stays generic (technical detail lives in task_log).
+  await setIdea(ideaId, {
+    status: "failed",
+    error_message: "Konnte gerade nicht automatisch umgesetzt werden. Dein Bruder schaut es sich an.",
+  });
   return { ok: false, status: "failed", reason: lastReason };
 }
