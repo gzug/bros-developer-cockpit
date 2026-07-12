@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS public.task_log (
   blocked_reason text,
   pr_number integer,
   pr_url text,
+  review_verdict text,                -- 'ok' | 'risky' — filled by post-PR judge
+  review_reason text,                 -- one-sentence explanation from judge
   created_at timestamptz NOT NULL DEFAULT now()
 );
 GRANT SELECT ON public.task_log TO authenticated;

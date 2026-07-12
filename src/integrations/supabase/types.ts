@@ -153,6 +153,8 @@ export type Database = {
           pr_number: number | null
           pr_url: string | null
           provider: string | null
+          review_reason: string | null
+          review_verdict: string | null
           req_id: string | null
           template_version: string | null
           tier: string | null
@@ -176,6 +178,8 @@ export type Database = {
           pr_url?: string | null
           provider?: string | null
           req_id?: string | null
+          review_reason?: string | null
+          review_verdict?: string | null
           template_version?: string | null
           tier?: string | null
           tokens_completion?: number | null
@@ -198,6 +202,8 @@ export type Database = {
           pr_url?: string | null
           provider?: string | null
           req_id?: string | null
+          review_reason?: string | null
+          review_verdict?: string | null
           template_version?: string | null
           tier?: string | null
           tokens_completion?: number | null

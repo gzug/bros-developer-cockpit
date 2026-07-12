@@ -205,6 +205,15 @@ export const getOwnerKpis = createServerFn({ method: "GET" })
     const totalTasks = logs.length;
     const okTasks = logs.filter((l) => l.validate_result === "ok").length;
     const escalated = logs.filter((l) => l.escalated_from != null).length;
+
+    const judgedLogs = logs.filter((l) => l.review_verdict != null);
+    const judgeRisky = judgedLogs.filter((l) => l.review_verdict === "risky").length;
+    const judgeOk = judgedLogs.filter((l) => l.review_verdict === "ok").length;
+    // Last 5 risky flags so the owner can spot patterns.
+    const recentRiskyFlags = logs
+      .filter((l) => l.review_verdict === "risky")
+      .slice(0, 5)
+      .map((l) => ({ reqId: l.req_id, reason: l.review_reason, prUrl: l.pr_url }));
     const totalTokensPrompt = logs.reduce((s, l) => s + (l.tokens_prompt ?? 0), 0);
     const totalTokensCompletion = logs.reduce((s, l) => s + (l.tokens_completion ?? 0), 0);
     const totalCostUsd = logs.reduce((s, l) => s + (l.cost_usd ?? 0), 0);
@@ -267,6 +276,10 @@ export const getOwnerKpis = createServerFn({ method: "GET" })
       modelCounts,
       modelUsage,
       whatIf,
+      judgeOk,
+      judgeRisky,
+      judgeCoverage: judgedLogs.length,
+      recentRiskyFlags,
       intentCounts,
       totalIdeas: ideas.length,
       shippedCount: shipped.length,

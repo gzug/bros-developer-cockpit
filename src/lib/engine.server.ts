@@ -189,6 +189,40 @@ async function runEditor(
   };
 }
 
+type JudgeOut = { verdict: "ok" | "risky"; reason: string };
+
+// Quick post-PR sanity check: tier0 (cheapest model) reads the wish + summary
+// and flags anything obviously wrong BEFORE the owner's brother sees the PR.
+// Non-blocking: if the judge errors we log null and continue.
+async function runJudge(
+  wish: string,
+  summary: string,
+  files: string[],
+): Promise<{ verdict: string; reason: string } | null> {
+  try {
+    const res = await callModel({
+      tier: "tier0",
+      responseJson: true,
+      messages: [
+        {
+          role: "system",
+          content:
+            'You are a cautious reviewer. Given a user wish and the one-sentence summary of what the AI changed, decide if the change looks reasonable. Return JSON only: {"verdict":"ok","reason":"..."} or {"verdict":"risky","reason":"..."}. Be brief (max 15 words for reason). Mark "risky" if the summary sounds unrelated to the wish, mentions data/schema/secret changes, or is vague/empty.',
+        },
+        {
+          role: "user",
+          content: `WISH:\n${wish}\n\nCHANGED FILES: ${files.join(", ")}\n\nAI SUMMARY: ${summary}`,
+        },
+      ],
+    });
+    const parsed = safeJsonParse<JudgeOut>(res.content);
+    if (!parsed || !parsed.verdict || !parsed.reason) return null;
+    return { verdict: parsed.verdict, reason: parsed.reason.slice(0, 200) };
+  } catch {
+    return null;
+  }
+}
+
 export type ProcessResult =
   | { ok: true; prNumber: number; prUrl: string }
   | { ok: false; status: "blocked" | "failed"; reason: string };
@@ -360,8 +394,11 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
         body: prBody,
       });
 
+      // Post-PR judge: non-blocking cheap sanity check.
+      const judge = await runJudge(wish, edited.out.summary, editList.map((e) => e.path));
+
       await setIdea(ideaId, { status: "sent", github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
-      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url });
+      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: judge?.verdict ?? null, review_reason: judge?.reason ?? null });
       return { ok: true, prNumber: pr.number, prUrl: pr.html_url };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : String(e);

@@ -89,6 +89,63 @@ function ModelUsageTable({
   );
 }
 
+function JudgeSection({
+  ok,
+  risky,
+  coverage,
+  recentFlags,
+}: {
+  ok: number;
+  risky: number;
+  coverage: number;
+  recentFlags: Array<{ reqId: string | null; reason: string | null; prUrl: string | null }>;
+}) {
+  return (
+    <div>
+      <h3 className="mb-1 text-xs font-medium uppercase text-muted-foreground">
+        Post-PR Judge (tier0 sanity check)
+      </h3>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Nach jedem erfolgreichen PR prueft ein Billig-Model, ob die Aenderung zur Wish passt.
+      </p>
+      <div className="grid grid-cols-3 gap-3">
+        <Stat label="Bewertet" value={coverage} />
+        <Stat label="OK" value={ok} />
+        <Stat label="Risky" value={risky} />
+      </div>
+      {recentFlags.length > 0 && (
+        <div className="mt-3 rounded-md border border-amber-400/40 bg-amber-50/30 p-3 dark:bg-amber-900/10">
+          <p className="mb-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+            Letzte &ldquo;risky&rdquo;-Flags
+          </p>
+          <ul className="space-y-1">
+            {recentFlags.map((f, i) => (
+              <li key={i} className="text-xs">
+                <span className="font-mono text-muted-foreground">{f.reqId ?? "?"}</span>
+                {" — "}
+                {f.reason}
+                {f.prUrl && (
+                  <>
+                    {" "}
+                    <a
+                      href={f.prUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:no-underline"
+                    >
+                      PR
+                    </a>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WhatIfTable({
   actual,
   scenarios,
@@ -178,6 +235,12 @@ function OwnerKpiPage() {
             {q.data.whatIf && (
               <WhatIfTable actual={q.data.totalCostUsd} scenarios={q.data.whatIf} />
             )}
+            <JudgeSection
+              ok={q.data.judgeOk}
+              risky={q.data.judgeRisky}
+              coverage={q.data.judgeCoverage}
+              recentFlags={q.data.recentRiskyFlags}
+            />
             <MapTable data={q.data.tierCounts} label="Runs per Tier" />
             <MapTable data={q.data.intentCounts} label="Intents" />
           </div>
