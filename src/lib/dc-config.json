@@ -1,0 +1,20 @@
+{
+  "routingMap": {
+    "wording": "tier0",
+    "look": "tier1",
+    "wrong": "tier1",
+    "idea": "review"
+  },
+  "allowed": [
+    "apps/mobile/src/"
+  ],
+  "forbidden": [
+    ".env",
+    "package.json",
+    "app.config",
+    "android/",
+    "ios/"
+  ],
+  "promptTemplate": "smallest-correct-ui-change",
+  "templateVersion": "github-native-v1"
+}

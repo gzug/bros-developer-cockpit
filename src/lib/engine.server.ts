@@ -1,112 +1,38 @@
-// The BDC engine — turns a saved idea into a real Pull Request on the One L1fe
-// repo via OpenRouter. Fail-closed: any error leaves the idea in a terminal
-// 'failed'/'blocked' state with a reason, never a half-open PR path.
-//
-// Flow: load config -> kill-switch -> gather repo context -> PLANNER (which files)
-// -> fetch files -> EDITOR (full new contents) -> path-validate -> JUDGE (lane pick)
-// -> branch/commit/PR -> log provenance. The engine does NOT merge: the target
-// repo's bdc-ship workflow runs the full validate chain on the PR, merges only on
-// green, and publishes the OTA. On parse/path failure, escalate one tier and retry.
-
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import type { Database } from "@/integrations/supabase/types";
-import { callModel, nextTier, type Tier } from "./openrouter.server";
+import config from "./dc-config.json";
+import { nextTier, type Tier, callModel } from "./openrouter.server";
 import { isPathAllowed } from "./paths.server";
 import {
-  getDefaultBranch,
-  getBranchHeadSha,
-  getRepoTree,
-  getFileContent,
-  createBranch,
   commitFiles,
+  createBranch,
+  getBranchHeadSha,
+  getDefaultBranch,
+  getFileContent,
+  getRepoTree,
   openPullRequest,
   type FileEdit,
 } from "./github.server";
+import { addEngineRunComment, addIdeaComment, getIdeaWithPull, setIdeaStatus } from "./github-issues.server";
 
-type Intent = Database["public"]["Enums"]["contribution_intent"];
-
-// "review" is a sentinel value (not a model tier) that causes the engine to
-// skip processing entirely and hold the idea for the owner's manual review.
+type Intent = "wording" | "look" | "wrong" | "idea";
 type RoutingValue = Tier | "review";
 
-type Config = {
-  routingMap: Record<string, RoutingValue>;
-  allowed: string[];
-  forbidden: string[];
-  promptTemplate: string;
-  templateVersion: string;
-  bdcPaused: boolean;
-  pauseReason: string | null;
-};
+type ProcessResult =
+  | { ok: true; prNumber: number; prUrl: string }
+  | { ok: false; status: "blocked" | "failed"; reason: string };
 
-const MAX_CONTEXT_FILES = 6;
-const MAX_TREE_CANDIDATES = 600;
+type PlannerOut = { files: string[] };
+type EditorOut = { summary: string; edits: Array<{ path: string; content: string }> };
 
-async function loadConfig(): Promise<Config> {
-  const { data, error } = await supabaseAdmin
-    .from("app_config")
-    .select("*")
-    .eq("id", true)
-    .maybeSingle();
-  if (error) throw new Error(`app_config load failed: ${error.message}`);
-  if (!data) throw new Error("app_config row missing (run the engine migration)");
-  const rm = (data.routing_map ?? {}) as Record<string, string>;
-  const routingMap: Record<string, RoutingValue> = {};
-  for (const [k, v] of Object.entries(rm)) {
-    if (v === "tier0" || v === "tier1" || v === "tier2" || v === "review") routingMap[k] = v;
-  }
-  return {
-    routingMap,
-    allowed: data.allowed_paths ?? [],
-    forbidden: data.forbidden_paths ?? [],
-    promptTemplate: data.prompt_template ?? "",
-    templateVersion: data.template_version ?? "v1",
-    bdcPaused: data.bdc_paused ?? false,
-    pauseReason: data.pause_reason ?? null,
-  };
-}
+const SYSTEM_PROMPT = `You are a senior React Native / TypeScript engineer working on the "One L1fe" health app (Expo, TypeScript, under apps/mobile/src). A non-developer user described a small UI change in plain words. Your job is to make the SMALLEST correct code change that satisfies the wish.
 
-type IdeaRow = Database["public"]["Tables"]["ideas"]["Row"];
-
-async function loadIdea(ideaId: string): Promise<IdeaRow> {
-  const { data, error } = await supabaseAdmin
-    .from("ideas")
-    .select("*")
-    .eq("id", ideaId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("idea not found");
-  return data;
-}
-
-async function setIdea(ideaId: string, patch: Database["public"]["Tables"]["ideas"]["Update"]) {
-  await supabaseAdmin.from("ideas").update(patch).eq("id", ideaId);
-}
-
-async function logTask(row: Database["public"]["Tables"]["task_log"]["Insert"]) {
-  await supabaseAdmin.from("task_log").insert(row);
-}
-
-function wishText(idea: IdeaRow): string {
-  return [
-    `Intent: ${idea.intent}`,
-    `Where in the app: ${idea.screen ?? ""}`,
-    `What is wrong now: ${idea.wrong ?? ""}`,
-    `What should happen instead: ${idea.should ?? ""}`,
-    idea.body ? `Extra note (user raw text): ${idea.body}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-function sumNullable(a: number | null, b: number | null): number | null {
-  if (a == null && b == null) return null;
-  return (a ?? 0) + (b ?? 0);
-}
+Hard rules:
+- Only edit UI/presentation files under apps/mobile/src. NEVER touch data layer, database, native code, secrets, or config.
+- Do not invent health values or fabricate data. Presentation only.
+- Return COMPLETE file contents for every file you change.
+- Keep the change minimal and consistent with surrounding code.
+Respond with JSON only, no prose outside the JSON.`;
 
 function safeJsonParse<T>(text: string): T | null {
-  // Models sometimes wrap JSON in ```json fences or prose. Extract the first
-  // balanced {...} block as a fallback.
   try {
     return JSON.parse(text) as T;
   } catch {
@@ -123,55 +49,26 @@ function safeJsonParse<T>(text: string): T | null {
   }
 }
 
-const SYSTEM_PROMPT = `You are a senior React Native / TypeScript engineer working on the "One L1fe" health app (Expo, TypeScript, under apps/mobile/src). A non-developer user described a small UI change in plain words. Your job is to make the SMALLEST correct code change that satisfies the wish.
-
-Hard rules:
-- Only edit UI/presentation files under apps/mobile/src. NEVER touch data layer, database, native code, secrets, or config.
-- Do not invent health values or fabricate data. Presentation only.
-- Return COMPLETE file contents for every file you change (not a diff).
-- Keep the change minimal and consistent with surrounding code.
-Respond with JSON only, no prose outside the JSON.`;
-
-type PlannerOut = { files: string[] };
-type EditorOut = { summary: string; edits: Array<{ path: string; content: string }> };
-
-async function runPlanner(
-  tier: Tier,
-  wish: string,
-  candidatePaths: string[],
-): Promise<{ files: string[]; tokensPrompt: number | null; tokensCompletion: number | null; costUsd: number | null; modelServed: string; provider: string | null } | null> {
-  const res = await callModel({
+async function runPlanner(tier: Tier, wish: string, candidatePaths: string[]) {
+  const result = await callModel({
     tier,
     responseJson: true,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `WISH:\n${wish}\n\nCANDIDATE FILES (choose up to ${MAX_CONTEXT_FILES} that you need to read to make this change):\n${candidatePaths.join("\n")}\n\nReturn JSON: {"files": ["path", ...]} — only paths from the candidate list.`,
+        content: `WISH:\n${wish}\n\nCANDIDATE FILES:\n${candidatePaths.join("\n")}\n\nReturn JSON: {"files":["path"]}`,
       },
     ],
   });
-  const parsed = safeJsonParse<PlannerOut>(res.content);
-  if (!parsed || !Array.isArray(parsed.files)) return null;
-  return {
-    files: parsed.files.slice(0, MAX_CONTEXT_FILES),
-    tokensPrompt: res.tokensPrompt,
-    tokensCompletion: res.tokensCompletion,
-    costUsd: res.costUsd,
-    modelServed: res.modelServed,
-    provider: res.provider,
-  };
+  const parsed = safeJsonParse<PlannerOut>(result.content);
+  if (!parsed) return null;
+  return { parsed, result };
 }
 
-async function runEditor(
-  tier: Tier,
-  wish: string,
-  files: Array<{ path: string; content: string }>,
-): Promise<{ out: EditorOut; tokensPrompt: number | null; tokensCompletion: number | null; costUsd: number | null; modelServed: string; provider: string | null } | null> {
-  const fileBlocks = files
-    .map((f) => `=== FILE: ${f.path} ===\n${f.content}`)
-    .join("\n\n");
-  const res = await callModel({
+async function runEditor(tier: Tier, wish: string, files: Array<{ path: string; content: string }>) {
+  const fileBlocks = files.map((file) => `=== FILE: ${file.path} ===\n${file.content}`).join("\n\n");
+  const result = await callModel({
     tier,
     responseJson: true,
     maxTokens: 8192,
@@ -179,276 +76,137 @@ async function runEditor(
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
-        content: `WISH:\n${wish}\n\nCURRENT FILES:\n${fileBlocks}\n\nReturn JSON: {"summary": "one sentence", "edits": [{"path": "<one of the files above>", "content": "<COMPLETE new file content>"}]}. Only include files you actually changed.`,
+        content: `WISH:\n${wish}\n\nCURRENT FILES:\n${fileBlocks}\n\nReturn JSON: {"summary":"...","edits":[{"path":"...","content":"..."}]}`,
       },
     ],
   });
-  const parsed = safeJsonParse<EditorOut>(res.content);
-  if (!parsed || !Array.isArray(parsed.edits) || parsed.edits.length === 0) return null;
-  return {
-    out: parsed,
-    tokensPrompt: res.tokensPrompt,
-    tokensCompletion: res.tokensCompletion,
-    costUsd: res.costUsd,
-    modelServed: res.modelServed,
-    provider: res.provider,
-  };
+  const parsed = safeJsonParse<EditorOut>(result.content);
+  if (!parsed) return null;
+  return { parsed, result };
 }
 
-type JudgeOut = { verdict: "ok" | "risky"; reason: string };
-
-// Pre-PR sanity check: tier0 (cheapest model) reads the wish + summary and picks
-// the ship lane BEFORE anything reaches GitHub: "ok" -> bdc/* branch (auto-ship
-// via the target repo's bdc-ship workflow), "risky" -> bdc-hold/* branch (the
-// workflow ignores it; the owner reviews and merges by hand).
-// Fail-open: if the judge errors we log null and use the auto-ship lane — the
-// bdc-ship workflow's full validate is the hard gate either way.
-async function runJudge(
-  wish: string,
-  summary: string,
-  files: string[],
-): Promise<{ verdict: string; reason: string } | null> {
-  try {
-    const res = await callModel({
-      tier: "tier0",
-      responseJson: true,
-      messages: [
-        {
-          role: "system",
-          content:
-            'You are a cautious reviewer. Given a user wish and the one-sentence summary of what the AI changed, decide if the change looks reasonable. Return JSON only: {"verdict":"ok","reason":"..."} or {"verdict":"risky","reason":"..."}. Be brief (max 15 words for reason). Mark "risky" if the summary sounds unrelated to the wish, mentions data/schema/secret changes, or is vague/empty.',
-        },
-        {
-          role: "user",
-          content: `WISH:\n${wish}\n\nCHANGED FILES: ${files.join(", ")}\n\nAI SUMMARY: ${summary}`,
-        },
-      ],
-    });
-    const parsed = safeJsonParse<JudgeOut>(res.content);
-    if (!parsed || !parsed.verdict || !parsed.reason) return null;
-    return { verdict: parsed.verdict, reason: parsed.reason.slice(0, 200) };
-  } catch {
-    return null;
-  }
+function wishText(title: string, intent: Intent, description: string): string {
+  return [`Intent: ${intent}`, `Titel: ${title}`, `Beschreibung: ${description}`].join("\n");
 }
 
-export type ProcessResult =
-  | { ok: true; prNumber: number; prUrl: string }
-  | { ok: false; status: "blocked" | "failed"; reason: string };
-
-async function checkAutoPause(): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from("ideas")
-    .select("status")
-    .in("status", ["sent", "shipped", "live", "reverted"])
-    .order("updated_at", { ascending: false })
-    .limit(10);
-  if (!data || data.length < 3) return false;
-  const reverts = data.filter((r) => r.status === "reverted").length;
-  if (reverts >= 2) {
-    await supabaseAdmin
-      .from("app_config")
-      .update({ bdc_paused: true, pause_reason: `Auto-Pause: ${reverts} von ${data.length} letzten PRs reverted.` })
-      .eq("id", true);
-    return true;
-  }
-  return false;
+function totalCost(...values: Array<number | null>): number {
+  return values.reduce((sum, value) => sum + (value ?? 0), 0);
 }
 
-export async function processTask(ideaId: string): Promise<ProcessResult> {
-  const idea = await loadIdea(ideaId);
-  const config = await loadConfig();
-  const rules = { allowed: config.allowed, forbidden: config.forbidden };
-  const intent = (idea.intent ?? "idea") as Intent;
-  const reqId = idea.req_id ?? "REQ-UNKNOWN";
+export async function processTask(issueNumber: number): Promise<ProcessResult> {
+  const paused = process.env.BDC_PAUSED?.toLowerCase() === "true";
+  const { idea, pr } = await getIdeaWithPull(issueNumber);
 
-  // Auto-pause: if 2+ of the last 10 shipped PRs were reverted, stop.
-  if (!config.bdcPaused && (await checkAutoPause())) {
-    const reason = "Auto-Pause: zu viele Reverts in letzter Zeit. Dein Bruder schaut sich das an.";
-    await setIdea(ideaId, { status: "blocked", block_reason: reason });
-    await logTask({ idea_id: ideaId, req_id: reqId, intent, validate_result: "auto_paused", blocked_reason: reason, template_version: config.templateVersion });
+  if (paused) {
+    const reason = "BDC ist gerade pausiert.";
+    await setIdeaStatus(issueNumber, "blocked", idea.intent);
+    await addIdeaComment(issueNumber, reason);
     return { ok: false, status: "blocked", reason };
   }
 
-  // Kill-switch.
-  if (config.bdcPaused) {
-    const reason = config.pauseReason || "BDC ist gerade pausiert.";
-    await setIdea(ideaId, { status: "blocked", block_reason: reason });
-    await logTask({ idea_id: ideaId, req_id: reqId, intent, validate_result: "paused", blocked_reason: reason, template_version: config.templateVersion });
+  if (pr) {
+    return { ok: false, status: "blocked", reason: "Dazu gibt es bereits einen Pull Request." };
+  }
+
+  const intentRoute = (config.routingMap[idea.intent] ?? "tier1") as RoutingValue;
+  if (intentRoute === "review") {
+    const reason = "Diese Idee ist für manuelles Review vorgemerkt.";
+    await setIdeaStatus(issueNumber, "blocked", idea.intent);
+    await addIdeaComment(issueNumber, reason);
     return { ok: false, status: "blocked", reason };
   }
 
-  // Claim the idea atomically (generating -> shipping) so a second concurrent
-  // run (double tab / reload) cannot start a duplicate PR on the same branch.
-  const { data: claimed, error: claimErr } = await supabaseAdmin
-    .from("ideas")
-    .update({ status: "shipping" })
-    .eq("id", ideaId)
-    .eq("status", "generating")
-    .select("id");
-  if (claimErr) throw new Error(claimErr.message);
-  if (!claimed || claimed.length === 0) {
-    return { ok: false, status: "blocked", reason: "Wird bereits bearbeitet." };
-  }
+  await setIdeaStatus(issueNumber, "sent", idea.intent);
 
-  // Repo context.
   const base = await getDefaultBranch();
   const baseSha = await getBranchHeadSha(base);
   const tree = await getRepoTree(baseSha);
   const candidates = tree.entries
-    .filter((e) => e.type === "blob" && isPathAllowed(e.path, rules))
-    .map((e) => e.path)
-    .slice(0, MAX_TREE_CANDIDATES);
+    .filter((entry) => entry.type === "blob" && isPathAllowed(entry.path, { allowed: config.allowed, forbidden: config.forbidden }))
+    .map((entry) => entry.path)
+    .slice(0, 600);
 
-  if (candidates.length === 0) {
-    const reason = "Keine bearbeitbaren Dateien gefunden (Pfadregeln zu eng?).";
-    await setIdea(ideaId, { status: "failed", error_message: reason });
-    await logTask({ idea_id: ideaId, req_id: reqId, intent, base_sha: baseSha, validate_result: "error", blocked_reason: reason, template_version: config.templateVersion });
-    return { ok: false, status: "failed", reason };
-  }
-
-  // "review" intent: skip the engine, hold for the owner to assess manually.
-  const intentRoute = config.routingMap[intent] ?? "tier1";
-  if (intentRoute === "review") {
-    const reason = `Intent '${intent}' ist für manuelles Review vorgemerkt. Dein Bruder (Don) schaut sich das zuerst an.`;
-    await setIdea(ideaId, { status: "blocked", block_reason: reason });
-    await logTask({ idea_id: ideaId, req_id: reqId, intent, validate_result: "review_hold", blocked_reason: reason, template_version: config.templateVersion });
-    return { ok: false, status: "blocked", reason };
-  }
-
-  const wish = wishText(idea);
-  const startTier: Tier = intentRoute;
-
-  let tier: Tier | null = startTier;
-  let escalatedFrom: string | null = null;
-  let attempt = 0;
-  let lastReason = "Kein gültiger Patch erzeugt.";
+  const wish = wishText(idea.title, idea.intent, idea.description);
+  let tier: Tier | null = intentRoute;
+  let lastError = "Kein Patch erzeugt.";
 
   while (tier) {
-    attempt++;
-    const thisTier = tier;
     try {
-      // PLANNER
-      const plan = await runPlanner(thisTier, wish, candidates);
-      const planFiles = (plan?.files ?? []).filter((p) => isPathAllowed(p, rules) && candidates.includes(p));
-      if (!plan || planFiles.length === 0) {
-        lastReason = "Modell konnte keine passenden Dateien wählen.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_requested: undefined, model_served: plan?.modelServed, provider: plan?.provider ?? null, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: plan?.tokensPrompt ?? null, tokens_completion: plan?.tokensCompletion ?? null, cost_usd: plan?.costUsd ?? null, validate_result: "parse_fail", blocked_reason: lastReason });
-        escalatedFrom = thisTier;
-        tier = nextTier(thisTier);
+      const plan = await runPlanner(tier, wish, candidates);
+      const filesToRead = (plan?.parsed.files ?? []).filter((path) =>
+        candidates.includes(path) &&
+        isPathAllowed(path, { allowed: config.allowed, forbidden: config.forbidden }),
+      );
+      if (!plan || filesToRead.length === 0) {
+        lastError = "Keine passenden Dateien gefunden.";
+        tier = nextTier(tier);
         continue;
       }
 
-      // FETCH
-      const files: Array<{ path: string; content: string }> = [];
-      for (const p of planFiles) {
-        const content = await getFileContent(p, base);
-        if (content != null) files.push({ path: p, content });
-      }
-      if (files.length === 0) {
-        lastReason = "Ausgewählte Dateien konnten nicht gelesen werden.";
-        escalatedFrom = thisTier;
-        tier = nextTier(thisTier);
+      const files = (
+        await Promise.all(filesToRead.map(async (path) => ({ path, content: await getFileContent(path, base) })))
+      )
+        .filter((file): file is { path: string; content: string } => typeof file.content === "string");
+
+      const edited = await runEditor(tier, wish, files);
+      if (!edited || edited.parsed.edits.length === 0) {
+        lastError = "Kein brauchbarer Patch.";
+        tier = nextTier(tier);
         continue;
       }
 
-      // EDITOR
-      const edited = await runEditor(thisTier, wish, files);
-      if (!edited) {
-        lastReason = "Modell lieferte keinen brauchbaren Patch.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: undefined, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, cost_usd: plan.costUsd, validate_result: "parse_fail", blocked_reason: lastReason });
-        escalatedFrom = thisTier;
-        tier = nextTier(thisTier);
+      const fetched = new Set(files.map((file) => file.path));
+      const edits: FileEdit[] = edited.parsed.edits
+        .filter((edit) => fetched.has(edit.path))
+        .map((edit) => ({ path: edit.path, content: edit.content }));
+      if (edits.length === 0) {
+        lastError = "Patch ausserhalb des erlaubten Bereichs.";
+        tier = nextTier(tier);
         continue;
       }
 
-      // PATH-VALIDATE every edit (security boundary). An edit must (a) pass the
-      // allow/forbid rules AND (b) be one of the files we actually fetched — the
-      // editor may only change files it was given, never introduce a new path.
-      const fetchedSet = new Set(files.map((f) => f.path));
-      const editList: FileEdit[] = [];
-      let pathReject = false;
-      for (const e of edited.out.edits) {
-        if (
-          !e.path ||
-          typeof e.content !== "string" ||
-          !fetchedSet.has(e.path) ||
-          !isPathAllowed(e.path, rules)
-        ) {
-          pathReject = true;
-          break;
-        }
-        editList.push({ path: e.path, content: e.content });
-      }
-      if (pathReject || editList.length === 0) {
-        lastReason = "Patch wollte eine gesperrte Datei ändern — abgelehnt.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "path_reject", blocked_reason: lastReason });
-        escalatedFrom = thisTier;
-        tier = nextTier(thisTier);
-        continue;
-      }
-
-      // JUDGE (pre-PR): decides the ship lane before anything reaches GitHub.
-      const judge = await runJudge(wish, edited.out.summary, editList.map((e) => e.path));
-      const judgeRisky = judge?.verdict === "risky";
-
-      // OPEN PR — the branch prefix is the machine-readable ship signal:
-      //   bdc/*      -> the target repo's bdc-ship workflow validates, merges on
-      //                 green, and publishes the OTA
-      //   bdc-hold/* -> the workflow ignores it; the owner reviews + merges by hand
-      const branch = `${judgeRisky ? "bdc-hold" : "bdc"}/${reqId.toLowerCase()}`;
+      const branch = `bdc/dc-issue-${issueNumber}`;
       await createBranch(branch, baseSha);
-      const commitMsg = `bdc: ${idea.title ?? reqId}\n\n${edited.out.summary}\n\n${reqId}`;
-      await commitFiles(branch, baseSha, editList, commitMsg);
-      const prBody = [
-        `Automated by **Bros Developer Cockpit** (${reqId}).`,
-        ``,
-        `**Wish**`,
-        wish,
-        ``,
-        `**Change**: ${edited.out.summary}`,
-        `**Files**: ${editList.map((e) => e.path).join(", ")}`,
-        `**Model tier**: ${thisTier} (${edited.modelServed})`,
-        ``,
-        judgeRisky
-          ? `> HELD for manual review (judge: ${judge!.reason}). Token: ${reqId}`
-          : `> Ships automatically once the bdc-ship check (full validate) is green. Token: ${reqId}`,
-      ].join("\n");
-      const pr = await openPullRequest({
+      await commitFiles(
+        branch,
+        baseSha,
+        edits,
+        `bdc: ${idea.title}\n\n${edited.parsed.summary}\n\nIssue #${issueNumber}`,
+      );
+
+      const pullRequest = await openPullRequest({
         head: branch,
         base,
-        title: `${reqId}: ${idea.title ?? "BDC change"}`.slice(0, 200),
-        body: prBody,
+        title: `BDC: ${idea.title}`.slice(0, 200),
+        body: [
+          `Automated by Bros Developer Cockpit.`,
+          ``,
+          `Closes #${issueNumber}`,
+          ``,
+          `Wish:`,
+          wish,
+          ``,
+          `Change: ${edited.parsed.summary}`,
+          `Files: ${edits.map((edit) => edit.path).join(", ")}`,
+        ].join("\n"),
       });
 
-      if (judgeRisky) {
-        // Judge flagged a risk → PR exists for the owner to inspect, but on the
-        // bdc-hold/* branch the ship workflow never touches.
-        const blockReason = `Judge: ${judge!.reason} (PR #${pr.number} offen, aber angehalten — Don muss reviewen).`;
-        await setIdea(ideaId, { status: "blocked", github_pr_number: pr.number, github_pr_url: pr.html_url, block_reason: blockReason, error_message: null });
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: "risky", review_reason: judge!.reason });
-        return { ok: false, status: "blocked", reason: blockReason };
-      }
-
-      // Judge ok (or unavailable) → hand over to the bdc-ship workflow, which
-      // runs the full validate chain on the PR, merges only on green, and then
-      // publishes the OTA. "sent" = PR open, cloud check running;
-      // refreshContributionStatus flips it to "live" once the workflow merged.
-      await setIdea(ideaId, { status: "sent", github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
-      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url, review_verdict: judge?.verdict ?? null, review_reason: judge?.reason ?? null });
-      return { ok: true, prNumber: pr.number, prUrl: pr.html_url };
-    } catch (e) {
-      lastReason = e instanceof Error ? e.message : String(e);
-      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, validate_result: "error", blocked_reason: lastReason.slice(0, 400) });
-      escalatedFrom = thisTier;
-      tier = nextTier(thisTier);
+      await addEngineRunComment(issueNumber, {
+        model: edited.result.modelServed,
+        promptTokens: (plan.result.tokensPrompt ?? 0) + (edited.result.tokensPrompt ?? 0),
+        completionTokens: (plan.result.tokensCompletion ?? 0) + (edited.result.tokensCompletion ?? 0),
+        costUsd: totalCost(plan.result.costUsd, edited.result.costUsd),
+        prNumber: pullRequest.number,
+      });
+      await setIdeaStatus(issueNumber, "sent", idea.intent);
+      return { ok: true, prNumber: pullRequest.number, prUrl: pullRequest.html_url };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      tier = nextTier(tier);
     }
   }
 
-  // User-facing message stays generic (technical detail lives in task_log).
-  await setIdea(ideaId, {
-    status: "failed",
-    error_message: "Konnte gerade nicht automatisch umgesetzt werden. Dein Bruder schaut es sich an.",
-  });
-  return { ok: false, status: "failed", reason: lastReason };
+  await setIdeaStatus(issueNumber, "blocked", idea.intent);
+  await addIdeaComment(issueNumber, `Automatische Verarbeitung fehlgeschlagen: ${lastError}`);
+  return { ok: false, status: "failed", reason: lastError };
 }
