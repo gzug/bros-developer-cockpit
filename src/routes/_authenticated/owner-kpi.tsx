@@ -89,6 +89,57 @@ function ModelUsageTable({
   );
 }
 
+function WhatIfTable({
+  actual,
+  scenarios,
+}: {
+  actual: number;
+  scenarios: Array<{ tier: string; model: string; costUsd: number }>;
+}) {
+  return (
+    <div>
+      <h3 className="mb-1 text-xs font-medium uppercase text-muted-foreground">
+        Routing what-if
+      </h3>
+      <p className="mb-2 text-xs text-muted-foreground">
+        Gleiches Tokenvolumen, gerechnet mit Live-Preisen: was es gekostet hätte, wenn ALLE Runs
+        auf einem Model gepinnt gewesen wären. Vergleich gegen das echte Routing.
+      </p>
+      <div className="overflow-x-auto rounded-md border border-border">
+        <table className="w-full text-sm">
+          <tbody>
+            <tr className="border-b border-border bg-muted/40">
+              <td className="px-3 py-1.5 font-medium">Echt (geroutet)</td>
+              <td className="px-3 py-1.5 text-right font-semibold tabular-nums">{fmtUsd(actual)}</td>
+              <td className="px-3 py-1.5" />
+            </tr>
+            {scenarios.map((s) => {
+              const delta = s.costUsd - actual;
+              return (
+                <tr key={s.tier} className="border-b border-border last:border-0">
+                  <td className="px-3 py-1.5">
+                    <span className="font-medium">Alles {s.tier}</span>{" "}
+                    <span className="font-mono text-xs text-muted-foreground">{s.model}</span>
+                  </td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{fmtUsd(s.costUsd)}</td>
+                  <td
+                    className={`px-3 py-1.5 text-right text-xs tabular-nums ${
+                      delta > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
+                    }`}
+                  >
+                    {delta >= 0 ? "+" : ""}
+                    {fmtUsd(delta)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function OwnerKpiPage() {
   const q = useQuery({
     queryKey: ["owner-kpi"],
@@ -124,6 +175,9 @@ function OwnerKpiPage() {
             </div>
 
             <ModelUsageTable data={q.data.modelUsage} />
+            {q.data.whatIf && (
+              <WhatIfTable actual={q.data.totalCostUsd} scenarios={q.data.whatIf} />
+            )}
             <MapTable data={q.data.tierCounts} label="Runs per Tier" />
             <MapTable data={q.data.intentCounts} label="Intents" />
           </div>

@@ -93,7 +93,7 @@ function wishText(idea: IdeaRow): string {
     .join("\n");
 }
 
-function sumCost(a: number | null, b: number | null): number | null {
+function sumNullable(a: number | null, b: number | null): number | null {
   if (a == null && b == null) return null;
   return (a ?? 0) + (b ?? 0);
 }
@@ -330,7 +330,7 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
       }
       if (pathReject || editList.length === 0) {
         lastReason = "Patch wollte eine gesperrte Datei ändern — abgelehnt.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: edited.tokensPrompt, tokens_completion: edited.tokensCompletion, cost_usd: sumCost(plan.costUsd, edited.costUsd), validate_result: "path_reject", blocked_reason: lastReason });
+        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "path_reject", blocked_reason: lastReason });
         escalatedFrom = thisTier;
         tier = nextTier(thisTier);
         continue;
@@ -361,7 +361,7 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
       });
 
       await setIdea(ideaId, { status: "sent", github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
-      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: edited.tokensPrompt, tokens_completion: edited.tokensCompletion, cost_usd: sumCost(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url });
+      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: sumNullable(plan.tokensPrompt, edited.tokensPrompt), tokens_completion: sumNullable(plan.tokensCompletion, edited.tokensCompletion), cost_usd: sumNullable(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url });
       return { ok: true, prNumber: pr.number, prUrl: pr.html_url };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : String(e);

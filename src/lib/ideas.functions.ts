@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { assertAllowedEmail, getAllowedEmail } from "./allowlist.server";
 import { findPullRequestByReqId } from "./github.server";
+import { getTierPricing } from "./pricing.server";
 import { INTENT_LABEL, runSubmitContribution } from "./contribution.server";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -233,6 +234,27 @@ export const getOwnerKpis = createServerFn({ method: "GET" })
       intentCounts[k] = (intentCounts[k] ?? 0) + 1;
     }
 
+    // What-if routing comparison: what the SAME token volume would have cost
+    // if every run had been pinned to one tier's model (live OpenRouter
+    // pricing). Shows what the intent routing actually saves or costs.
+    let whatIf: Array<{ tier: string; model: string; costUsd: number }> | null = null;
+    const tierPricing = await getTierPricing();
+    if (tierPricing) {
+      const scenarios: Array<{ tier: string; model: string; costUsd: number }> = [];
+      for (const t of ["tier0", "tier1", "tier2"] as const) {
+        const tp = tierPricing[t];
+        if (!tp) continue;
+        let cost = 0;
+        for (const l of logs) {
+          cost +=
+            (l.tokens_prompt ?? 0) * tp.pricing.prompt +
+            (l.tokens_completion ?? 0) * tp.pricing.completion;
+        }
+        scenarios.push({ tier: t, model: tp.model, costUsd: cost });
+      }
+      if (scenarios.length > 0) whatIf = scenarios;
+    }
+
     return {
       totalTasks,
       okTasks,
@@ -244,6 +266,7 @@ export const getOwnerKpis = createServerFn({ method: "GET" })
       tierCounts,
       modelCounts,
       modelUsage,
+      whatIf,
       intentCounts,
       totalIdeas: ideas.length,
       shippedCount: shipped.length,
