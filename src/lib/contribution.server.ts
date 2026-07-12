@@ -1,10 +1,10 @@
-// Server-only helpers shared by the TanStack server functions and the
-// MCP tool handlers. Never import from client-reachable modules at module scope.
+// Server-only submit helper. Runs Layer-1 guardrails, then records the idea.
+// The heavy engine work (OpenRouter -> PR) runs separately in engine.server.ts
+// via processContribution, so the submit request stays fast.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { checkGuardrails, sanitizeForFence } from "./guardrails.server";
-import { createIssue } from "./github.server";
+import { checkGuardrails } from "./guardrails.server";
 
 type Intent = Database["public"]["Enums"]["contribution_intent"];
 
@@ -22,66 +22,6 @@ export function shortReqId(): string {
   crypto.getRandomValues(buf);
   for (const b of buf) s += alphabet[b % alphabet.length];
   return `REQ-${s}`;
-}
-
-function randomBoundary(): string {
-  const buf = new Uint8Array(8);
-  crypto.getRandomValues(buf);
-  return (
-    "USER-NOTE-" +
-    Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("")
-  );
-}
-
-export function buildBrief(input: {
-  reqId: string;
-  intent: Intent;
-  screen: string;
-  wrong: string;
-  should: string;
-  body: string;
-}): { title: string; body: string } {
-  const boundary = randomBoundary();
-  const safeNote = sanitizeForFence(input.body ?? "", boundary).trim();
-
-  const title =
-    `${input.reqId}: ${INTENT_LABEL[input.intent]} — ${input.screen}`.slice(
-      0,
-      200,
-    );
-
-  const md = [
-    `### ${input.reqId}`,
-    `**Intent:** ${INTENT_LABEL[input.intent]}`,
-    ``,
-    `**Wo in der App**`,
-    input.screen,
-    ``,
-    `**Was aktuell nicht passt**`,
-    input.wrong,
-    ``,
-    `**Was stattdessen passieren soll**`,
-    input.should,
-    ``,
-    ...(safeNote
-      ? [
-          `**Zusatz (rohtext des Users, sanitized)**`,
-          "```text " + boundary,
-          safeNote,
-          boundary + " ```",
-          ``,
-        ]
-      : []),
-    `---`,
-    `**Rules for the implementing agent**`,
-    `- Do NOT touch health data, storage layer, or auth.`,
-    `- Do NOT target \`main\` directly — open a Pull Request against the default branch.`,
-    `- Include the token \`${input.reqId}\` in the PR title or body so status tracking finds it.`,
-    ``,
-    `@codex please implement this in a fresh branch and open a PR referencing ${input.reqId}.`,
-  ].join("\n");
-
-  return { title, body: md };
 }
 
 export type SubmitInputData = {
@@ -103,9 +43,8 @@ export type SubmitResult =
   | {
       id: string;
       blocked: false;
-      issueUrl: string | null;
       reqId: string;
-      sendError?: string;
+      status: "generating";
     };
 
 export async function runSubmitContribution(
@@ -122,9 +61,9 @@ export async function runSubmitContribution(
   });
 
   const reqId = shortReqId();
-  const displayTitle =
-    `${INTENT_LABEL[input.intent]} — ${input.screen}`.slice(0, 120);
+  const displayTitle = `${INTENT_LABEL[input.intent]} — ${input.screen}`.slice(0, 120);
 
+  // Blocked by a Layer-1 brake and not overridden -> save it, never lose it.
   if (!guard.ok && !input.force) {
     const { data: saved, error } = await supabase
       .from("ideas")
@@ -143,14 +82,10 @@ export async function runSubmitContribution(
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    return {
-      id: saved.id,
-      blocked: true,
-      kind: guard.kind,
-      message: guard.message,
-    };
+    return { id: saved.id, blocked: true, kind: guard.kind, message: guard.message };
   }
 
+  // Accepted -> record as 'generating'. The engine picks it up next.
   const { data: created, error: insErr } = await supabase
     .from("ideas")
     .insert({
@@ -161,7 +96,7 @@ export async function runSubmitContribution(
       should: input.should,
       body: input.body ?? "",
       title: displayTitle,
-      status: "draft",
+      status: "generating",
       req_id: reqId,
       block_reason: !guard.ok ? guard.message : null,
     })
@@ -169,45 +104,5 @@ export async function runSubmitContribution(
     .single();
   if (insErr) throw new Error(insErr.message);
 
-  const brief = buildBrief({
-    reqId,
-    intent: input.intent,
-    screen: input.screen,
-    wrong: input.wrong,
-    should: input.should,
-    body: input.body ?? "",
-  });
-
-  try {
-    const issue = await createIssue(brief);
-    await supabase
-      .from("ideas")
-      .update({
-        status: "sent",
-        github_issue_number: issue.number,
-        github_issue_url: issue.html_url,
-      })
-      .eq("id", created.id);
-    return {
-      id: created.id,
-      blocked: false,
-      issueUrl: issue.html_url,
-      reqId,
-    };
-  } catch (e) {
-    await supabase
-      .from("ideas")
-      .update({
-        status: "saved",
-        error_message: e instanceof Error ? e.message : String(e),
-      })
-      .eq("id", created.id);
-    return {
-      id: created.id,
-      blocked: false,
-      issueUrl: null,
-      reqId,
-      sendError: e instanceof Error ? e.message : String(e),
-    };
-  }
+  return { id: created.id, blocked: false, reqId, status: "generating" };
 }

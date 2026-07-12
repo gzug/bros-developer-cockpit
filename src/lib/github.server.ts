@@ -53,6 +53,122 @@ export type PullState = {
   merged_at: string | null;
 };
 
+// ---------- repo read helpers (for the engine to gather context) ----------
+
+export async function getDefaultBranch(): Promise<string> {
+  const r = repo();
+  const meta = await gh<{ default_branch: string }>(`/repos/${r.path}`);
+  return meta.default_branch;
+}
+
+export async function getBranchHeadSha(branch: string): Promise<string> {
+  const r = repo();
+  const b = await gh<{ commit: { sha: string } }>(
+    `/repos/${r.path}/branches/${encodeURIComponent(branch)}`,
+  );
+  return b.commit.sha;
+}
+
+export type TreeEntry = { path: string; type: "blob" | "tree" };
+
+// Full recursive path list at a commit/tree sha. `truncated` flags huge repos.
+export async function getRepoTree(
+  sha: string,
+): Promise<{ entries: TreeEntry[]; truncated: boolean }> {
+  const r = repo();
+  const t = await gh<{
+    tree: Array<{ path: string; type: string }>;
+    truncated: boolean;
+  }>(`/repos/${r.path}/git/trees/${sha}?recursive=1`);
+  return {
+    entries: t.tree
+      .filter((e) => e.type === "blob" || e.type === "tree")
+      .map((e) => ({ path: e.path, type: e.type as "blob" | "tree" })),
+    truncated: !!t.truncated,
+  };
+}
+
+// Raw text content of a file at a ref. Returns null if not found.
+export async function getFileContent(
+  path: string,
+  ref: string,
+): Promise<string | null> {
+  const r = repo();
+  const res = await fetch(
+    `${GH}/repos/${r.path}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref)}`,
+    { headers: { ...headers(), Accept: "application/vnd.github.raw" } },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub ${res.status} contents ${path}`);
+  return res.text();
+}
+
+// ---------- write helpers (branch + commit + PR) ----------
+
+export async function createBranch(name: string, fromSha: string): Promise<void> {
+  const r = repo();
+  await gh(`/repos/${r.path}/git/refs`, {
+    method: "POST",
+    body: JSON.stringify({ ref: `refs/heads/${name}`, sha: fromSha }),
+  });
+}
+
+export type FileEdit = { path: string; content: string };
+
+// Commit a set of file edits onto `branch` (already created at baseSha), using
+// the Git Data API: blobs -> tree -> commit -> move ref. Returns the new sha.
+export async function commitFiles(
+  branch: string,
+  baseSha: string,
+  files: FileEdit[],
+  message: string,
+): Promise<string> {
+  const r = repo();
+  const baseCommit = await gh<{ tree: { sha: string } }>(
+    `/repos/${r.path}/git/commits/${baseSha}`,
+  );
+
+  const tree = await Promise.all(
+    files.map(async (f) => {
+      const blob = await gh<{ sha: string }>(`/repos/${r.path}/git/blobs`, {
+        method: "POST",
+        body: JSON.stringify({ content: f.content, encoding: "utf-8" }),
+      });
+      return { path: f.path, mode: "100644", type: "blob", sha: blob.sha };
+    }),
+  );
+
+  const newTree = await gh<{ sha: string }>(`/repos/${r.path}/git/trees`, {
+    method: "POST",
+    body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree }),
+  });
+
+  const commit = await gh<{ sha: string }>(`/repos/${r.path}/git/commits`, {
+    method: "POST",
+    body: JSON.stringify({ message, tree: newTree.sha, parents: [baseSha] }),
+  });
+
+  await gh(`/repos/${r.path}/git/refs/heads/${encodeURIComponent(branch)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sha: commit.sha, force: false }),
+  });
+
+  return commit.sha;
+}
+
+export async function openPullRequest(input: {
+  head: string;
+  base: string;
+  title: string;
+  body: string;
+}): Promise<{ number: number; html_url: string }> {
+  const r = repo();
+  return gh(`/repos/${r.path}/pulls`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 // Search for a PR that references our REQ-<id> in title or body.
 export async function findPullRequestByReqId(
   reqId: string,

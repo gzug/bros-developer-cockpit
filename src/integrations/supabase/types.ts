@@ -101,6 +101,116 @@ export type Database = {
         }
         Relationships: []
       }
+      app_config: {
+        Row: {
+          allowed_paths: string[]
+          bdc_paused: boolean
+          forbidden_paths: string[]
+          id: boolean
+          pause_reason: string | null
+          prompt_template: string
+          routing_map: Json
+          template_version: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_paths?: string[]
+          bdc_paused?: boolean
+          forbidden_paths?: string[]
+          id?: boolean
+          pause_reason?: string | null
+          prompt_template?: string
+          routing_map?: Json
+          template_version?: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_paths?: string[]
+          bdc_paused?: boolean
+          forbidden_paths?: string[]
+          id?: boolean
+          pause_reason?: string | null
+          prompt_template?: string
+          routing_map?: Json
+          template_version?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      task_log: {
+        Row: {
+          attempt_number: number
+          base_sha: string | null
+          blocked_reason: string | null
+          created_at: string
+          escalated_from: string | null
+          id: string
+          idea_id: string | null
+          intent: Database["public"]["Enums"]["contribution_intent"] | null
+          model_requested: string | null
+          model_served: string | null
+          pr_number: number | null
+          pr_url: string | null
+          provider: string | null
+          req_id: string | null
+          template_version: string | null
+          tier: string | null
+          tokens_completion: number | null
+          tokens_prompt: number | null
+          validate_result: string | null
+        }
+        Insert: {
+          attempt_number?: number
+          base_sha?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          escalated_from?: string | null
+          id?: string
+          idea_id?: string | null
+          intent?: Database["public"]["Enums"]["contribution_intent"] | null
+          model_requested?: string | null
+          model_served?: string | null
+          pr_number?: number | null
+          pr_url?: string | null
+          provider?: string | null
+          req_id?: string | null
+          template_version?: string | null
+          tier?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          validate_result?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          base_sha?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          escalated_from?: string | null
+          id?: string
+          idea_id?: string | null
+          intent?: Database["public"]["Enums"]["contribution_intent"] | null
+          model_requested?: string | null
+          model_served?: string | null
+          pr_number?: number | null
+          pr_url?: string | null
+          provider?: string | null
+          req_id?: string | null
+          template_version?: string | null
+          tier?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          validate_result?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_log_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

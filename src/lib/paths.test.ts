@@ -1,0 +1,62 @@
+import { expect, test } from "bun:test";
+import { isPathAllowed, globMatch, isGlob } from "./paths.server";
+
+const rules = {
+  allowed: [
+    "apps/mobile/src/**",
+    // exact carve-out inside an otherwise-forbidden tree:
+    "apps/mobile/src/data/reviewerContent.ts",
+  ],
+  forbidden: [
+    "apps/mobile/src/data/**",
+    "apps/mobile/android/**",
+    "**/*.gradle",
+    "**/AndroidManifest.xml",
+    "**/*.sql",
+    "**/.env*",
+  ],
+};
+
+test("allow glob matches a normal UI file", () => {
+  expect(isPathAllowed("apps/mobile/src/screens/Home.tsx", rules)).toBe(true);
+});
+
+test("exact allow WINS over a broad forbidden glob", () => {
+  expect(isPathAllowed("apps/mobile/src/data/reviewerContent.ts", rules)).toBe(true);
+});
+
+test("glob allow does NOT override a forbidden glob", () => {
+  // src/** allows, but src/data/** forbids — forbidden wins for non-exact paths.
+  expect(isPathAllowed("apps/mobile/src/data/secrets.ts", rules)).toBe(false);
+});
+
+test("forbidden native/gradle rejected", () => {
+  expect(isPathAllowed("apps/mobile/android/app/build.gradle", rules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/android/app/src/main/AndroidManifest.xml", rules)).toBe(false);
+});
+
+test("forbidden sql + env rejected anywhere", () => {
+  expect(isPathAllowed("apps/mobile/supabase/migrations/x.sql", rules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/.env.local", rules)).toBe(false);
+});
+
+test("path outside the allow list is rejected", () => {
+  expect(isPathAllowed("packages/other/x.ts", rules)).toBe(false);
+  expect(isPathAllowed("README.md", rules)).toBe(false);
+});
+
+test("leading slashes are normalized", () => {
+  expect(isPathAllowed("/apps/mobile/src/screens/Home.tsx", rules)).toBe(true);
+});
+
+test("empty rules reject everything", () => {
+  expect(isPathAllowed("apps/mobile/src/x.tsx", { allowed: [], forbidden: [] })).toBe(false);
+});
+
+test("globMatch ** spans path separators, * does not", () => {
+  expect(globMatch("a/b/c.ts", "a/**")).toBe(true);
+  expect(globMatch("a/b/c.ts", "a/*")).toBe(false);
+  expect(globMatch("a/c.ts", "a/*")).toBe(true);
+  expect(isGlob("a/**")).toBe(true);
+  expect(isGlob("a/b.ts")).toBe(false);
+});

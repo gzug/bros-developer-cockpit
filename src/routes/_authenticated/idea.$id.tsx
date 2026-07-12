@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { toast } from "sonner";
 import {
   getContribution,
   refreshContributionStatus,
+  processContribution,
 } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/idea/$id")({
@@ -35,6 +37,29 @@ function IdeaPage() {
     queryFn: () => getContribution({ data: { id } }),
     refetchInterval: 15_000,
   });
+
+  // When the idea is still 'generating', kick the engine exactly once. The
+  // engine call is long-running; on completion we refetch to show the result.
+  const engineStarted = useRef(false);
+  const process = useMutation({
+    mutationFn: () => processContribution({ data: { id } }),
+    onSettled: async () => {
+      await qc.invalidateQueries({ queryKey: ["contribution", id] });
+      await qc.invalidateQueries({ queryKey: ["contributions"] });
+    },
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Engine-Fehler."),
+  });
+  useEffect(() => {
+    if (
+      q.data?.status === "generating" &&
+      !engineStarted.current &&
+      !process.isPending
+    ) {
+      engineStarted.current = true;
+      process.mutate();
+    }
+  }, [q.data?.status, process]);
 
   const refresh = useMutation({
     mutationFn: () => refreshContributionStatus({ data: { id } }),
@@ -117,17 +142,21 @@ function IdeaPage() {
                   >
                     {refresh.isPending ? "Prüfe…" : "Stand auffrischen"}
                   </Button>
-                  {q.data.github_issue_url && (
-                    <a
-                      href={q.data.github_issue_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-muted-foreground underline"
-                    >
-                      Aufgabe für den Bruder öffnen
-                    </a>
-                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Generating — engine is building the change */}
+            {q.data.status === "generating" && (
+              <div className="mt-6 rounded-md border border-border bg-card p-4 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                  <p className="font-medium">Ich baue das gerade…</p>
+                </div>
+                <p className="mt-2 text-muted-foreground">
+                  Das dauert einen Moment. Die Seite aktualisiert sich von selbst,
+                  sobald es fertig ist.
+                </p>
               </div>
             )}
 

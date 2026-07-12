@@ -60,6 +60,31 @@ export const submitContribution = createServerFn({ method: "POST" })
     return runSubmitContribution(context.supabase, context.userId, data);
   });
 
+// ---------- process: run the engine (OpenRouter -> PR) for one idea ----------
+// Guarded: only the allow-listed user, only an idea still in 'generating'.
+// Idempotent-ish: once it succeeds the status leaves 'generating', so a repeat
+// call is a no-op.
+
+export const processContribution = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => IdInput.parse(input))
+  .handler(async ({ data, context }) => {
+    assertAllowedEmail(context.claims as { email?: string | null });
+    const { data: idea, error } = await context.supabase
+      .from("ideas")
+      .select("id, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!idea) throw new Error("Nicht gefunden.");
+    if (idea.status !== "generating") {
+      return { started: false as const, status: idea.status };
+    }
+    const { processTask } = await import("./engine.server");
+    const result = await processTask(data.id);
+    return { started: true as const, result };
+  });
+
 
 // ---------- list ----------
 
