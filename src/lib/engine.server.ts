@@ -93,6 +93,11 @@ function wishText(idea: IdeaRow): string {
     .join("\n");
 }
 
+function sumCost(a: number | null, b: number | null): number | null {
+  if (a == null && b == null) return null;
+  return (a ?? 0) + (b ?? 0);
+}
+
 function safeJsonParse<T>(text: string): T | null {
   // Models sometimes wrap JSON in ```json fences or prose. Extract the first
   // balanced {...} block as a fallback.
@@ -128,7 +133,7 @@ async function runPlanner(
   tier: Tier,
   wish: string,
   candidatePaths: string[],
-): Promise<{ files: string[]; tokensPrompt: number | null; tokensCompletion: number | null; modelServed: string; provider: string | null } | null> {
+): Promise<{ files: string[]; tokensPrompt: number | null; tokensCompletion: number | null; costUsd: number | null; modelServed: string; provider: string | null } | null> {
   const res = await callModel({
     tier,
     responseJson: true,
@@ -146,6 +151,7 @@ async function runPlanner(
     files: parsed.files.slice(0, MAX_CONTEXT_FILES),
     tokensPrompt: res.tokensPrompt,
     tokensCompletion: res.tokensCompletion,
+    costUsd: res.costUsd,
     modelServed: res.modelServed,
     provider: res.provider,
   };
@@ -155,7 +161,7 @@ async function runEditor(
   tier: Tier,
   wish: string,
   files: Array<{ path: string; content: string }>,
-): Promise<{ out: EditorOut; tokensPrompt: number | null; tokensCompletion: number | null; modelServed: string; provider: string | null } | null> {
+): Promise<{ out: EditorOut; tokensPrompt: number | null; tokensCompletion: number | null; costUsd: number | null; modelServed: string; provider: string | null } | null> {
   const fileBlocks = files
     .map((f) => `=== FILE: ${f.path} ===\n${f.content}`)
     .join("\n\n");
@@ -177,6 +183,7 @@ async function runEditor(
     out: parsed,
     tokensPrompt: res.tokensPrompt,
     tokensCompletion: res.tokensCompletion,
+    costUsd: res.costUsd,
     modelServed: res.modelServed,
     provider: res.provider,
   };
@@ -186,12 +193,39 @@ export type ProcessResult =
   | { ok: true; prNumber: number; prUrl: string }
   | { ok: false; status: "blocked" | "failed"; reason: string };
 
+async function checkAutoPause(): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("ideas")
+    .select("status")
+    .in("status", ["sent", "shipped", "live", "reverted"])
+    .order("updated_at", { ascending: false })
+    .limit(10);
+  if (!data || data.length < 3) return false;
+  const reverts = data.filter((r) => r.status === "reverted").length;
+  if (reverts >= 2) {
+    await supabaseAdmin
+      .from("app_config")
+      .update({ bdc_paused: true, pause_reason: `Auto-Pause: ${reverts} von ${data.length} letzten PRs reverted.` })
+      .eq("id", true);
+    return true;
+  }
+  return false;
+}
+
 export async function processTask(ideaId: string): Promise<ProcessResult> {
   const idea = await loadIdea(ideaId);
   const config = await loadConfig();
   const rules = { allowed: config.allowed, forbidden: config.forbidden };
   const intent = (idea.intent ?? "idea") as Intent;
   const reqId = idea.req_id ?? "REQ-UNKNOWN";
+
+  // Auto-pause: if 2+ of the last 10 shipped PRs were reverted, stop.
+  if (!config.bdcPaused && (await checkAutoPause())) {
+    const reason = "Auto-Pause: zu viele Reverts in letzter Zeit. Dein Bruder schaut sich das an.";
+    await setIdea(ideaId, { status: "blocked", block_reason: reason });
+    await logTask({ idea_id: ideaId, req_id: reqId, intent, validate_result: "auto_paused", blocked_reason: reason, template_version: config.templateVersion });
+    return { ok: false, status: "blocked", reason };
+  }
 
   // Kill-switch.
   if (config.bdcPaused) {
@@ -247,7 +281,7 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
       const planFiles = (plan?.files ?? []).filter((p) => isPathAllowed(p, rules) && candidates.includes(p));
       if (!plan || planFiles.length === 0) {
         lastReason = "Modell konnte keine passenden Dateien wählen.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_requested: undefined, model_served: plan?.modelServed, provider: plan?.provider ?? null, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: plan?.tokensPrompt ?? null, tokens_completion: plan?.tokensCompletion ?? null, validate_result: "parse_fail", blocked_reason: lastReason });
+        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_requested: undefined, model_served: plan?.modelServed, provider: plan?.provider ?? null, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: plan?.tokensPrompt ?? null, tokens_completion: plan?.tokensCompletion ?? null, cost_usd: plan?.costUsd ?? null, validate_result: "parse_fail", blocked_reason: lastReason });
         escalatedFrom = thisTier;
         tier = nextTier(thisTier);
         continue;
@@ -270,7 +304,7 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
       const edited = await runEditor(thisTier, wish, files);
       if (!edited) {
         lastReason = "Modell lieferte keinen brauchbaren Patch.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: undefined, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, validate_result: "parse_fail", blocked_reason: lastReason });
+        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: undefined, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, cost_usd: plan.costUsd, validate_result: "parse_fail", blocked_reason: lastReason });
         escalatedFrom = thisTier;
         tier = nextTier(thisTier);
         continue;
@@ -296,7 +330,7 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
       }
       if (pathReject || editList.length === 0) {
         lastReason = "Patch wollte eine gesperrte Datei ändern — abgelehnt.";
-        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: edited.tokensPrompt, tokens_completion: edited.tokensCompletion, validate_result: "path_reject", blocked_reason: lastReason });
+        await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: edited.tokensPrompt, tokens_completion: edited.tokensCompletion, cost_usd: sumCost(plan.costUsd, edited.costUsd), validate_result: "path_reject", blocked_reason: lastReason });
         escalatedFrom = thisTier;
         tier = nextTier(thisTier);
         continue;
@@ -327,7 +361,7 @@ export async function processTask(ideaId: string): Promise<ProcessResult> {
       });
 
       await setIdea(ideaId, { status: "sent", github_pr_number: pr.number, github_pr_url: pr.html_url, error_message: null });
-      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: edited.tokensPrompt, tokens_completion: edited.tokensCompletion, validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url });
+      await logTask({ idea_id: ideaId, req_id: reqId, intent, tier: thisTier, model_served: edited.modelServed, provider: edited.provider, attempt_number: attempt, escalated_from: escalatedFrom, base_sha: baseSha, template_version: config.templateVersion, tokens_prompt: edited.tokensPrompt, tokens_completion: edited.tokensCompletion, cost_usd: sumCost(plan.costUsd, edited.costUsd), validate_result: "ok", pr_number: pr.number, pr_url: pr.html_url });
       return { ok: true, prNumber: pr.number, prUrl: pr.html_url };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : String(e);

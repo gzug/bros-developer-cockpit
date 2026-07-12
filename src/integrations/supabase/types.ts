@@ -142,6 +142,7 @@ export type Database = {
           attempt_number: number
           base_sha: string | null
           blocked_reason: string | null
+          cost_usd: number | null
           created_at: string
           escalated_from: string | null
           id: string
@@ -163,6 +164,7 @@ export type Database = {
           attempt_number?: number
           base_sha?: string | null
           blocked_reason?: string | null
+          cost_usd?: number | null
           created_at?: string
           escalated_from?: string | null
           id?: string
@@ -184,6 +186,7 @@ export type Database = {
           attempt_number?: number
           base_sha?: string | null
           blocked_reason?: string | null
+          cost_usd?: number | null
           created_at?: string
           escalated_from?: string | null
           id?: string

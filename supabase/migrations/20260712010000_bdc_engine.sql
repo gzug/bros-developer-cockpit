@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.task_log (
   template_version text,
   tokens_prompt integer,
   tokens_completion integer,
+  cost_usd numeric,                   -- real spend from OpenRouter usage accounting
   validate_result text,               -- 'ok' | 'parse_fail' | 'path_reject' | 'error'
   blocked_reason text,
   pr_number integer,

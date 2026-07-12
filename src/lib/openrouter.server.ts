@@ -35,6 +35,7 @@ export type ModelResult = {
   provider: string | null;
   tokensPrompt: number | null;
   tokensCompletion: number | null;
+  costUsd: number | null;
 };
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -68,6 +69,9 @@ export async function callModel(opts: {
     messages: opts.messages,
     max_tokens: opts.maxTokens ?? 4096,
     temperature: opts.temperature ?? 0.2,
+    // Ask OpenRouter to include real cost (USD) in the usage block, same number
+    // the Activity page shows.
+    usage: { include: true },
   };
   if (opts.responseJson) body.response_format = { type: "json_object" };
 
@@ -103,7 +107,7 @@ export async function callModel(opts: {
         model?: string;
         provider?: string;
         choices?: Array<{ message?: { content?: string } }>;
-        usage?: { prompt_tokens?: number; completion_tokens?: number };
+        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
       };
       const content = json.choices?.[0]?.message?.content ?? "";
       if (!content) throw new Error("OpenRouter returned empty content");
@@ -115,6 +119,7 @@ export async function callModel(opts: {
         provider: json.provider ?? null,
         tokensPrompt: json.usage?.prompt_tokens ?? null,
         tokensCompletion: json.usage?.completion_tokens ?? null,
+        costUsd: typeof json.usage?.cost === "number" ? json.usage.cost : null,
       };
     } catch (e) {
       lastErr = e;

@@ -21,13 +21,46 @@ const STATUS_TEXT: Record<string, string> = {
   reverted: "Wieder zurückgenommen",
   saved: "Gespeichert — Bruder kümmert sich",
   blocked: "Gespeichert — Bruder guckt drüber",
-  failed: "Konnte nicht abgeschickt werden",
-  generating: "Wird verarbeitet…",
+  failed: "Hat nicht geklappt",
+  generating: "Wird gebaut…",
   ready: "Bereit",
-  shipping: "Wird ausgerollt",
+  shipping: "Wird gebaut…",
   shipped: "In der App drin",
   blocked_native: "Muss der Bruder von Hand machen",
 };
+
+// Traffic light: green = done/in the app, amber = on its way, red = stopped/needs attention.
+type Light = "green" | "amber" | "red";
+const STATUS_LIGHT: Record<string, Light> = {
+  live: "green",
+  shipped: "green",
+  generating: "amber",
+  shipping: "amber",
+  sent: "amber",
+  reviewing: "amber",
+  ready: "amber",
+  draft: "amber",
+  reverted: "red",
+  failed: "red",
+  blocked: "red",
+  blocked_native: "red",
+  saved: "red",
+};
+const LIGHT_CLASS: Record<Light, string> = {
+  green: "bg-emerald-500",
+  amber: "bg-amber-500",
+  red: "bg-rose-500",
+};
+
+function StatusDot({ status }: { status: string }) {
+  const light = STATUS_LIGHT[status] ?? "amber";
+  return (
+    <span
+      className={"h-2.5 w-2.5 shrink-0 rounded-full " + LIGHT_CLASS[light]}
+      aria-hidden
+    />
+  );
+}
 
 function Dashboard() {
   const router = useRouter();
@@ -48,21 +81,8 @@ function Dashboard() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Deine Wünsche</h1>
             <p className="mt-1 text-xs text-muted-foreground">
-              Du hast {usage.data?.count ?? 0} Wünsche in den letzten{" "}
-              {usage.data?.windowHours ?? 5} Stunden abgeschickt.{" "}
-              <span className="opacity-70">
-                (Codex Plus schafft ungefähr ein paar Dutzend pro 5 h — genaue
-                Zahl im{" "}
-                <a
-                  href="https://chatgpt.com/#settings"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                >
-                  Codex-Konto
-                </a>
-                .)
-              </span>
+              {usage.data?.count ?? 0} Wünsche in den letzten{" "}
+              {usage.data?.windowHours ?? 5} Stunden.
             </p>
           </div>
           <Button asChild size="sm">
@@ -90,7 +110,10 @@ function Dashboard() {
                 className="flex w-full flex-col rounded-md border border-border bg-card p-3 text-left hover:bg-accent"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="truncate text-sm font-medium">{it.title}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <StatusDot status={it.status} />
+                    <span className="truncate text-sm font-medium">{it.title}</span>
+                  </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
                     {new Date(it.created_at).toLocaleDateString("de-DE", {
                       day: "2-digit",
@@ -98,7 +121,7 @@ function Dashboard() {
                     })}
                   </span>
                 </div>
-                <span className="mt-1 text-xs text-muted-foreground">
+                <span className="mt-1 pl-[18px] text-xs text-muted-foreground">
                   {STATUS_TEXT[it.status] ?? it.status}
                 </span>
               </button>

@@ -7,35 +7,34 @@ import { findPullRequestByReqId } from "./github.server";
 import { INTENT_LABEL, runSubmitContribution } from "./contribution.server";
 import type { Database } from "@/integrations/supabase/types";
 
-// ---------- login: request magic link (allowlist enforced server-side) ----------
-// Always returns { ok: true } so the endpoint never reveals which email is
-// allowed. The OTP is only actually dispatched when the submitted email
-// matches ALLOWED_EMAIL.
+// ---------- login: PIN/password (no magic link, no email field) ----------
+// The brother types only a PIN. The server pairs it with ALLOWED_EMAIL and
+// calls signInWithPassword. Generic error on failure (never reveals which
+// email is configured).
 
-const RequestLoginInput = z.object({
-  email: z.string().trim().toLowerCase().email().max(254),
-  redirectTo: z.string().url(),
+const LoginInput = z.object({
+  pin: z.string().min(1).max(64),
 });
 
-export const requestLoginLink = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => RequestLoginInput.parse(input))
+export const loginWithPin = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => LoginInput.parse(input))
   .handler(async ({ data }) => {
-    try {
-      if (data.email === getAllowedEmail()) {
-        const supa = createClient<Database>(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_PUBLISHABLE_KEY!,
-          { auth: { persistSession: false, autoRefreshToken: false } },
-        );
-        await supa.auth.signInWithOtp({
-          email: data.email,
-          options: { emailRedirectTo: data.redirectTo, shouldCreateUser: true },
-        });
-      }
-    } catch {
-      // swallow — response stays generic
+    const supa = createClient<Database>(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data: result, error } = await supa.auth.signInWithPassword({
+      email: getAllowedEmail(),
+      password: data.pin,
+    });
+    if (error || !result.session) {
+      throw new Error("Falscher Code.");
     }
-    return { ok: true as const };
+    return {
+      access_token: result.session.access_token,
+      refresh_token: result.session.refresh_token,
+    };
   });
 
 // ---------- schema ----------
@@ -182,6 +181,75 @@ export const refreshContributionStatus = createServerFn({ method: "POST" })
       await supabase.from("ideas").update({ last_polled_at: new Date().toISOString() }).eq("id", idea.id);
     }
     return { changed, status: nextStatus, prUrl: pr.html_url };
+  });
+
+// ---------- owner KPI (hidden route, not visible to the brother) ----------
+
+export const getOwnerKpis = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    assertAllowedEmail(context.claims as { email?: string | null });
+    const { supabase } = context;
+
+    const [logsRes, ideasRes] = await Promise.all([
+      supabase.from("task_log").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("ideas").select("id, status, intent, created_at, updated_at").order("created_at", { ascending: false }).limit(200),
+    ]);
+    if (logsRes.error) throw new Error(logsRes.error.message);
+    if (ideasRes.error) throw new Error(ideasRes.error.message);
+
+    const logs = logsRes.data ?? [];
+    const ideas = ideasRes.data ?? [];
+
+    const totalTasks = logs.length;
+    const okTasks = logs.filter((l) => l.validate_result === "ok").length;
+    const escalated = logs.filter((l) => l.escalated_from != null).length;
+    const totalTokensPrompt = logs.reduce((s, l) => s + (l.tokens_prompt ?? 0), 0);
+    const totalTokensCompletion = logs.reduce((s, l) => s + (l.tokens_completion ?? 0), 0);
+    const totalCostUsd = logs.reduce((s, l) => s + (l.cost_usd ?? 0), 0);
+
+    const tierCounts: Record<string, number> = {};
+    const modelCounts: Record<string, number> = {};
+    // Per-model usage, OpenRouter-Activity style: requests, tokens, spend.
+    const modelUsage: Record<string, { requests: number; tokens: number; costUsd: number }> = {};
+    for (const l of logs) {
+      if (l.tier) tierCounts[l.tier] = (tierCounts[l.tier] ?? 0) + 1;
+      if (l.model_served) {
+        modelCounts[l.model_served] = (modelCounts[l.model_served] ?? 0) + 1;
+        const m = (modelUsage[l.model_served] ??= { requests: 0, tokens: 0, costUsd: 0 });
+        m.requests += 1;
+        m.tokens += (l.tokens_prompt ?? 0) + (l.tokens_completion ?? 0);
+        m.costUsd += l.cost_usd ?? 0;
+      }
+    }
+
+    const shipped = ideas.filter((i) => ["sent", "shipped", "live", "reverted"].includes(i.status));
+    const reverted = shipped.filter((i) => i.status === "reverted").length;
+    const reworkFreeRate = shipped.length > 0 ? ((shipped.length - reverted) / shipped.length) * 100 : null;
+
+    const intentCounts: Record<string, number> = {};
+    for (const i of ideas) {
+      const k = i.intent ?? "unknown";
+      intentCounts[k] = (intentCounts[k] ?? 0) + 1;
+    }
+
+    return {
+      totalTasks,
+      okTasks,
+      successRate: totalTasks > 0 ? Math.round((okTasks / totalTasks) * 100) : null,
+      escalated,
+      totalTokensPrompt,
+      totalTokensCompletion,
+      totalCostUsd,
+      tierCounts,
+      modelCounts,
+      modelUsage,
+      intentCounts,
+      totalIdeas: ideas.length,
+      shippedCount: shipped.length,
+      revertedCount: reverted,
+      reworkFreeRate: reworkFreeRate != null ? Math.round(reworkFreeRate) : null,
+    };
   });
 
 // Convenience re-export for UI labels.
