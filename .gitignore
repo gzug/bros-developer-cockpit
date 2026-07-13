@@ -38,3 +38,5 @@ src/routeTree.gen.ts
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*
