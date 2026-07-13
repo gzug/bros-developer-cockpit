@@ -130,6 +130,10 @@ export function canTransitionIdeaStatus(from: DCIdeaStatus, to: DCIdeaStatus): b
   }
 }
 
+export function canConfirmIdeaLive(pr?: Pick<PullState, "merged"> | null): boolean {
+  return pr?.merged === true;
+}
+
 export function describeIdeaStatus(status: DCIdeaStatus): string {
   switch (status) {
     case "submitted":

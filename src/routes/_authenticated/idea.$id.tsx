@@ -118,7 +118,7 @@ function IdeaPage() {
                       onClick={() => updateStatus.mutate("live")}
                       disabled={updateStatus.isPending}
                     >
-                      {updateStatus.isPending ? "Saving…" : "Confirm live"}
+                      {updateStatus.isPending ? "Saving…" : "Confirm live after ship"}
                     </Button>
                   )}
                   <Button
