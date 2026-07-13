@@ -43,7 +43,7 @@ export function checkGuardrails(input: {
       ok: false,
       kind: "destructive",
       message:
-        "Die App löscht deine Gesundheitsdaten nie. Meintest du eher verstecken oder archivieren? Formulier es gerne noch mal um — oder wir speichern's so, wie du's geschrieben hast, als Idee für deinen Bruder.",
+        "The app never deletes your health data. Did you mean hide or archive?",
     };
   }
 
@@ -52,7 +52,7 @@ export function checkGuardrails(input: {
       ok: false,
       kind: "scope",
       message:
-        "Das klingt nach etwas, das nur dein Bruder direkt anfassen kann (Login, Verbindungen, Server). Ich hab's als Idee gespeichert — er kümmert sich darum.",
+        "That sounds like something only your brother can handle directly.",
     };
   }
 
@@ -61,7 +61,7 @@ export function checkGuardrails(input: {
       ok: false,
       kind: "reask",
       message:
-        "Formulier's bitte in eigenen Worten und ohne Anweisungen an eine KI — beschreib einfach, was du siehst und was du dir wünschst. Ich hab die Version so als Idee gespeichert.",
+        "Please phrase it in your own words without instructions to an AI.",
     };
   }
 

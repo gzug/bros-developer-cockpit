@@ -86,7 +86,7 @@ async function runEditor(tier: Tier, wish: string, files: Array<{ path: string; 
 }
 
 function wishText(title: string, intent: Intent, description: string): string {
-  return [`Intent: ${intent}`, `Titel: ${title}`, `Beschreibung: ${description}`].join("\n");
+  return [`Intent: ${intent}`, `Title: ${title}`, `Description: ${description}`].join("\n");
 }
 
 function totalCost(...values: Array<number | null>): number {
@@ -98,19 +98,19 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
   const { idea, pr } = await getIdeaWithPull(issueNumber);
 
   if (paused) {
-    const reason = "BDC ist gerade pausiert.";
+    const reason = "BDC is currently paused.";
     await setIdeaStatus(issueNumber, "blocked", idea.intent);
     await addIdeaComment(issueNumber, reason);
     return { ok: false, status: "blocked", reason };
   }
 
   if (pr) {
-    return { ok: false, status: "blocked", reason: "Dazu gibt es bereits einen Pull Request." };
+    return { ok: false, status: "blocked", reason: "There is already a pull request for this idea." };
   }
 
   const intentRoute = (config.routingMap[idea.intent] ?? "tier1") as RoutingValue;
   if (intentRoute === "review") {
-    const reason = "Diese Idee ist für manuelles Review vorgemerkt.";
+    const reason = "This idea is flagged for manual review.";
     await setIdeaStatus(issueNumber, "blocked", idea.intent);
     await addIdeaComment(issueNumber, reason);
     return { ok: false, status: "blocked", reason };
@@ -128,7 +128,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
 
   const wish = wishText(idea.title, idea.intent, idea.description);
   let tier: Tier | null = intentRoute;
-  let lastError = "Kein Patch erzeugt.";
+  let lastError = "No patch was generated.";
 
   while (tier) {
     try {
@@ -138,7 +138,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
         isPathAllowed(path, { allowed: config.allowed, forbidden: config.forbidden }),
       );
       if (!plan || filesToRead.length === 0) {
-        lastError = "Keine passenden Dateien gefunden.";
+        lastError = "No matching files were found.";
         tier = nextTier(tier);
         continue;
       }
@@ -150,7 +150,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
 
       const edited = await runEditor(tier, wish, files);
       if (!edited || edited.parsed.edits.length === 0) {
-        lastError = "Kein brauchbarer Patch.";
+        lastError = "No usable patch was returned.";
         tier = nextTier(tier);
         continue;
       }
@@ -160,7 +160,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
         .filter((edit) => fetched.has(edit.path))
         .map((edit) => ({ path: edit.path, content: edit.content }));
       if (edits.length === 0) {
-        lastError = "Patch ausserhalb des erlaubten Bereichs.";
+        lastError = "The patch touched files outside the allowed scope.";
         tier = nextTier(tier);
         continue;
       }
@@ -207,6 +207,6 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
   }
 
   await setIdeaStatus(issueNumber, "blocked", idea.intent);
-  await addIdeaComment(issueNumber, `Automatische Verarbeitung fehlgeschlagen: ${lastError}`);
+  await addIdeaComment(issueNumber, `Automatic processing failed: ${lastError}`);
   return { ok: false, status: "failed", reason: lastError };
 }

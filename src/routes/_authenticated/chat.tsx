@@ -11,10 +11,10 @@ type Intent = "wording" | "look" | "wrong" | "idea";
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; opener: string }> = [
-  { id: "wording", title: "Wording ändern", hint: "Ein Wort oder Satz passt nicht.", emoji: "✍️", opener: "Was möchtest du anders formuliert haben?" },
-  { id: "look", title: "Aussehen ändern", hint: "Farbe, Größe oder Platzierung.", emoji: "🎨", opener: "Was soll optisch anders werden?" },
-  { id: "wrong", title: "Etwas ist kaputt", hint: "Etwas funktioniert nicht richtig.", emoji: "🐞", opener: "Was läuft gerade schief?" },
-  { id: "idea", title: "Neue Idee", hint: "Etwas fehlt komplett.", emoji: "💡", opener: "Welche neue Idee hast du?" },
+  { id: "wording", title: "Change wording", hint: "A word or sentence doesn't fit.", emoji: "✍️", opener: "What would you like rephrased?" },
+  { id: "look", title: "Change appearance", hint: "Color, size, or placement.", emoji: "🎨", opener: "What should look different?" },
+  { id: "wrong", title: "Something is broken", hint: "Something isn't working right.", emoji: "🐞", opener: "What's going wrong?" },
+  { id: "idea", title: "New idea", hint: "Something is completely missing.", emoji: "💡", opener: "What new idea do you have?" },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/chat")({
 });
 
 function splitSuggestion(text: string): { reply: string; suggestion: string | null } {
-  const marker = "[VORSCHLAG]";
+  const marker = "Refined version:";
   const index = text.indexOf(marker);
   if (index < 0) return { reply: text, suggestion: null };
   return {
@@ -32,7 +32,7 @@ function splitSuggestion(text: string): { reply: string; suggestion: string | nu
 }
 
 function buildTitle(intent: Intent, text: string): string {
-  const prefix = INTENTS.find((entry) => entry.id === intent)?.title ?? "Idee";
+  const prefix = INTENTS.find((entry) => entry.id === intent)?.title ?? "Idea";
   return `${prefix}: ${text.replace(/\s+/g, " ").trim()}`.slice(0, 80);
 }
 
@@ -60,7 +60,7 @@ function ChatPage() {
       setSuggestion(nextSuggestion);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Konnte nicht antworten.");
+      toast.error(error instanceof Error ? error.message : "Could not respond.");
     },
   });
 
@@ -77,7 +77,7 @@ function ChatPage() {
       setSubmittedIdeaId(idea.id);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Konnte nicht einreichen.");
+      toast.error(error instanceof Error ? error.message : "Could not submit.");
     },
   });
 
@@ -113,8 +113,8 @@ function ChatPage() {
       <main className="mx-auto flex min-h-[calc(100vh-57px)] max-w-2xl flex-col px-4 py-4">
         {!intent && (
           <div className="grid gap-2">
-            <h1 className="text-xl font-semibold">Was für ein Wunsch?</h1>
-            <p className="text-sm text-muted-foreground">Wähl die Richtung, dann reden wir kurz darüber.</p>
+            <h1 className="text-xl font-semibold">What kind of wish?</h1>
+            <p className="text-sm text-muted-foreground">Pick a direction, then we'll chat about it.</p>
             {INTENTS.map((entry) => (
               <button
                 key={entry.id}
@@ -142,7 +142,7 @@ function ChatPage() {
                 <p className="text-sm text-muted-foreground">{selectedIntent?.hint}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setIntent(null)}>
-                Wechseln
+                Switch
               </Button>
             </div>
 
@@ -178,11 +178,11 @@ function ChatPage() {
 
               {suggestion && (
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Vorschlag</div>
+                  <div className="text-xs uppercase text-muted-foreground">Suggestion</div>
                   <p className="mt-2 whitespace-pre-wrap text-sm">{suggestion}</p>
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Button onClick={() => submitFinal(suggestion)} disabled={createIdeaMutation.isPending}>
-                      Vorschlag übernehmen
+                      Accept suggestion
                     </Button>
                     <Button
                       variant="outline"
@@ -192,7 +192,7 @@ function ChatPage() {
                       }}
                       disabled={createIdeaMutation.isPending}
                     >
-                      Bei meinem Text bleiben
+                      Keep my text
                     </Button>
                   </div>
                 </div>
@@ -200,8 +200,8 @@ function ChatPage() {
 
               {submittedIdeaId && createIdeaMutation.isSuccess && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
-                  Dein Wunsch wurde eingereicht! 🎉{" "}
-                  <Link to="/dashboard" className="underline">Zum Dashboard</Link>
+                  Your wish has been submitted!{" "}
+                  <Link to="/dashboard" className="underline">Go to dashboard</Link>
                 </div>
               )}
             </div>
@@ -211,12 +211,12 @@ function ChatPage() {
                 <textarea
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Beschreib deinen Wunsch in eigenen Worten…"
+                  placeholder="Describe your wish in your own words…"
                   className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
                   rows={2}
                 />
                 <Button onClick={sendMessage} disabled={refine.isPending || !input.trim()}>
-                  Senden
+                  Send
                 </Button>
               </div>
             </div>

@@ -25,24 +25,24 @@ function OwnerKpiPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
           ← Dashboard
         </Link>
         <h1 className="mt-3 text-xl font-semibold">Owner KPI</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Übersicht aus GitHub-Issues und Engine-Kommentaren.
+          Overview from GitHub Issues and engine comments.
         </p>
 
         {query.data && (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Stat label="Ideen gesamt" value={query.data.totalIdeas} />
+            <Stat label="Total ideas" value={query.data.totalIdeas} />
             <Stat label="Live" value={query.data.liveCount} />
-            <Stat label="Blockiert" value={query.data.blockedCount} />
-            <Stat label="Gesendet" value={query.data.sentCount} />
-            <Stat label="Offen" value={query.data.submittedCount} />
-            <Stat label="Geschlossen" value={query.data.closedCount} />
-            <Stat label="Kosten gesamt" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
+            <Stat label="Blocked" value={query.data.blockedCount} />
+            <Stat label="Sent" value={query.data.sentCount} />
+            <Stat label="Open" value={query.data.submittedCount} />
+            <Stat label="Closed" value={query.data.closedCount} />
+            <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
           </div>
         )}
       </main>

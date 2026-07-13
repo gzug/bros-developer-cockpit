@@ -33,7 +33,7 @@ export type RepoComment = {
 
 function headers(extra?: HeadersInit): HeadersInit {
   const token = process.env.GITHUB_TOKEN;
-  if (!token) throw new Error("GITHUB_TOKEN fehlt.");
+  if (!token) throw new Error("GITHUB_TOKEN is missing.");
   return {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${token}`,
@@ -47,7 +47,7 @@ function headers(extra?: HeadersInit): HeadersInit {
 export function repo() {
   const owner = process.env.GITHUB_REPO_OWNER;
   const name = process.env.GITHUB_REPO_NAME;
-  if (!owner || !name) throw new Error("GITHUB_REPO_OWNER oder GITHUB_REPO_NAME fehlt.");
+  if (!owner || !name) throw new Error("GITHUB_REPO_OWNER or GITHUB_REPO_NAME is missing.");
   return { owner, name, path: `${owner}/${name}` };
 }
 

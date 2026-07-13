@@ -30,7 +30,7 @@ function AuthPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!/^\d{4}$/.test(pin.trim())) {
-      toast.error("Bitte vier Ziffern eingeben.");
+      toast.error("Please enter exactly four digits.");
       return;
     }
     setBusy(true);
@@ -39,7 +39,7 @@ function AuthPage() {
       if (nextSafe) window.location.replace(nextSafe);
       else navigate({ to: "/dashboard", replace: true });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falscher Code");
+      toast.error(err instanceof Error ? err.message : "Wrong code");
     } finally {
       setBusy(false);
     }
@@ -49,8 +49,8 @@ function AuthPage() {
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <CardTitle>Einloggen</CardTitle>
-          <CardDescription>Gib den vierstelligen Code ein.</CardDescription>
+          <CardTitle>Log in</CardTitle>
+          <CardDescription>Enter the four-digit code.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
@@ -66,7 +66,7 @@ function AuthPage() {
               className="text-center text-2xl tracking-[0.45em]"
             />
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Prüfe…" : "Einloggen"}
+              {busy ? "Checking…" : "Log in"}
             </Button>
           </form>
         </CardContent>

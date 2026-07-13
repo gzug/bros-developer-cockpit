@@ -6,7 +6,7 @@ const MAX_AGE = 60 * 60 * 24 * 30;
 
 function getAppSecret(): string {
   const secret = process.env.APP_SECRET;
-  if (!secret) throw new Error("APP_SECRET fehlt.");
+  if (!secret) throw new Error("APP_SECRET is missing.");
   return secret;
 }
 
@@ -33,7 +33,7 @@ export function isAuthenticated(): boolean {
 
 export function requireAuth(): void {
   if (!isAuthenticated()) {
-    throw new Error("Nicht eingeloggt.");
+    throw new Error("Not logged in.");
   }
 }
 

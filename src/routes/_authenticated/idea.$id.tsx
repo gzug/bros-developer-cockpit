@@ -25,52 +25,52 @@ function IdeaPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
       await queryClient.invalidateQueries({ queryKey: ["ideas"] });
-      toast.success("Ablauf gestartet.");
+      toast.success("Pipeline started.");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Konnte nicht starten.");
+      toast.error(error instanceof Error ? error.message : "Could not start.");
     },
   });
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
-          ← zurück
+          ← back
         </Link>
 
-        {idea.isLoading && <p className="mt-4 text-sm text-muted-foreground">Lade…</p>}
+        {idea.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
         {idea.data && (
           <>
             <div className="mt-3 flex items-start justify-between gap-3">
               <div>
                 <h1 className="text-xl font-semibold">{idea.data.title}</h1>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Status: {idea.data.status}
+                  Current status: {idea.data.status}
                 </p>
               </div>
               {idea.data.status === "submitted" && (
                 <Button size="sm" onClick={() => process.mutate()} disabled={process.isPending}>
-                  {process.isPending ? "Starte…" : "Jetzt losschicken"}
+                  {process.isPending ? "Starting…" : "Send now"}
                 </Button>
               )}
             </div>
 
             <section className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Beschreibung</div>
+                <div className="text-xs uppercase text-muted-foreground">Description</div>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{idea.data.description}</p>
               </div>
               <div className="grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground">Kategorie</div>
+                  <div className="text-xs uppercase text-muted-foreground">Category</div>
                   <p className="mt-1">{idea.data.intent}</p>
                 </div>
                 <div>
                   <div className="text-xs uppercase text-muted-foreground">Issue</div>
                   <a href={idea.data.issueUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block underline">
-                    #{idea.data.id} auf GitHub
+                    #{idea.data.id} on GitHub
                   </a>
                 </div>
               </div>

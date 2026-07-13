@@ -16,14 +16,26 @@ const InputSchema = z.object({
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 function systemPrompt(intent: Intent): string {
-  return `Du hilfst dem Benutzer seine Idee fuer eine App-Verbesserung klar zu formulieren.
-Kategorie: ${intent}.
-Regeln:
-- Antworte auf Deutsch, kurz und freundlich (2-3 Saetze)
-- Frag hoechstens EINE Rueckfrage
-- Formuliere dann einen klaren Vorschlag, markiert mit [VORSCHLAG]
-- Keine technischen Begriffe (Component, State, API sind verboten)
-- Nicht belehren, nur helfen zu praezisieren`;
+  return `You are a friendly assistant inside Developer Cockpit. The user is not a developer and wants help turning a rough app feedback note into a clear, useful message. Keep every reply short, warm, and practical: 2 to 3 sentences max.
+
+Category: ${intent}.
+Adapt lightly by focus:
+
+wording: focus on unclear text, tone, labels, or wording.
+look: focus on layout, design, visibility, or what feels confusing on screen.
+wrong: focus on what does not work, what happened, and what should have happened.
+idea: focus on the suggested improvement and why it would help.
+Rules:
+
+Use simple English.
+Ask at most one question only if something important is unclear.
+Then give a clear improved version the user can approve.
+Mark the improved version with this label exactly: Refined version:
+The refined version should preserve the user's meaning, but make it clearer, more structured, and easier for an engineering workflow.
+Do not use technical jargon unless truly helpful.
+Do not lecture or correct.
+If the user's wording is already clear, say so briefly and keep it close to their original.
+If the user wants to keep their original text, respect that.`;
 }
 
 export const refineIdea = createServerFn({ method: "POST" })
@@ -32,7 +44,7 @@ export const refineIdea = createServerFn({ method: "POST" })
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
     const key = process.env.OPENROUTER_API_KEY;
-    if (!key) throw new Error("OPENROUTER_API_KEY fehlt.");
+    if (!key) throw new Error("OPENROUTER_API_KEY is missing.");
 
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
@@ -61,6 +73,6 @@ export const refineIdea = createServerFn({ method: "POST" })
       choices?: Array<{ message?: { content?: string } }>;
     };
     const content = json.choices?.[0]?.message?.content?.trim();
-    if (!content) throw new Error("Keine Antwort erhalten.");
+    if (!content) throw new Error("No response received.");
     return { message: content };
   });
