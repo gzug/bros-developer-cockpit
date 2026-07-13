@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { deleteCookie, getCookie, setCookie } from "vinxi/http";
+import { deleteCookie, getCookie, setCookie } from "@tanstack/react-start/server";
 
 const COOKIE_NAME = "dc_session";
 const MAX_AGE = 60 * 60 * 24 * 30;
