@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { deriveIdeaStatus } from "./github-issues.server";
+import { canTransitionIdeaStatus, deriveIdeaStatus } from "./github-issues.server";
 
 test("open pull request derives sent status", () => {
   expect(
@@ -49,4 +49,22 @@ test("explicit approved label derives approved status", () => {
       pr: { labels: [], merged: false },
     }),
   ).toBe("approved");
+});
+
+test("sent ideas can move to approved or blocked", () => {
+  expect(canTransitionIdeaStatus("sent", "approved")).toBe(true);
+  expect(canTransitionIdeaStatus("sent", "blocked")).toBe(true);
+  expect(canTransitionIdeaStatus("sent", "live")).toBe(false);
+});
+
+test("approved ideas can move to live or blocked", () => {
+  expect(canTransitionIdeaStatus("approved", "live")).toBe(true);
+  expect(canTransitionIdeaStatus("approved", "blocked")).toBe(true);
+  expect(canTransitionIdeaStatus("approved", "sent")).toBe(false);
+});
+
+test("other statuses cannot enter the owner lane directly", () => {
+  expect(canTransitionIdeaStatus("submitted", "approved")).toBe(false);
+  expect(canTransitionIdeaStatus("blocked", "approved")).toBe(false);
+  expect(canTransitionIdeaStatus("live", "blocked")).toBe(false);
 });

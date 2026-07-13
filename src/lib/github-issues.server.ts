@@ -107,6 +107,19 @@ export function deriveIdeaStatus(input: {
   return "submitted";
 }
 
+export function canTransitionIdeaStatus(from: DCIdeaStatus, to: DCIdeaStatus): boolean {
+  if (from === to) return true;
+
+  switch (from) {
+    case "sent":
+      return to === "approved" || to === "blocked";
+    case "approved":
+      return to === "live" || to === "blocked";
+    default:
+      return false;
+  }
+}
+
 async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea> {
   const labels = issue.labels.map((label) => label.name);
   const meta = parseMeta(issue);

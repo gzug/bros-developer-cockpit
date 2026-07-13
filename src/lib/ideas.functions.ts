@@ -1,11 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
+  addIdeaComment,
+  canTransitionIdeaStatus,
   createIdea,
   getEngineRunStats,
   getIdea,
   listIdeas,
   recentIdeaCount,
+  setIdeaStatus,
+  type DCIdeaStatus,
   type DCIdeaIntent,
 } from "./github-issues.server";
 
@@ -17,6 +21,11 @@ const CreateIdeaInput = z.object({
 
 const IdInput = z.object({
   id: z.number().int().positive(),
+});
+
+const UpdateIdeaStatusInput = z.object({
+  id: z.number().int().positive(),
+  status: z.enum(["approved", "live", "blocked"]),
 });
 
 export const createIdeaEntry = createServerFn({ method: "POST" })
@@ -61,6 +70,28 @@ export const processContribution = createServerFn({ method: "POST" })
     requireAuth();
     const { processTask } = await import("./engine.server");
     return processTask(data.id);
+  });
+
+const STATUS_COMMENT: Record<"approved" | "live" | "blocked", string> = {
+  approved: "Owner marked this PR approved to ship.",
+  live: "Owner confirmed this change live in OL1.",
+  blocked: "Owner returned this idea to manual review.",
+};
+
+export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => UpdateIdeaStatusInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    const idea = await getIdea(data.id);
+
+    if (!canTransitionIdeaStatus(idea.status, data.status as DCIdeaStatus)) {
+      throw new Error(`Cannot move ${idea.status} to ${data.status}.`);
+    }
+
+    await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
+    await addIdeaComment(data.id, STATUS_COMMENT[data.status]);
+    return { ok: true as const };
   });
 
 export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () => {

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
-import { getIdeaEntry, processContribution } from "@/lib/ideas.functions";
+import { getIdeaEntry, processContribution, updateIdeaStatusEntry } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/idea/$id")({
   component: IdeaPage,
@@ -38,6 +38,25 @@ function IdeaPage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not start.");
+    },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: (status: "approved" | "live" | "blocked") => updateIdeaStatusEntry({ data: { id: ideaId, status } }),
+    onSuccess: async (_, status) => {
+      await queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
+      await queryClient.invalidateQueries({ queryKey: ["ideas"] });
+      await queryClient.invalidateQueries({ queryKey: ["owner-kpi"] });
+      const message =
+        status === "approved"
+          ? "Marked approved to ship."
+          : status === "live"
+            ? "Marked confirmed live."
+            : "Returned to manual review.";
+      toast.success(message);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not update status.");
     },
   });
 
@@ -82,6 +101,37 @@ function IdeaPage() {
             )}
 
             <section className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
+              {(idea.data.status === "sent" || idea.data.status === "approved") && (
+                <div className="flex flex-wrap gap-2">
+                  {idea.data.status === "sent" && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateStatus.mutate("approved")}
+                      disabled={updateStatus.isPending}
+                    >
+                      {updateStatus.isPending ? "Saving…" : "Approve to ship"}
+                    </Button>
+                  )}
+                  {idea.data.status === "approved" && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateStatus.mutate("live")}
+                      disabled={updateStatus.isPending}
+                    >
+                      {updateStatus.isPending ? "Saving…" : "Confirm live"}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => updateStatus.mutate("blocked")}
+                    disabled={updateStatus.isPending}
+                  >
+                    Return to review
+                  </Button>
+                </div>
+              )}
               <div>
                 <div className="text-xs uppercase text-muted-foreground">Description</div>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{idea.data.description}</p>
