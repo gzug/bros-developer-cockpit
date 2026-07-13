@@ -55,6 +55,13 @@ export function AppHeader() {
           >
             New
           </Link>
+          <Link
+            to="/runs"
+            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+          >
+            Runs
+          </Link>
           <Button variant="ghost" className="h-8 w-8 p-0" onClick={toggleTheme} aria-label="Toggle dark mode">
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
