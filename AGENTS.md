@@ -20,6 +20,14 @@
 - Reports to Don: outcome first, short, plain language. No filler, no restating known facts.
 - Honest and objective; push back on unrealistic ideas.
 
+### Batch gate (default autonomy level)
+- Before starting a batch of tasks (or two running in parallel): announce it to Don
+  in chat, in simple language — what, why, expected result.
+- On Don's go (or after adjusting to his input): execute without further check-ins.
+- Next contact only when the batch is done: short success report + the next batch
+  proposal in the same message.
+- A session start prompt may explicitly raise or suspend this gate.
+
 ### Worker instances (any capable model — pick by capability & token cost, not by name)
 - Spawned by the Projektleiter for parallel branches, large mechanical batches,
   or a second opinion from a cheap capable model.
