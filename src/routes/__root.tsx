@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function NotFoundComponent() {
   return (
@@ -18,14 +19,14 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-6xl font-bold text-foreground">404</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          Diese Seite gibt es nicht.
+          Page not found.
         </p>
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Zurück
+            Go back
           </Link>
         </div>
       </div>
@@ -44,10 +45,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold text-foreground">
-          Da lief was schief.
+          Something went wrong.
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Probier's noch mal, oder geh zurück auf die Startseite.
+          Try again or go back to the home page.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -57,13 +58,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Nochmal versuchen
+            Try again
           </button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
-            Startseite
+            Home
           </a>
         </div>
       </div>
@@ -76,25 +77,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "One L1fe — Wünsche einreichen" },
+      { title: "One L1fe — Developer Cockpit" },
       {
         name: "description",
         content:
-          "Kleiner privater Ort, um Wünsche und Bugs für die One L1fe App an deinen Bruder zu schicken. Keine Gesundheitsdaten, kein Fachchinesisch.",
+          "Submit wishes and bug reports for the One L1fe app. No health data, no jargon.",
       },
-      { property: "og:title", content: "One L1fe — Wünsche einreichen" },
+      { property: "og:title", content: "One L1fe — Developer Cockpit" },
       {
         property: "og:description",
         content:
-          "Privater Kanal für Wünsche und Bugs an die One L1fe App.",
+          "Private channel for wishes and bugs for the One L1fe app.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex, nofollow" },
+      { name: "theme-color", content: "#09090b" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "manifest", href: "/manifest.json" },
     ],
   }),
   shellComponent: RootShell,
@@ -105,7 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="de">
+    <html lang="en">
       <head>
         <HeadContent />
       </head>
@@ -121,7 +125,9 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <ErrorBoundary>
+        <Outlet />
+      </ErrorBoundary>
       <Toaster position="top-center" richColors />
     </QueryClientProvider>
   );

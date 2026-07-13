@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { listIdeaEntries, recentIdeaUsage } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -9,11 +10,11 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 const STATUS_TEXT = {
-  submitted: "Eingereicht",
-  sent: "An den Ablauf geschickt",
-  live: "In der App drin",
-  blocked: "Braucht Handarbeit",
-  closed: "Geschlossen",
+  submitted: "Submitted",
+  sent: "Sent to pipeline",
+  live: "Live in app",
+  blocked: "Needs manual review",
+  closed: "Closed",
 } as const;
 
 const STATUS_CLASS = {
@@ -38,24 +39,30 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Deine Wünsche</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Your wishes</h1>
             <p className="mt-1 text-xs text-muted-foreground">
-              {usage.data?.count ?? 0} Wünsche in den letzten {usage.data?.windowHours ?? 5} Stunden.
+              {usage.data?.count ?? 0} wishes in the last {usage.data?.windowHours ?? 5} hours.
             </p>
           </div>
           <Button asChild size="sm">
-            <Link to="/chat">Neu</Link>
+            <Link to="/chat">New</Link>
           </Button>
         </div>
 
         <div className="mt-6 space-y-2">
-          {list.isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
+          {list.isLoading && (
+            <>
+              <Skeleton className="h-20 w-full rounded-md" />
+              <Skeleton className="h-20 w-full rounded-md" />
+              <Skeleton className="h-20 w-full rounded-md" />
+            </>
+          )}
           {list.isSuccess && list.data.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Noch nichts hier. <Link to="/chat" className="underline">Ersten Wunsch schreiben</Link>.
+              Nothing here yet. <Link to="/chat" className="underline">Write your first wish</Link>!
             </div>
           )}
           {list.data?.map((idea) => (
@@ -71,7 +78,7 @@ function Dashboard() {
                   <span className="truncate text-sm font-medium">{idea.title}</span>
                 </span>
                 <span className="shrink-0 text-xs text-muted-foreground">
-                  {new Date(idea.createdAt).toLocaleDateString("de-DE", {
+                  {new Date(idea.createdAt).toLocaleDateString("en-AU", {
                     day: "2-digit",
                     month: "2-digit",
                   })}
