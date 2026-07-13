@@ -17,7 +17,6 @@
     "apps/mobile/ios/**",
     "apps/mobile/src/data/**",
     "**/*.sql",
-    "**/migrations/**",
     "**/*.gradle",
     "**/AndroidManifest.xml"
   ],

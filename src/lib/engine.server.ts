@@ -12,6 +12,7 @@ import {
   type FileEdit,
 } from "./github.server";
 import { addEngineRunComment, addIdeaComment, getIdeaWithPull, setIdeaStatus } from "./github-issues.server";
+import { finishRun, markRun, startRun, upsertTask } from "./db/runs.server";
 
 type Intent = "wording" | "look" | "wrong" | "idea";
 type RoutingValue = Tier | "review";
@@ -100,16 +101,21 @@ export function bridgeBranchName(issueNumber: number): string {
 export async function processTask(issueNumber: number): Promise<ProcessResult> {
   const paused = process.env.BDC_PAUSED?.toLowerCase() === "true";
   const { idea, pr } = await getIdeaWithPull(issueNumber);
+  await upsertTask({ issueNumber, title: idea.title, intent: idea.intent, status: "queued" });
+  const runId = await startRun({ issueNumber });
 
   if (paused) {
     const reason = "BDC is currently paused.";
     await setIdeaStatus(issueNumber, "blocked", idea.intent);
     await addIdeaComment(issueNumber, reason);
+    await finishRun(runId, { status: "blocked", error: reason });
     return { ok: false, status: "blocked", reason };
   }
 
   if (pr) {
-    return { ok: false, status: "blocked", reason: "There is already a pull request for this idea." };
+    const reason = "There is already a pull request for this idea.";
+    await finishRun(runId, { status: "blocked", error: reason });
+    return { ok: false, status: "blocked", reason };
   }
 
   const intentRoute = (config.routingMap[idea.intent] ?? "tier1") as RoutingValue;
@@ -117,10 +123,12 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
     const reason = "This idea is flagged for manual review.";
     await setIdeaStatus(issueNumber, "blocked", idea.intent);
     await addIdeaComment(issueNumber, reason);
+    await finishRun(runId, { status: "blocked", error: reason });
     return { ok: false, status: "blocked", reason };
   }
 
   await setIdeaStatus(issueNumber, "sent", idea.intent);
+  await upsertTask({ issueNumber, title: idea.title, intent: idea.intent, status: "sent" });
 
   const base = await getDefaultBranch();
   const baseSha = await getBranchHeadSha(base);
@@ -136,6 +144,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
 
   while (tier) {
     try {
+      await markRun(runId, "running", { tier });
       const plan = await runPlanner(tier, wish, candidates);
       const filesToRead = (plan?.parsed.files ?? []).filter((path) =>
         candidates.includes(path) &&
@@ -204,6 +213,15 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
         prNumber: pullRequest.number,
       });
       await setIdeaStatus(issueNumber, "sent", idea.intent);
+      await finishRun(runId, {
+        status: "completed",
+        model: edited.result.modelServed,
+        tokensPrompt: (plan.result.tokensPrompt ?? 0) + (edited.result.tokensPrompt ?? 0),
+        tokensCompletion: (plan.result.tokensCompletion ?? 0) + (edited.result.tokensCompletion ?? 0),
+        costUsd: totalCost(plan.result.costUsd, edited.result.costUsd),
+        githubBranchRef: branch,
+        githubPrNumber: pullRequest.number,
+      });
       return { ok: true, prNumber: pullRequest.number, prUrl: pullRequest.html_url };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
@@ -213,5 +231,6 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
 
   await setIdeaStatus(issueNumber, "blocked", idea.intent);
   await addIdeaComment(issueNumber, `Automatic processing failed: ${lastError}`);
+  await finishRun(runId, { status: "failed", error: lastError });
   return { ok: false, status: "failed", reason: lastError };
 }
