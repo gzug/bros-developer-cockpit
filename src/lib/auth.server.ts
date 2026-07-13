@@ -56,9 +56,9 @@ export const loginWithPin = createServerFn({ method: "POST" })
     if (!expectedPin) throw new Error("APP_PIN is missing.");
     const key = throttleKey(getRequestIP());
     checkLoginThrottle(key);
-    const inputHash = createHash("sha256").update(data.pin).digest();
-    const expectedHash = createHash("sha256").update(expectedPin).digest();
-    const pinMatch = timingSafeEqual(inputHash, expectedHash);
+const inputHash = createHash("sha256").update(data.pin).digest();
+        const expectedHash = createHash("sha256").update(expectedPin).digest();
+        const pinMatch = timingSafeEqual(inputHash, expectedHash);
     if (!pinMatch) {
       recordLoginFailure(key);
       throw new Error("Wrong code");
