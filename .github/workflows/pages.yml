@@ -1,8 +1,0 @@
-# GitHub Pages workflow disabled — BDC is a private repo.
-# GitHub Pages requires either a public repo or GitHub Enterprise.
-# This workflow was causing 3 recurring CI failures on main with no path to fix.
-# Docs can be served via Vercel deployment if needed in the future.
-# Disabled: 2026-07-13 by PM decision.
-
-# name: Deploy Docs to GitHub Pages
-# on: { push: { branches: [main], paths: ['docs/**'] }, workflow_dispatch: {} }
