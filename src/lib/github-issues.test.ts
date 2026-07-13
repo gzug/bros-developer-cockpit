@@ -1,5 +1,12 @@
 import { expect, test } from "bun:test";
-import { canTransitionIdeaStatus, deriveIdeaStatus, describeIdeaStatus, getOwnerActionQueue, toIdeaActivity } from "./github-issues.server";
+import {
+  canConfirmIdeaLive,
+  canTransitionIdeaStatus,
+  deriveIdeaStatus,
+  describeIdeaStatus,
+  getOwnerActionQueue,
+  toIdeaActivity,
+} from "./github-issues.server";
 
 test("open pull request derives sent status", () => {
   expect(
@@ -19,6 +26,12 @@ test("merged pull request is not live without explicit live label", () => {
       pr: { labels: [], merged: true },
     }),
   ).toBe("sent");
+});
+
+test("live confirmation requires an existing merged pull request", () => {
+  expect(canConfirmIdeaLive()).toBe(false);
+  expect(canConfirmIdeaLive({ merged: false })).toBe(false);
+  expect(canConfirmIdeaLive({ merged: true })).toBe(true);
 });
 
 test("explicit live label derives live status", () => {

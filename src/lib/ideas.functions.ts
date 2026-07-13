@@ -3,10 +3,11 @@ import { z } from "zod";
 import {
   addIdeaComment,
   canTransitionIdeaStatus,
+  canConfirmIdeaLive,
   createIdea,
   describeIdeaStatus,
   getEngineRunStats,
-  getIdea,
+  getIdeaWithPull,
   getOwnerActionQueue,
   listIdeaActivity,
   listIdeas,
@@ -94,10 +95,14 @@ export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
-    const idea = await getIdea(data.id);
+    const { idea, pr } = await getIdeaWithPull(data.id);
 
     if (!canTransitionIdeaStatus(idea.status, data.status as DCIdeaStatus)) {
       throw new Error(`Cannot move ${idea.status} to ${data.status}.`);
+    }
+
+    if (data.status === "live" && !canConfirmIdeaLive(pr)) {
+      throw new Error("Cannot confirm live until the linked PR is merged.");
     }
 
     await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
