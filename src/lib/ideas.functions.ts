@@ -17,6 +17,7 @@ import {
   type DCIdeaStatus,
   type DCIdeaIntent,
 } from "./github-issues.server";
+import { checkGuardrails } from "./guardrails.server";
 
 const CreateIdeaInput = z.object({
   intent: z.enum(["wording", "look", "wrong", "idea"]),

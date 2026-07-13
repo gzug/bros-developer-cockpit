@@ -11,14 +11,20 @@
   "forbidden": [
     "**/.env*",
     "**/package.json",
-    "**/app.config",
-    "**/app.config.*",
-    "apps/mobile/android/**",
-    "apps/mobile/ios/**",
-    "apps/mobile/src/data/**",
+    "**/package-lock.json",
+    "**/bun.lock*",
+    "**/pnpm-lock.yaml",
+    "**/yarn.lock",
     "**/*.sql",
     "**/*.gradle",
-    "**/AndroidManifest.xml"
+    "**/AndroidManifest.xml",
+    "apps/mobile/app.config.*",
+    "apps/mobile/app.json",
+    "apps/mobile/eas.json",
+    "apps/mobile/android/**",
+    "apps/mobile/ios/**",
+    "apps/mobile/supabase/**",
+    "apps/mobile/src/data/**"
   ],
   "promptTemplate": "smallest-correct-ui-change",
   "templateVersion": "github-native-v1"

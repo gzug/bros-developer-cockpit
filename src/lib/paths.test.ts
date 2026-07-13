@@ -23,6 +23,11 @@ test("allow glob matches a normal UI file", () => {
   expect(isPathAllowed("apps/mobile/src/screens/ProfileScreenV2.tsx", rules)).toBe(true);
 });
 
+test("dc config allows normal mobile UI files and rejects malformed directory paths", () => {
+  expect(isPathAllowed("apps/mobile/src/screens/ProfileScreenV2.tsx", config)).toBe(true);
+  expect(isPathAllowed("apps/mobile/src/", config)).toBe(false);
+});
+
 test("exact allow WINS over a broad forbidden glob", () => {
   expect(isPathAllowed("apps/mobile/src/data/reviewerContent.ts", rules)).toBe(true);
 });
