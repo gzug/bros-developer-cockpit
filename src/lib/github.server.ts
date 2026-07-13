@@ -105,6 +105,21 @@ export async function listIssueComments(number: number): Promise<RepoComment[]> 
   return gh(`/repos/${r.path}/issues/${number}/comments?per_page=100`);
 }
 
+export type RepoIssueComment = RepoComment & { issue_url: string };
+
+export async function listAllIssueComments(maxPages = 10): Promise<RepoIssueComment[]> {
+  const r = repo();
+  const all: RepoIssueComment[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const batch = await gh<RepoIssueComment[]>(
+      `/repos/${r.path}/issues/comments?per_page=100&page=${page}`,
+    );
+    all.push(...batch);
+    if (batch.length < 100) break;
+  }
+  return all;
+}
+
 export async function addIssueComment(number: number, body: string): Promise<RepoComment> {
   const r = repo();
   return gh(`/repos/${r.path}/issues/${number}/comments`, {
