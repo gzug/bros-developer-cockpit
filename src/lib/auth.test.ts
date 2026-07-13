@@ -4,6 +4,7 @@ import {
   clearLoginThrottle,
   recordLoginFailure,
   resetLoginThrottleForTest,
+  throttleKey,
 } from "./auth.server";
 
 test("login throttle locks after repeated failures and then expires", () => {
@@ -30,4 +31,11 @@ test("successful login clears throttle bucket", () => {
   clearLoginThrottle(key);
 
   expect(() => checkLoginThrottle(key, now)).not.toThrow();
+});
+
+test("throttle key uses request IP when present", () => {
+  expect(throttleKey("203.0.113.9")).toBe("ip:203.0.113.9");
+  expect(throttleKey(" 203.0.113.9 ")).toBe("ip:203.0.113.9");
+  expect(throttleKey("")).toBe("global");
+  expect(throttleKey()).toBe("global");
 });

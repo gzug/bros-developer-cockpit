@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestIP } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -16,8 +17,9 @@ type LoginThrottleBucket = {
 
 const loginThrottle = new Map<string, LoginThrottleBucket>();
 
-function throttleKey(): string {
-  return "global";
+export function throttleKey(ip?: string | null): string {
+  const value = ip?.trim();
+  return value ? `ip:${value}` : "global";
 }
 
 export function resetLoginThrottleForTest(): void {
@@ -52,7 +54,7 @@ export const loginWithPin = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const expectedPin = process.env.APP_PIN;
     if (!expectedPin) throw new Error("APP_PIN is missing.");
-    const key = throttleKey();
+    const key = throttleKey(getRequestIP());
     checkLoginThrottle(key);
     const pinMatch =
       data.pin.length === expectedPin.length &&
