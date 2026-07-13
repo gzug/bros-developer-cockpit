@@ -87,7 +87,7 @@ function IdeaPage() {
               <div>
                 <h1 className="text-xl font-semibold">{idea.data.title}</h1>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Current status: {STATUS_TEXT[idea.data.status]}
+                  Current status: {STATUS_TEXT[idea.data.status as keyof typeof STATUS_TEXT] ?? idea.data.status}
                 </p>
               </div>
               {idea.data.status === "submitted" && (

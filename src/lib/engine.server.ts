@@ -91,7 +91,7 @@ function wishText(title: string, intent: Intent, description: string): string {
 }
 
 function totalCost(...values: Array<number | null>): number {
-  return values.reduce((sum, value) => sum + (value ?? 0), 0);
+  return values.reduce<number>((sum, value) => sum + (value ?? 0), 0);
 }
 
 export function bridgeBranchName(issueNumber: number): string {
@@ -225,7 +225,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
       return { ok: true, prNumber: pullRequest.number, prUrl: pullRequest.html_url };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
-      tier = nextTier(tier);
+      tier = tier ? nextTier(tier) : null;
     }
   }
 
