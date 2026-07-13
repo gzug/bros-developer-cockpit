@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Project Overview — One L1fe × BDC</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --accent: #5b7cfa;
+    --accent2: #7c5bfa;
+    --green: #3ecf8e;
+    --yellow: #f5c542;
+    --red: #f56565;
+    --muted: #6b7280;
+    --text: #e2e8f0;
+    --text2: #a0aec0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* HEADER */
+  .header { margin-bottom: 2.5rem; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .logo { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+  .logo span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .date-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.9rem; font-size: 0.78rem; color: var(--text2); }
+  .tagline { margin-top: 0.5rem; color: var(--text2); font-size: 0.9rem; }
+
+  /* STATUS ROW */
+  .status-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .status-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.2rem; }
+  .status-card .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.4rem; }
+  .status-card .value { font-size: 1.05rem; font-weight: 600; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .dot-red { background: var(--red); }
+
+  /* SECTION */
+  .section { margin-bottom: 2rem; }
+  .section-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.8rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+
+  /* GRID 2 col */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+
+  /* CARD */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; }
+  .card-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+  .badge { font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 999px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .badge-green { background: rgba(62,207,142,0.15); color: var(--green); }
+  .badge-yellow { background: rgba(245,197,66,0.15); color: var(--yellow); }
+  .badge-blue { background: rgba(91,124,250,0.15); color: var(--accent); }
+  .badge-muted { background: var(--surface2); color: var(--muted); }
+
+  /* ITEMS */
+  .item-list { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+  .item { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.85rem; color: var(--text2); line-height: 1.45; }
+  .item-icon { flex-shrink: 0; margin-top: 1px; font-size: 0.8rem; }
+  .item strong { color: var(--text); font-weight: 500; }
+
+  /* NEXT STEPS */
+  .next-list { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+  .next-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1rem; display: flex; align-items: flex-start; gap: 0.75rem; }
+  .next-num { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 0.7rem; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .next-text { font-size: 0.85rem; color: var(--text2); line-height: 1.45; }
+  .next-text strong { color: var(--text); }
+
+  /* LEARNINGS */
+  .learning { background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 0.7rem 1rem; margin-bottom: 0.6rem; font-size: 0.83rem; color: var(--text2); line-height: 1.5; }
+  .learning strong { color: var(--text); display: block; margin-bottom: 0.2rem; font-size: 0.82rem; }
+  .learning .applied { margin-top: 0.3rem; font-size: 0.78rem; color: var(--green); }
+
+  /* TIMELINE */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item { display: flex; gap: 1rem; }
+  .tl-left { display: flex; flex-direction: column; align-items: center; width: 32px; flex-shrink: 0; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 4px; }
+  .tl-dot-green { background: var(--green); }
+  .tl-line { width: 2px; background: var(--border); flex: 1; margin: 2px 0; min-height: 16px; }
+  .tl-content { padding-bottom: 1rem; flex: 1; }
+  .tl-date { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.2rem; }
+  .tl-title { font-size: 0.85rem; font-weight: 500; color: var(--text); margin-bottom: 0.15rem; }
+  .tl-desc { font-size: 0.78rem; color: var(--text2); line-height: 1.4; }
+
+  /* FOOTER */
+  .footer { margin-top: 3rem; text-align: center; font-size: 0.75rem; color: var(--muted); }
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">One <span>L1fe</span> × BDC</div>
+      <div class="date-badge">Stand: 13. Juli 2026</div>
+    </div>
+    <div class="tagline">Project Overview — Live-Status · Nächste Schritte · Learnings · Historie</div>
+  </div>
+
+  <!-- STATUS ROW -->
+  <div class="status-row">
+    <div class="status-card">
+      <div class="label">OL1 App</div>
+      <div class="value"><span class="dot dot-green"></span>Live · OTA aktiv</div>
+    </div>
+    <div class="status-card">
+      <div class="label">BDC (Dev Cockpit)</div>
+      <div class="value"><span class="dot dot-yellow"></span>Live · E2E offen</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Blocker</div>
+      <div class="value"><span class="dot dot-green"></span>Keine harten</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Device-Checks</div>
+      <div class="value"><span class="dot dot-yellow"></span>2 offen (DP-008b, 014)</div>
+    </div>
+    <div class="status-card">
+      <div class="label">Offene PRs (gesamt)</div>
+      <div class="value">0 OL1 · 0 BDC</div>
+    </div>
+  </div>
+
+  <!-- HEUTE / AKTUELL -->
+  <div class="section">
+    <div class="section-title">Heute — 13. Juli 2026</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">One L1fe — gemergte PRs <span class="badge badge-green">OL1</span></div>
+        <ul class="item-list">
+          <li class="item"><span class="item-icon">✦</span><span><strong>#272</strong> Manuelle Biomarker-Eingabe — 9 Kern-Biomarker lokal eingeben, prüfen, approven. Validierung für Dezimalkomma, Nullwert, Datum, Doppeltap.</span></li>
+          <li class="item"><span class="item-icon">✦</span><span><strong>#273</strong> Home Lab-Frische — zeigt konkret ob Panel veraltet, frisch oder undatiert ist.</span></li>
+          <li class="item"><span class="item-icon">✦</span><span><strong>#274</strong> Twin abgeleitete Frische — TyG, eGFR, AIP zeigen Alter/Datum des zugrundeliegenden Panels.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">Bros Dev Cockpit — gemergte PRs <span class="badge badge-blue">BDC</span></div>
+        <ul class="item-list">
+          <li class="item"><span class="item-icon">✦</span><span><strong>#3</strong> Supabase raus → GitHub-native: PIN-Auth, Issues als Datenspeicher, Chat UI. Build grün.</span></li>
+          <li class="item"><span class="item-icon">✦</span><span><strong>#4</strong> Nitro Vercel-Preset fix (404-Fix durch falsches Output-Dir).</span></li>
+          <li class="item"><span class="item-icon">✦</span><span><strong>#5</strong> Cookie-API Runtime Crash behoben (vinxi → @tanstack/react-start/server).</span></li>
+          <li class="item"><span class="item-icon">✦</span><span><strong>#6</strong> Live-Confirmation Gate: erst live wenn verlinkter OL1-PR gemergt.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- NÄCHSTE SCHRITTE -->
+  <div class="section">
+    <div class="section-title">Nächste Schritte — Priorität ↓</div>
+    <ul class="next-list">
+      <li class="next-item">
+        <div class="next-num">1</div>
+        <div class="next-text"><strong>BDC E2E-Test (owner-gated):</strong> Don loggt sich mit PIN ein, reicht eine Test-Idee ein → Kette prüfen: Idee → GitHub Issue → bdc-hold/* PR → Approval im Cockpit → OL1 live-Bestätigung. Kein PR darf als "live" gelten bevor Don explizit bestätigt.</div>
+      </li>
+      <li class="next-item">
+        <div class="next-num">2</div>
+        <div class="next-text"><strong>Device-Checks schließen (OL1):</strong> DP-008b Navigation-Refactor-Parität + DP-014 SI Reference-Bound Display auf dem Gerät des Bruders verifizieren.</div>
+      </li>
+      <li class="next-item">
+        <div class="next-num">3</div>
+        <div class="next-text"><strong>Lovable-Block aus BDC AGENTS.md entfernen:</strong> Supabase/Lovable-Kopplung ist mit PR #3 raus — der Force-Push-Warnblock ist toter Ballast, sollte bereinigt werden.</div>
+      </li>
+      <li class="next-item">
+        <div class="next-num">4</div>
+        <div class="next-text"><strong>OL1 OTAs weiterführen:</strong> Kontinuierlich kleine verifizierte OTAs auf Runtime 1.1.0 ausliefern während Home/UX weiteriteriert. Bruder nutzt die App täglich — das ist der primäre Qualitätsindikator.</div>
+      </li>
+      <li class="next-item">
+        <div class="next-num">5</div>
+        <div class="next-text"><strong>Readiness Score (owner-gated, nicht dringend):</strong> <code>feat/readiness-score</code> Branch — fertiger HRV+RHR Scorer mit Tests, nie in die App eingebaut. Revisit sobald BDC live und stabil läuft.</div>
+      </li>
+      <li class="next-item">
+        <div class="next-num">6</div>
+        <div class="next-text"><strong>Eval-Infrastruktur (post-BDC):</strong> promptfoo + Golden Dataset + deterministische Asserts adoptieren. Brief <code>eval-coach-honesty</code> ist fireable — owner muss relay geben. BDC Eval-Loop-Spec liegt in <code>docs/planning/bdc-eval-loop-spec.md</code>.</div>
+      </li>
+      <li class="next-item">
+        <div class="next-num">7</div>
+        <div class="next-text"><strong>Owner-gated OL1 Features:</strong> <code>c3b-route-detail-view</code>, <code>design-3-bioage-range</code>, <code>home-bioage-add-button</code> — warten auf Don's Freigabe.</div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- LEARNINGS -->
+  <div class="section">
+    <div class="section-title">Learnings & wie sie ins Operative flossen</div>
+
+    <div class="learning">
+      <strong>Supabase ist Overhead für diesen Use Case</strong>
+      Der Versuch, BDC über Supabase zu betreiben, erzeugte Setup-Komplexität ohne Mehrwert. GitHub Issues + PIN-Cookie ist einfacher, deterministischer und hat keine externe Abhängigkeit.
+      <div class="applied">→ Operativ: Supabase komplett entfernt (PR #3). Neue Regel in AGENTS.md: Cookie-Helpers nur noch aus @tanstack/react-start/server.</div>
+    </div>
+
+    <div class="learning">
+      <strong>Dead Branches akkumulieren schnell — aktiv sweepen</strong>
+      OL1 hatte 74 tote Branches. BDC hat nach dem Pivot bereits nur noch 1 Branch (main).
+      <div class="applied">→ Operativ: Branch-Sweep in OL1 als feste Hygiene-Routine etabliert. BDC startet sauber.</div>
+    </div>
+
+    <div class="learning">
+      <strong>Vercel Git-Autodeploy ist unzuverlässig</strong>
+      Mehrfach wurde nach einem Merge kein Deploy getriggert oder der falsche Preset verwendet (→ 404).
+      <div class="applied">→ Operativ: Nach jedem Merge manuell <code>npx vercel --prod --yes</code>, dann Prod auf echte Fehler checken. Steht fest in AGENTS.md Ops Facts.</div>
+    </div>
+
+    <div class="learning">
+      <strong>Adversarial Review verhindert schleichende Qualitätserosion</strong>
+      Der Copilot-Worktree (gzug-special-carnival) wurde nach adversarialem Review verworfen — er hätte subtile Regressions mitgebracht.
+      <div class="applied">→ Operativ: Kein Merge ohne zweite Perspektive bei nicht-trivialen Änderungen. PL verifiziert immer selbst.</div>
+    </div>
+
+    <div class="learning">
+      <strong>"Live" ≠ "gemergt"</strong>
+      Mehrfach wurden gemergde PRs im Kontext als "live" behandelt, bevor der OTA tatsächlich beim Bruder ankam oder er es bestätigt hatte.
+      <div class="applied">→ Operativ: CHECKPOINT unterscheidet explizit zwischen "JS-only, device-unverified" und verifizierten OTAs. BDC hat PR #6 als Gate eingebaut.</div>
+    </div>
+
+    <div class="learning">
+      <strong>Framework-Evaluations früh und einmal machen, dann entscheiden</strong>
+      Die Evals-Recherche (LangChain etc.) hätte die Arbeit mehrfach unterbrochen wenn sie ad-hoc gemacht worden wäre.
+      <div class="applied">→ Operativ: Dedizierter Evals-Track (2026-07-12) mit klarer Verdict: Framework skip, promptfoo + Golden Dataset adopt. Ergebnis dokumentiert, nicht mehr offen.</div>
+    </div>
+  </div>
+
+  <!-- HERKUNFT / MEILENSTEINE -->
+  <div class="section">
+    <div class="section-title">Woher wir kommen — Schlüsselmeilensteine</div>
+    <div class="card">
+      <div class="timeline">
+
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot tl-dot-green"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-date">13. Juli 2026 — heute</div>
+            <div class="tl-title">BDC vollständig auf GitHub-native pivotiert · OL1 Lab-Frische-Trias gemergt</div>
+            <div class="tl-desc">4 BDC-PRs + 3 OL1-PRs. Supabase weg, Vercel-Deploy stabil. Kein offener Branch.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-date">12. Juli 2026</div>
+            <div class="tl-title">Architektur-Pivot BDC beschlossen · Emulator-Precheck bestanden · Evals-Track</div>
+            <div class="tl-desc">Supabase-Entfernung entschieden. Pixel 9 Emulator-Check nach VIEW_ROUTES-Refactor grün. Evals-Forschung abgeschlossen.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-date">11. Juli 2026</div>
+            <div class="tl-title">Branch-Sweep OL1 · Unit-aware Lab-Verification OTA · 39-Commit-Backlog shipped</div>
+            <div class="tl-desc">74 tote Branches gelöscht. #262, #266, #268, #263 gemergt. OTA-Gruppe 0cff03e4 ausgeliefert.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-date">10. Juli 2026</div>
+            <div class="tl-title">Reviewer-Lane · Home Coaching · Inbox Chat-Hub · Don Drive Log live</div>
+            <div class="tl-desc">APK vc2008 gebaut, OTA-Shipping resumed, Reviewer-Lane smoke-tested, #249–#259 integriert.</div>
+          </div>
+        </div>
+
+        <div class="tl-item">
+          <div class="tl-left"><div class="tl-dot"></div></div>
+          <div class="tl-content">
+            <div class="tl-date">Früher</div>
+            <div class="tl-title">T1–T11 · #243 VO2max · Daten-Architektur · Inbox als zentrales Updates-Surface</div>
+            <div class="tl-desc">Fundament: Biomarker-Architektur, Twin-Screen, Wearable-Integration, Coaching. Detail im Git-Log.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- IMMER IM HINTERKOPF -->
+  <div class="section">
+    <div class="section-title">Immer im Hinterkopf</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Operative Konstanten</div>
+        <ul class="item-list">
+          <li class="item"><span class="item-icon">→</span><span>Don ist <strong>kein Relay</strong> — nie Briefings/Outputs durch ihn routen. Nur: Ziele setzen, Secrets liefern, PIN/UI testen.</span></li>
+          <li class="item"><span class="item-icon">→</span><span>Optimierungsziel: <strong>Bruders echter Alltag</strong>. Inbox ist das einzige Updates/Messages/Warnings-Surface.</span></li>
+          <li class="item"><span class="item-icon">→</span><span>Kein Merge ohne Verifikation. <strong>Kein "live" ohne Device-Bestätigung</strong> oder Owner-Bestätigung.</span></li>
+          <li class="item"><span class="item-icon">→</span><span>OTA-Strategie: <strong>klein und häufig</strong> — keine großen Batches, die schwer zu debuggen sind.</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-title">Tech-Gotchas (nie vergessen)</div>
+        <ul class="item-list">
+          <li class="item"><span class="item-icon">⚠</span><span>BDC: Cookie-Helpers <strong>nur</strong> aus <code>@tanstack/react-start/server</code> — vinxi/http crasht unter Vercel/Nitro.</span></li>
+          <li class="item"><span class="item-icon">⚠</span><span>BDC: <code>vercel.json</code> braucht <code>NITRO_PRESET=vercel</code> explizit — Default schreibt falsches Output-Dir → 404.</span></li>
+          <li class="item"><span class="item-icon">⚠</span><span>OL1: Git-Autodeploy Vercel ist flaky — nach jedem Merge manuell <code>npx vercel --prod --yes</code>.</span></li>
+          <li class="item"><span class="item-icon">⚠</span><span>OL1: <code>curl</code> gegen <code>/_serverFn/*</code> ist nicht repräsentativ — Server-Fns im echten Browser prüfen.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    One L1fe · <a href="https://github.com/gzug/01-One-L1fe" target="_blank">gzug/01-One-L1fe</a> &nbsp;·&nbsp;
+    BDC · <a href="https://github.com/gzug/bros-developer-cockpit" target="_blank">gzug/bros-developer-cockpit</a> &nbsp;·&nbsp;
+    Zuletzt aktualisiert: 13. Juli 2026
+  </div>
+
+</div>
+</body>
+</html>
