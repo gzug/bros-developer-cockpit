@@ -7,13 +7,14 @@ type Props = {
 
 type State = {
   hasError: boolean;
+    error?: Error | null;
 };
 
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+    static getDerivedStateFromError(error: Error): State {
+        return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -29,6 +30,11 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="mt-2 text-sm text-muted-foreground">
               An unexpected error occurred. Try reloading the page.
             </p>
+                      {this.state.error && (
+            <pre className="mt-3 text-left overflow-x-auto rounded bg-gray-100 dark:bg-gray-800 p-2 text-xs">
+              {this.state.error.message}
+            </pre>
+          )}
             <div className="mt-4 flex justify-center gap-2">
               <Button onClick={() => window.location.reload()}>Reload</Button>
               <Button variant="outline" onClick={() => this.setState({ hasError: false })}>
