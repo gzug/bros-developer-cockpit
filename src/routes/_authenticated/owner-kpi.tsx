@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getOwnerKpis } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/owner-kpi")({
@@ -33,6 +34,21 @@ function OwnerKpiPage() {
         <p className="mt-1 text-xs text-muted-foreground">
           Overview from GitHub Issues and engine comments.
         </p>
+
+        {query.isLoading && (
+          <div className="mt-6 space-y-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-md" />
+              ))}
+            </div>
+            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-16 w-full rounded-md" />
+            </div>
+          </div>
+        )}
 
         {query.data && (
           <>

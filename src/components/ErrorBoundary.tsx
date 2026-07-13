@@ -11,7 +11,7 @@ type State = {
 };
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, error: null };
 
     static getDerivedStateFromError(error: Error): State {
         return { hasError: true, error };
@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
           )}
             <div className="mt-4 flex justify-center gap-2">
               <Button onClick={() => window.location.reload()}>Reload</Button>
-              <Button variant="outline" onClick={() => this.setState({ hasError: false })}>
+              <Button variant="outline" onClick={() => this.setState({ hasError: false, error: null })}>
                 Dismiss
               </Button>
             </div>
