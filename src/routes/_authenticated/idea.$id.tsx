@@ -3,7 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
-import { getIdeaEntry, processContribution, updateIdeaStatusEntry } from "@/lib/ideas.functions";
+import {
+  getIdeaActivityEntry,
+  getIdeaEntry,
+  processContribution,
+  updateIdeaStatusEntry,
+} from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/idea/$id")({
   component: IdeaPage,
@@ -28,11 +33,17 @@ function IdeaPage() {
     queryFn: () => getIdeaEntry({ data: { id: ideaId } }),
     refetchInterval: 15_000,
   });
+  const activity = useQuery({
+    queryKey: ["idea-activity", ideaId],
+    queryFn: () => getIdeaActivityEntry({ data: { id: ideaId } }),
+    refetchInterval: 15_000,
+  });
 
   const process = useMutation({
     mutationFn: () => processContribution({ data: { id: ideaId } }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
+      await queryClient.invalidateQueries({ queryKey: ["idea-activity", ideaId] });
       await queryClient.invalidateQueries({ queryKey: ["ideas"] });
       toast.success("Pipeline started.");
     },
@@ -45,6 +56,7 @@ function IdeaPage() {
     mutationFn: (status: "approved" | "live" | "blocked") => updateIdeaStatusEntry({ data: { id: ideaId, status } }),
     onSuccess: async (_, status) => {
       await queryClient.invalidateQueries({ queryKey: ["idea", ideaId] });
+      await queryClient.invalidateQueries({ queryKey: ["idea-activity", ideaId] });
       await queryClient.invalidateQueries({ queryKey: ["ideas"] });
       await queryClient.invalidateQueries({ queryKey: ["owner-kpi"] });
       const message =
@@ -84,21 +96,9 @@ function IdeaPage() {
                 </Button>
               )}
             </div>
-            {idea.data.status === "sent" && (
-              <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted-foreground">
-                A PR exists. OL1 merge and OTA still need owner approval.
-              </p>
-            )}
-            {idea.data.status === "approved" && (
-              <p className="mt-3 rounded-md border border-sky-500/30 bg-sky-500/5 p-3 text-sm text-muted-foreground">
-                Approved to ship. Waiting for confirmed OL1 delivery.
-              </p>
-            )}
-            {idea.data.status === "live" && (
-              <p className="mt-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-muted-foreground">
-                Confirmed live in OL1.
-              </p>
-            )}
+            <p className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              {idea.data.statusSummary}
+            </p>
 
             <section className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
               {(idea.data.status === "sent" || idea.data.status === "approved") && (
@@ -161,6 +161,29 @@ function IdeaPage() {
                   {idea.data.blockReason}
                 </div>
               )}
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Recent activity</div>
+                {activity.isLoading && <p className="mt-1 text-sm text-muted-foreground">Loading…</p>}
+                {activity.data?.length ? (
+                  <div className="mt-2 space-y-2">
+                    {activity.data.slice(0, 5).map((entry) => (
+                      <div key={entry.id} className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                        <p className="whitespace-pre-wrap">{entry.body}</p>
+                        <a
+                          href={entry.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-block text-xs text-muted-foreground underline"
+                        >
+                          {new Date(entry.createdAt).toLocaleString("en-AU")}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">No comments yet.</p>
+                )}
+              </div>
             </section>
           </>
         )}

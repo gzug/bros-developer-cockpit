@@ -21,12 +21,20 @@ export interface DCIdea {
   description: string;
   intent: DCIdeaIntent;
   status: DCIdeaStatus;
+  statusSummary: string;
   createdAt: string;
   issueUrl: string;
   prNumber?: number;
   prUrl?: string;
   blockReason?: string;
   labels: string[];
+}
+
+export interface DCIdeaActivity {
+  id: number;
+  body: string;
+  createdAt: string;
+  url: string;
 }
 
 export type EngineRunStats = {
@@ -120,6 +128,35 @@ export function canTransitionIdeaStatus(from: DCIdeaStatus, to: DCIdeaStatus): b
   }
 }
 
+export function describeIdeaStatus(status: DCIdeaStatus): string {
+  switch (status) {
+    case "submitted":
+      return "Ready to start the bridge pipeline.";
+    case "sent":
+      return "A held PR exists. Review it and either approve shipping or return it to manual review.";
+    case "approved":
+      return "Approved in Cockpit. Ship it in OL1, then confirm it live here.";
+    case "live":
+      return "Confirmed live in OL1.";
+    case "blocked":
+      return "Stopped for manual review.";
+    case "closed":
+      return "Closed without a live confirmation.";
+  }
+}
+
+export function toIdeaActivity(comments: RepoComment[]): DCIdeaActivity[] {
+  return comments
+    .filter((comment) => comment.body.trim())
+    .map((comment) => ({
+      id: comment.id,
+      body: comment.body.trim(),
+      createdAt: comment.created_at,
+      url: comment.html_url,
+    }))
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
 async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea> {
   const labels = issue.labels.map((label) => label.name);
   const meta = parseMeta(issue);
@@ -138,6 +175,7 @@ async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea>
     description: cleanDescription(issue.body),
     intent: meta.intent,
     status,
+    statusSummary: describeIdeaStatus(status),
     createdAt: issue.created_at,
     issueUrl: issue.html_url,
     prNumber: pr?.number,
@@ -243,4 +281,8 @@ export async function getIdeaWithPull(issueNumber: number) {
   const idea = await getIdea(issueNumber);
   const pr = idea.prNumber ? await getPullRequest(idea.prNumber) : null;
   return { idea, pr };
+}
+
+export async function listIdeaActivity(issueNumber: number): Promise<DCIdeaActivity[]> {
+  return toIdeaActivity(await listIssueComments(issueNumber));
 }

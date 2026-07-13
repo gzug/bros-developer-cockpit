@@ -4,8 +4,10 @@ import {
   addIdeaComment,
   canTransitionIdeaStatus,
   createIdea,
+  describeIdeaStatus,
   getEngineRunStats,
   getIdea,
+  listIdeaActivity,
   listIdeas,
   recentIdeaCount,
   setIdeaStatus,
@@ -56,6 +58,14 @@ export const getIdeaEntry = createServerFn({ method: "GET" })
     return getIdea(data.id);
   });
 
+export const getIdeaActivityEntry = createServerFn({ method: "GET" })
+  .validator((input: unknown) => IdInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    return listIdeaActivity(data.id);
+  });
+
 export const recentIdeaUsage = createServerFn({ method: "GET" }).handler(async () => {
   const { requireAuth } = await import("./auth-session.server");
   requireAuth();
@@ -91,7 +101,7 @@ export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
 
     await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
     await addIdeaComment(data.id, STATUS_COMMENT[data.status]);
-    return { ok: true as const };
+    return { ok: true as const, statusSummary: describeIdeaStatus(data.status as DCIdeaStatus) };
   });
 
 export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () => {

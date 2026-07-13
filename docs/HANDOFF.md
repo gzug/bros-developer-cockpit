@@ -25,9 +25,14 @@ Operating mode:
 - Quality bar: hold or raise the current level while minimizing token/compute
   spend. If a task is small, do it yourself — delegation overhead must pay for itself.
 
-Current state: app is live and healthy (see Ops facts in AGENTS.md). Open thread:
-joint E2E test — Don logs in with PIN, submits a test idea; verify the chain
-idea → GitHub issue/PR on `bdc/*` → bdc-ship → merge → OTA.
+Current state: app is live and healthy (see Ops facts in AGENTS.md). The safety
+lane is active: Cockpit bridge PRs open on `bdc-hold/*`, stay out of OL1
+auto-ship, and require explicit owner status transitions (`sent` →
+`approved` → `live` or `blocked`). Open thread: run the next safe joint E2E —
+Don logs in with PIN, submits a harmless test idea; verify the chain idea →
+GitHub issue → held PR on `bdc-hold/*` → owner approval in Cockpit → separate
+OL1 ship/live confirmation. Do not describe merged PRs as live unless the owner
+explicitly marks them live.
 
 ## ADD-ON — valid for THIS session only (delete this section afterwards)
 
