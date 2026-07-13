@@ -35,16 +35,61 @@ function OwnerKpiPage() {
         </p>
 
         {query.data && (
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <Stat label="Total ideas" value={query.data.totalIdeas} />
-            <Stat label="Confirmed live" value={query.data.liveCount} />
-            <Stat label="Approved" value={query.data.approvedCount} />
-            <Stat label="Blocked" value={query.data.blockedCount} />
-            <Stat label="PR waiting" value={query.data.sentCount} />
-            <Stat label="Open" value={query.data.submittedCount} />
-            <Stat label="Closed" value={query.data.closedCount} />
-            <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
-          </div>
+          <>
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Stat label="Total ideas" value={query.data.totalIdeas} />
+              <Stat label="Confirmed live" value={query.data.liveCount} />
+              <Stat label="Approved" value={query.data.approvedCount} />
+              <Stat label="Blocked" value={query.data.blockedCount} />
+              <Stat label="PR waiting" value={query.data.sentCount} />
+              <Stat label="Open" value={query.data.submittedCount} />
+              <Stat label="Closed" value={query.data.closedCount} />
+              <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
+            </div>
+
+            <section className="mt-6 rounded-lg border border-border bg-card p-4">
+              <h2 className="text-sm font-semibold">Needs action</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Approved items should ship in OL1 first. Waiting items need an owner decision. Blocked items need manual review.
+              </p>
+
+              {query.data.actionQueue.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">Nothing is waiting on the owner lane right now.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {query.data.actionQueue.map((idea) => (
+                    <div key={idea.id} className="rounded-md border border-border bg-background p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link
+                            to="/idea/$id"
+                            params={{ id: String(idea.id) }}
+                            className="block truncate text-sm font-medium underline"
+                          >
+                            #{idea.id} {idea.title}
+                          </Link>
+                          <p className="mt-1 text-xs text-muted-foreground">{idea.statusSummary}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-border px-2 py-1 text-[11px] uppercase text-muted-foreground">
+                          {idea.status}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                        <a href={idea.issueUrl} target="_blank" rel="noreferrer" className="underline">
+                          Issue
+                        </a>
+                        {idea.prUrl && (
+                          <a href={idea.prUrl} target="_blank" rel="noreferrer" className="underline">
+                            PR #{idea.prNumber}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
         )}
       </main>
     </div>

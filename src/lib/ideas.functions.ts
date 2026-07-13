@@ -7,6 +7,7 @@ import {
   describeIdeaStatus,
   getEngineRunStats,
   getIdea,
+  getOwnerActionQueue,
   listIdeaActivity,
   listIdeas,
   recentIdeaCount,
@@ -120,5 +121,6 @@ export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () =
     submittedCount: ideas.filter((idea) => idea.status === "submitted").length,
     closedCount: ideas.filter((idea) => idea.status === "closed").length,
     totalCostUsd: flatRuns.reduce((sum, run) => sum + run.costUsd, 0),
+    actionQueue: getOwnerActionQueue(ideas),
   };
 });

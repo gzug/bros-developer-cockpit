@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { canTransitionIdeaStatus, deriveIdeaStatus, describeIdeaStatus, toIdeaActivity } from "./github-issues.server";
+import { canTransitionIdeaStatus, deriveIdeaStatus, describeIdeaStatus, getOwnerActionQueue, toIdeaActivity } from "./github-issues.server";
 
 test("open pull request derives sent status", () => {
   expect(
@@ -113,5 +113,64 @@ test("idea activity removes blank comments and returns newest first", () => {
       createdAt: "2026-07-13T09:00:00Z",
       url: "https://example.com/2",
     },
+  ]);
+});
+
+test("owner action queue prioritizes approved then sent then blocked", () => {
+  expect(
+    getOwnerActionQueue([
+      {
+        id: 1,
+        title: "Blocked",
+        description: "",
+        intent: "idea",
+        status: "blocked",
+        statusSummary: "Stopped for manual review.",
+        createdAt: "2026-07-13T09:00:00Z",
+        issueUrl: "https://example.com/issues/1",
+        labels: [],
+      },
+      {
+        id: 2,
+        title: "Approved",
+        description: "",
+        intent: "idea",
+        status: "approved",
+        statusSummary: "Approved in Cockpit. Ship it in OL1, then confirm it live here.",
+        createdAt: "2026-07-13T08:00:00Z",
+        issueUrl: "https://example.com/issues/2",
+        prNumber: 20,
+        prUrl: "https://example.com/pulls/20",
+        labels: [],
+      },
+      {
+        id: 3,
+        title: "Waiting",
+        description: "",
+        intent: "idea",
+        status: "sent",
+        statusSummary: "A held PR exists. Review it and either approve shipping or return it to manual review.",
+        createdAt: "2026-07-13T10:00:00Z",
+        issueUrl: "https://example.com/issues/3",
+        prNumber: 30,
+        prUrl: "https://example.com/pulls/30",
+        labels: [],
+      },
+      {
+        id: 4,
+        title: "Submitted",
+        description: "",
+        intent: "idea",
+        status: "submitted",
+        statusSummary: "Ready to start the bridge pipeline.",
+        createdAt: "2026-07-13T11:00:00Z",
+        issueUrl: "https://example.com/issues/4",
+        labels: [],
+      },
+    ]).map((idea) => ({ id: idea.id, status: idea.status })),
+  ).toEqual([
+    { id: 2, status: "approved" },
+    { id: 3, status: "sent" },
+    { id: 1, status: "blocked" },
   ]);
 });

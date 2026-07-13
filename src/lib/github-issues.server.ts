@@ -37,6 +37,8 @@ export interface DCIdeaActivity {
   url: string;
 }
 
+export type OwnerActionIdea = Pick<DCIdea, "id" | "title" | "status" | "statusSummary" | "prNumber" | "prUrl" | "issueUrl">;
+
 export type EngineRunStats = {
   model: string;
   promptTokens: number;
@@ -155,6 +157,31 @@ export function toIdeaActivity(comments: RepoComment[]): DCIdeaActivity[] {
       url: comment.html_url,
     }))
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+const OWNER_ACTION_PRIORITY: Partial<Record<DCIdeaStatus, number>> = {
+  approved: 0,
+  sent: 1,
+  blocked: 2,
+};
+
+export function getOwnerActionQueue(ideas: DCIdea[]): OwnerActionIdea[] {
+  return ideas
+    .filter((idea) => OWNER_ACTION_PRIORITY[idea.status] != null)
+    .sort((a, b) => {
+      const priorityDiff = (OWNER_ACTION_PRIORITY[a.status] ?? 99) - (OWNER_ACTION_PRIORITY[b.status] ?? 99);
+      if (priorityDiff !== 0) return priorityDiff;
+      return a.createdAt < b.createdAt ? 1 : -1;
+    })
+    .map(({ id, title, status, statusSummary, prNumber, prUrl, issueUrl }) => ({
+      id,
+      title,
+      status,
+      statusSummary,
+      prNumber,
+      prUrl,
+      issueUrl,
+    }));
 }
 
 async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea> {
