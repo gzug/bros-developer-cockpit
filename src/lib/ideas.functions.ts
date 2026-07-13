@@ -7,6 +7,7 @@ import {
   createIdea,
   describeIdeaStatus,
   getEngineRunStats,
+  getIdea,
   getIdeaWithPull,
   getOwnerActionQueue,
   listIdeaActivity,
