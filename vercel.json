@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "NITRO_PRESET=vercel bun run build",
-  "installCommand": "bun install"
+  "installCommand": "bun install",
+  "routes": [
+    {
+      "src": "/docs/(.*)",
+      "dest": "/docs/$1"
+    }
+  ]
 }
