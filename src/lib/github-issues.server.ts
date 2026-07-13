@@ -13,7 +13,7 @@ import {
 } from "./github.server";
 
 export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea";
-export type DCIdeaStatus = "submitted" | "sent" | "live" | "blocked" | "closed";
+export type DCIdeaStatus = "submitted" | "sent" | "approved" | "live" | "blocked" | "closed";
 
 export interface DCIdea {
   id: number;
@@ -91,28 +91,32 @@ function parseBlockReason(comments: RepoComment[]): string | undefined {
   return last?.body.trim();
 }
 
+export function deriveIdeaStatus(input: {
+  issueLabels: string[];
+  issueState: RepoIssue["state"];
+  pr?: Pick<PullState, "labels" | "merged"> | null;
+}): DCIdeaStatus {
+  const labels = new Set([...input.issueLabels, ...(input.pr?.labels ?? [])]);
+
+  if (labels.has("bdc-failed")) return "blocked";
+  if (labels.has(statusLabel("live"))) return "live";
+  if (labels.has(statusLabel("approved"))) return "approved";
+  if (labels.has(statusLabel("blocked"))) return "blocked";
+  if (input.pr) return "sent";
+  if (input.issueState === "closed") return "closed";
+  return "submitted";
+}
+
 async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea> {
   const labels = issue.labels.map((label) => label.name);
   const meta = parseMeta(issue);
   const pr = matchPullRequest(issue.number, pulls);
 
-  let status: DCIdeaStatus;
+  const status = deriveIdeaStatus({ issueLabels: labels, issueState: issue.state, pr });
   let blockReason: string | undefined;
 
-  if (pr?.labels.includes("bdc-failed")) {
-    status = "blocked";
-    blockReason = parseBlockReason(await listIssueComments(pr.number));
-  } else if (pr?.merged) {
-    status = "live";
-  } else if (pr) {
-    status = "sent";
-  } else if (issue.state === "closed") {
-    status = "closed";
-  } else if (labels.includes(statusLabel("blocked"))) {
-    status = "blocked";
-    blockReason = parseBlockReason(await listIssueComments(issue.number));
-  } else {
-    status = "submitted";
+  if (status === "blocked") {
+    blockReason = parseBlockReason(await listIssueComments(pr?.labels.includes("bdc-failed") ? pr.number : issue.number));
   }
 
   return {

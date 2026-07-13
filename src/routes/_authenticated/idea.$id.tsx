@@ -9,6 +9,15 @@ export const Route = createFileRoute("/_authenticated/idea/$id")({
   component: IdeaPage,
 });
 
+const STATUS_TEXT = {
+  submitted: "Submitted",
+  sent: "PR waiting for owner approval",
+  approved: "Approved to ship",
+  live: "Confirmed live",
+  blocked: "Needs manual review",
+  closed: "Closed",
+} as const;
+
 function IdeaPage() {
   const { id } = Route.useParams();
   const ideaId = Number(id);
@@ -47,15 +56,30 @@ function IdeaPage() {
               <div>
                 <h1 className="text-xl font-semibold">{idea.data.title}</h1>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Current status: {idea.data.status}
+                  Current status: {STATUS_TEXT[idea.data.status]}
                 </p>
               </div>
               {idea.data.status === "submitted" && (
                 <Button size="sm" onClick={() => process.mutate()} disabled={process.isPending}>
-                  {process.isPending ? "Starting…" : "Send now"}
+                  {process.isPending ? "Starting…" : "Create PR"}
                 </Button>
               )}
             </div>
+            {idea.data.status === "sent" && (
+              <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted-foreground">
+                A PR exists. OL1 merge and OTA still need owner approval.
+              </p>
+            )}
+            {idea.data.status === "approved" && (
+              <p className="mt-3 rounded-md border border-sky-500/30 bg-sky-500/5 p-3 text-sm text-muted-foreground">
+                Approved to ship. Waiting for confirmed OL1 delivery.
+              </p>
+            )}
+            {idea.data.status === "live" && (
+              <p className="mt-3 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-muted-foreground">
+                Confirmed live in OL1.
+              </p>
+            )}
 
             <section className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
               <div>

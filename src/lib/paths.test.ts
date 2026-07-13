@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import config from "./dc-config.json";
 import { isPathAllowed, globMatch, isGlob } from "./paths.server";
 
 const rules = {
@@ -19,6 +20,7 @@ const rules = {
 
 test("allow glob matches a normal UI file", () => {
   expect(isPathAllowed("apps/mobile/src/screens/Home.tsx", rules)).toBe(true);
+  expect(isPathAllowed("apps/mobile/src/screens/ProfileScreenV2.tsx", rules)).toBe(true);
 });
 
 test("exact allow WINS over a broad forbidden glob", () => {
@@ -63,10 +65,32 @@ test("path traversal segments are rejected", () => {
   expect(isPathAllowed("apps/mobile/src/../data/x.ts", rules)).toBe(false);
   expect(isPathAllowed("apps/mobile/src/./x.ts", rules)).toBe(false);
   expect(isPathAllowed("apps/mobile//src/x.ts", rules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/", rules)).toBe(false);
 });
 
 test("empty rules reject everything", () => {
   expect(isPathAllowed("apps/mobile/src/x.tsx", { allowed: [], forbidden: [] })).toBe(false);
+});
+
+test("dc config allows OL1 UI files and rejects package/config files", () => {
+  expect(
+    isPathAllowed("apps/mobile/src/screens/ProfileScreenV2.tsx", {
+      allowed: config.allowed,
+      forbidden: config.forbidden,
+    }),
+  ).toBe(true);
+  expect(
+    isPathAllowed("apps/mobile/package.json", {
+      allowed: config.allowed,
+      forbidden: config.forbidden,
+    }),
+  ).toBe(false);
+  expect(
+    isPathAllowed("apps/mobile/app.config.ts", {
+      allowed: config.allowed,
+      forbidden: config.forbidden,
+    }),
+  ).toBe(false);
 });
 
 test("globMatch ** spans path separators, * does not", () => {

@@ -37,9 +37,10 @@ function OwnerKpiPage() {
         {query.data && (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Stat label="Total ideas" value={query.data.totalIdeas} />
-            <Stat label="Live" value={query.data.liveCount} />
+            <Stat label="Confirmed live" value={query.data.liveCount} />
+            <Stat label="Approved" value={query.data.approvedCount} />
             <Stat label="Blocked" value={query.data.blockedCount} />
-            <Stat label="Sent" value={query.data.sentCount} />
+            <Stat label="PR waiting" value={query.data.sentCount} />
             <Stat label="Open" value={query.data.submittedCount} />
             <Stat label="Closed" value={query.data.closedCount} />
             <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />

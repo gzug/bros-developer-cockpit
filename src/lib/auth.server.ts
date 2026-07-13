@@ -2,21 +2,66 @@ import { timingSafeEqual } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_MS = 5 * 60 * 1000;
+
 const LoginInput = z.object({
   pin: z.string().regex(/^\d{4}$/, "Please enter exactly four digits."),
 });
+
+type LoginThrottleBucket = {
+  attempts: number;
+  lockedUntil: number;
+};
+
+const loginThrottle = new Map<string, LoginThrottleBucket>();
+
+function throttleKey(): string {
+  return "global";
+}
+
+export function resetLoginThrottleForTest(): void {
+  loginThrottle.clear();
+}
+
+export function checkLoginThrottle(key: string, now = Date.now()): void {
+  const bucket = loginThrottle.get(key);
+  if (bucket && bucket.lockedUntil > now) {
+    throw new Error("Too many attempts. Try again later.");
+  }
+  if (bucket && bucket.lockedUntil <= now && bucket.lockedUntil !== 0) {
+    loginThrottle.delete(key);
+  }
+}
+
+export function recordLoginFailure(key: string, now = Date.now()): void {
+  const bucket = loginThrottle.get(key) ?? { attempts: 0, lockedUntil: 0 };
+  const attempts = bucket.attempts + 1;
+  loginThrottle.set(key, {
+    attempts,
+    lockedUntil: attempts >= MAX_FAILED_ATTEMPTS ? now + LOCK_MS : 0,
+  });
+}
+
+export function clearLoginThrottle(key: string): void {
+  loginThrottle.delete(key);
+}
 
 export const loginWithPin = createServerFn({ method: "POST" })
   .validator((input: unknown) => LoginInput.parse(input))
   .handler(async ({ data }) => {
     const expectedPin = process.env.APP_PIN;
     if (!expectedPin) throw new Error("APP_PIN is missing.");
+    const key = throttleKey();
+    checkLoginThrottle(key);
     const pinMatch =
       data.pin.length === expectedPin.length &&
       timingSafeEqual(Buffer.from(data.pin), Buffer.from(expectedPin));
     if (!pinMatch) {
+      recordLoginFailure(key);
       throw new Error("Wrong code");
     }
+    clearLoginThrottle(key);
     const { loginCookie } = await import("./auth-session.server");
     loginCookie();
     return { ok: true as const };

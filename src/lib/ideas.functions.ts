@@ -23,7 +23,13 @@ export const createIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => CreateIdeaInput.parse(input))
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
+    const { checkGuardrails } = await import("./guardrails.server");
     requireAuth();
+    const guardrail = checkGuardrails({
+      title: data.title,
+      body: data.description,
+    });
+    if (!guardrail.ok) throw new Error(guardrail.message);
     return createIdea(data.intent as DCIdeaIntent, data.title, data.description);
   });
 
@@ -67,6 +73,7 @@ export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () =
   return {
     totalIdeas: ideas.length,
     liveCount: ideas.filter((idea) => idea.status === "live").length,
+    approvedCount: ideas.filter((idea) => idea.status === "approved").length,
     blockedCount: ideas.filter((idea) => idea.status === "blocked").length,
     sentCount: ideas.filter((idea) => idea.status === "sent").length,
     submittedCount: ideas.filter((idea) => idea.status === "submitted").length,

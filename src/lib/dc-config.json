@@ -6,14 +6,20 @@
     "idea": "review"
   },
   "allowed": [
-    "apps/mobile/src/"
+    "apps/mobile/src/**"
   ],
   "forbidden": [
-    ".env",
-    "package.json",
-    "app.config",
-    "android/",
-    "ios/"
+    "**/.env*",
+    "**/package.json",
+    "**/app.config",
+    "**/app.config.*",
+    "apps/mobile/android/**",
+    "apps/mobile/ios/**",
+    "apps/mobile/src/data/**",
+    "**/*.sql",
+    "**/migrations/**",
+    "**/*.gradle",
+    "**/AndroidManifest.xml"
   ],
   "promptTemplate": "smallest-correct-ui-change",
   "templateVersion": "github-native-v1"

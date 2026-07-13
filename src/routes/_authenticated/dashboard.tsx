@@ -11,8 +11,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 const STATUS_TEXT = {
   submitted: "Submitted",
-  sent: "Sent to pipeline",
-  live: "Live in app",
+  sent: "PR waiting",
+  approved: "Approved to ship",
+  live: "Confirmed live",
   blocked: "Needs manual review",
   closed: "Closed",
 } as const;
@@ -20,6 +21,7 @@ const STATUS_TEXT = {
 const STATUS_CLASS = {
   submitted: "bg-amber-500",
   sent: "bg-amber-500",
+  approved: "bg-sky-500",
   live: "bg-emerald-500",
   blocked: "bg-rose-500",
   closed: "bg-zinc-500",
