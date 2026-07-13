@@ -5,6 +5,7 @@ import {
   deriveIdeaStatus,
   describeIdeaStatus,
   getOwnerActionQueue,
+  groupEngineRunStats,
   toIdeaActivity,
 } from "./github-issues.server";
 
@@ -186,4 +187,36 @@ test("owner action queue prioritizes approved then sent then blocked", () => {
     { id: 3, status: "sent" },
     { id: 1, status: "blocked" },
   ]);
+});
+
+test("groupEngineRunStats groups engine comments by issue number", () => {
+  const comments = [
+    {
+      issue_url: "https://api.github.com/repos/o/r/issues/1",
+      body: "🤖 Model: gpt-x | Tokens: 100+50 | $0.0123 | PR #10",
+    },
+    {
+      issue_url: "https://api.github.com/repos/o/r/issues/1",
+      body: "just a normal comment",
+    },
+    {
+      issue_url: "https://api.github.com/repos/o/r/issues/2",
+      body: "🤖 Model: claude-y | Tokens: 200+80 | $0.0456",
+    },
+    {
+      issue_url: "https://api.github.com/repos/o/r/issues/99",
+      body: "🤖 Model: gpt-x | Tokens: 1+1 | $0.0001",
+    },
+  ];
+
+  const stats = groupEngineRunStats([1, 2, 3], comments);
+
+  expect(stats.get(1)).toEqual([
+    { model: "gpt-x", promptTokens: 100, completionTokens: 50, costUsd: 0.0123, prNumber: 10 },
+  ]);
+  expect(stats.get(2)).toEqual([
+    { model: "claude-y", promptTokens: 200, completionTokens: 80, costUsd: 0.0456, prNumber: undefined },
+  ]);
+  expect(stats.get(3)).toEqual([]);
+  expect(stats.has(99)).toBe(false);
 });

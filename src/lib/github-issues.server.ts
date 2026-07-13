@@ -3,6 +3,7 @@ import {
   createIssue,
   getIssue,
   getPullRequest,
+  listAllIssueComments,
   listIssueComments,
   listIssues,
   listPullRequests,
@@ -10,6 +11,7 @@ import {
   type PullState,
   type RepoComment,
   type RepoIssue,
+  type RepoIssueComment,
 } from "./github.server";
 
 export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea";
@@ -236,6 +238,7 @@ export async function createIdea(
     description: description.trim(),
     intent,
     status: "submitted",
+    statusSummary: describeIdeaStatus("submitted"),
     createdAt: issue.created_at,
     issueUrl: issue.html_url,
     labels: [DC_LABEL, `${INTENT_PREFIX}${intent}`, statusLabel("submitted")],
@@ -291,21 +294,46 @@ export async function addEngineRunComment(issueNumber: number, stats: EngineRunS
   );
 }
 
+function parseEngineRunStats(body: string): EngineRunStats | null {
+  const match = body.match(ENGINE_RE);
+  if (!match) return null;
+  return {
+    model: match[1].trim(),
+    promptTokens: Number(match[2]),
+    completionTokens: Number(match[3]),
+    costUsd: Number(match[4]),
+    prNumber: match[5] ? Number(match[5]) : undefined,
+  };
+}
+
 export async function getEngineRunStats(issueNumber: number): Promise<EngineRunStats[]> {
   const comments = await listIssueComments(issueNumber);
   return comments
-    .map((comment) => {
-      const match = comment.body.match(ENGINE_RE);
-      if (!match) return null;
-      return {
-        model: match[1].trim(),
-        promptTokens: Number(match[2]),
-        completionTokens: Number(match[3]),
-        costUsd: Number(match[4]),
-        prNumber: match[5] ? Number(match[5]) : undefined,
-      } satisfies EngineRunStats;
-    })
+    .map((comment) => parseEngineRunStats(comment.body))
     .filter((entry): entry is EngineRunStats => entry != null);
+}
+
+export function groupEngineRunStats(
+  issueNumbers: number[],
+  comments: Array<Pick<RepoIssueComment, "issue_url" | "body">>,
+): Map<number, EngineRunStats[]> {
+  const stats = new Map<number, EngineRunStats[]>(issueNumbers.map((n) => [n, []]));
+  for (const comment of comments) {
+    const issueNumber = Number(comment.issue_url.split("/").pop());
+    const bucket = stats.get(issueNumber);
+    if (!bucket) continue;
+    const parsed = parseEngineRunStats(comment.body);
+    if (parsed) bucket.push(parsed);
+  }
+  return stats;
+}
+
+export async function getEngineRunStatsBatch(
+  issueNumbers: number[],
+): Promise<Map<number, EngineRunStats[]>> {
+  if (issueNumbers.length === 0) return new Map();
+  const comments = await listAllIssueComments();
+  return groupEngineRunStats(issueNumbers, comments);
 }
 
 export async function getIdeaWithPull(issueNumber: number) {

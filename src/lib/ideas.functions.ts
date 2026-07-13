@@ -6,7 +6,7 @@ import {
   canConfirmIdeaLive,
   createIdea,
   describeIdeaStatus,
-  getEngineRunStats,
+  getEngineRunStatsBatch,
   getIdea,
   getIdeaWithPull,
   getOwnerActionQueue,
@@ -115,8 +115,8 @@ export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () =
   const { requireAuth } = await import("./auth-session.server");
   requireAuth();
   const ideas = await listIdeas();
-  const runs = await Promise.all(ideas.map((idea) => getEngineRunStats(idea.id)));
-  const flatRuns = runs.flat();
+  const statsMap = await getEngineRunStatsBatch(ideas.map((idea) => idea.id));
+  const flatRuns = ideas.flatMap((idea) => statsMap.get(idea.id) ?? []);
 
   return {
     totalIdeas: ideas.length,
