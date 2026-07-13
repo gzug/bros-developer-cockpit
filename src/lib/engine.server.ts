@@ -93,6 +93,10 @@ function totalCost(...values: Array<number | null>): number {
   return values.reduce((sum, value) => sum + (value ?? 0), 0);
 }
 
+export function bridgeBranchName(issueNumber: number): string {
+  return `bdc-hold/dc-issue-${issueNumber}`;
+}
+
 export async function processTask(issueNumber: number): Promise<ProcessResult> {
   const paused = process.env.BDC_PAUSED?.toLowerCase() === "true";
   const { idea, pr } = await getIdeaWithPull(issueNumber);
@@ -165,7 +169,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
         continue;
       }
 
-      const branch = `bdc/dc-issue-${issueNumber}`;
+      const branch = bridgeBranchName(issueNumber);
       await createBranch(branch, baseSha);
       await commitFiles(
         branch,
@@ -180,6 +184,7 @@ export async function processTask(issueNumber: number): Promise<ProcessResult> {
         title: `BDC: ${idea.title}`.slice(0, 200),
         body: [
           `Automated by Bros Developer Cockpit.`,
+          `This PR is held for owner approval and is not on the OL1 auto-ship branch lane.`,
           ``,
           `Closes #${issueNumber}`,
           ``,
