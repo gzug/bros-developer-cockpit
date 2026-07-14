@@ -62,7 +62,14 @@ export function AppHeader() {
           >
             Runs
           </Link>
-                    <Link
+          <Link
+            to="/analytics"
+            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+          >
+            Analytics
+          </Link>
+          <Link
             to="/dc"
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
