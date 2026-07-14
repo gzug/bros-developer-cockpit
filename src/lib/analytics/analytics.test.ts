@@ -138,3 +138,18 @@ test("buildLocalPaxelReport generates fully aggregated profile report", () => {
   expect(report.weakestPrompts).toHaveLength(1);
   expect(report.growthRecommendations.length).toBeGreaterThanOrEqual(3);
 });
+
+test("scrubText strips absolute paths, home directories, IPs, and secrets", () => {
+  const { scrubText } = require("./paxel-engine");
+
+  const rawText1 = "Let's edit /home/jules/project/src/lib/auth.ts and verify connection.";
+  const rawText2 = "The local database is at 192.168.1.50 with token=abc123xyz456_supersecret.";
+
+  expect(scrubText(rawText1)).toContain("~/[USER_HOME]");
+  expect(scrubText(rawText1)).toContain("/[ABSOLUTE_PATH]");
+  expect(scrubText(rawText1)).not.toContain("jules");
+
+  expect(scrubText(rawText2)).toContain("[IP_ADDRESS]");
+  expect(scrubText(rawText2)).toContain("token=[REDACTED_SECRET]");
+  expect(scrubText(rawText2)).not.toContain("abc123xyz456_supersecret");
+});

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   buildLocalPaxelReport,
   normalizeSessionData,
+  scrubText,
   type PaxelReport,
 } from "./paxel-engine";
 import { callModel, type ChatMessage } from "../openrouter.server";
@@ -10,6 +11,7 @@ import { callModel, type ChatMessage } from "../openrouter.server";
 const AnalyzeInput = z.object({
   rawContent: z.string(),
   fileName: z.string().optional(),
+  anonymize: z.boolean().optional(),
 });
 
 /**
@@ -26,6 +28,21 @@ export const analyzeSessionEntry = createServerFn({ method: "POST" })
 
     // 2. Normalize and compute core local metrics
     const normalized = normalizeSessionData(data.rawContent, data.fileName);
+
+    // 2b. Perform anonymization scrubbing if requested
+    if (data.anonymize) {
+      normalized.prompts = normalized.prompts.map(p => ({
+        ...p,
+        text: scrubText(p.text)
+      }));
+      normalized.tools = normalized.tools.map(t => ({
+        ...t,
+        params: t.params ? scrubText(t.params) : undefined
+      }));
+      normalized.title = normalized.title ? scrubText(normalized.title) : undefined;
+      normalized.anonymized = true;
+    }
+
     const report = buildLocalPaxelReport(normalized);
 
     // 3. Attempt OpenRouter integration if key is present

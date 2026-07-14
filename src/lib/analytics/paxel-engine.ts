@@ -25,6 +25,29 @@ export interface NormalizedSession {
   prompts: PromptMeta[];
   tools: ToolEvent[];
   commits?: CommitMeta[];
+  anonymized?: boolean;
+}
+
+/**
+ * Scrubs absolute file paths, home directories, IP addresses, and authorization keys to preserve privacy.
+ */
+export function scrubText(text: string): string {
+  if (!text) return "";
+  let scrubbed = text;
+
+  // 1. Scrub user home directories (e.g. /Users/john_doe or /home/jules)
+  scrubbed = scrubbed.replace(/\/(Users|home)\/[a-zA-Z0-9_\-\.]+/gi, "~/[USER_HOME]");
+
+  // 2. Scrub typical absolute paths (deep nested directories)
+  scrubbed = scrubbed.replace(/(\/[a-zA-Z0-9_\-\.]{2,}){3,}/g, "/[ABSOLUTE_PATH]");
+
+  // 3. Scrub IP addresses
+  scrubbed = scrubbed.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, "[IP_ADDRESS]");
+
+  // 4. Scrub potential auth keys / secrets patterns
+  scrubbed = scrubbed.replace(/(key|secret|token|password|passwd|auth)=["']?[a-zA-Z0-9_\-\.\/\+]{12,}["']?/gi, "$1=[REDACTED_SECRET]");
+
+  return scrubbed;
 }
 
 export interface PaxelScores {

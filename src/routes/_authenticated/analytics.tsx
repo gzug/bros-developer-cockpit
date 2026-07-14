@@ -242,6 +242,9 @@ function PaxelAnalyticsDashboard() {
   const [sessionsList, setSessionsList] = useState<PaxelReport[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"overview" | "tips" | "history" | "uploader">("overview");
+  const [showGlossary, setShowGuide] = useState<boolean>(false);
+  const [activeGlossaryMetric, setActiveGlossaryMetric] = useState<string | null>(null);
+  const [anonymize, setAnonymize] = useState<boolean>(false);
 
   // Load saved session reports from localStorage on mount
   useEffect(() => {
@@ -280,7 +283,7 @@ function PaxelAnalyticsDashboard() {
 
   // Server Fn Mutation to analyze uploaded file content
   const mutation = useMutation({
-    mutationFn: (variables: { rawContent: string; fileName?: string }) =>
+    mutationFn: (variables: { rawContent: string; fileName?: string; anonymize?: boolean }) =>
       analyzeSessionEntry({ data: variables }),
     onSuccess: (report) => {
       toast.success(`Session "${report.stats.totalPrompts > 0 ? (report.stats.totalPrompts + ' prompts') : 'uploaded'}" analyzed successfully!`);
@@ -304,14 +307,14 @@ function PaxelAnalyticsDashboard() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      mutation.mutate({ rawContent: content, fileName: file.name });
+      mutation.mutate({ rawContent: content, fileName: file.name, anonymize });
     };
     reader.readAsText(file);
   };
 
   // Load a preset template transcript instantly
   const loadPresetTemplate = (rawContent: string, title: string) => {
-    mutation.mutate({ rawContent, fileName: `${title}.json` });
+    mutation.mutate({ rawContent, fileName: `${title}.json`, anonymize });
   };
 
   // Find the currently active session report
@@ -517,18 +520,73 @@ function PaxelAnalyticsDashboard() {
                       <CardTitle className="text-base font-semibold">5-Axis Score Breakdown</CardTitle>
                       <CardDescription className="text-xs">Calculated from prompt lengths, tool calls, errors, and commits</CardDescription>
                     </div>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      Avg Score: {Math.round((currentReport.scores.steering + currentReport.scores.execution + currentReport.scores.quality + currentReport.scores.product + currentReport.scores.planning) / 5)}/100
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="text-xs text-blue-500 hover:bg-blue-500/10 flex items-center gap-1 h-7 px-2"
+                        onClick={() => setShowGuide(!showGlossary)}
+                      >
+                        <HelpCircle className="h-3.5 w-3.5" /> {showGlossary ? "Hide Help" : "Metric Guide"}
+                      </Button>
+                      <Badge variant="outline" className="font-mono text-xs h-7 flex items-center">
+                        Avg: {Math.round((currentReport.scores.steering + currentReport.scores.execution + currentReport.scores.quality + currentReport.scores.product + currentReport.scores.planning) / 5)}/100
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-5">
+                  {/* Metric glossary guide */}
+                  {showGlossary && (
+                    <div className="p-4 bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/15 rounded-md space-y-3 mb-4 text-xs animate-fade-in">
+                      <h4 className="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                        <Sparkles className="h-4 w-4" /> Metric glossary guide
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 divide-y md:divide-y-0 md:divide-x divide-border/60">
+                        <div className="space-y-2">
+                          <p>
+                            <span className="font-semibold text-foreground">Steering:</span> Prompts lengths & specificity. High scores reflect logical prompts combined with active course corrections like <em>'actually'</em> or <em>'instead'</em>.
+                          </p>
+                          <p>
+                            <span className="font-semibold text-foreground">Execution Leverage:</span> Density of edit and write operations. High scores show high code velocity and research-to-code balance (1.0x - 3.0x).
+                          </p>
+                          <p>
+                            <span className="font-semibold text-foreground">Engineering Quality:</span> Code hygiene and error recovery. Boosted by continuous testing, logically chunked commits, and low tool failures.
+                          </p>
+                        </div>
+                        <div className="space-y-2 md:pl-3">
+                          <p>
+                            <span className="font-semibold text-foreground">Product Thinking:</span> Focus on user outcomes. Boosted by user-centric terms (<em>'user', 'feels', 'ux', 'accessibility'</em>) and target screen specifications.
+                          </p>
+                          <p>
+                            <span className="font-semibold text-foreground">Pre-Flight Planning:</span> High planning ratio of exploration (<em>grep, glob, read</em>) vs editing. Measures systematic checklist preparation before code modification.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Steering */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium flex items-center gap-1"><Zap className="h-3.5 w-3.5 text-amber-500" /> Steering (Directing the AI)</span>
+                      <span className="font-medium flex items-center gap-1">
+                        <Zap className="h-3.5 w-3.5 text-amber-500" /> Steering (Directing the AI)
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => setActiveGlossaryMetric(activeGlossaryMetric === "steering" ? null : "steering")}
+                        >
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </span>
                       <span className="font-bold">{currentReport.scores.steering}/100</span>
                     </div>
+                    {activeGlossaryMetric === "steering" && (
+                      <div className="p-2.5 rounded bg-muted/40 text-[11px] text-muted-foreground border-l-2 border-amber-500 animate-fade-in">
+                        <strong>Steering calculation:</strong> 50% derived from prompt specificity (avg length) + 50% derived from active steering keyword triggers (e.g. "actually", "wait", "instead", "wrong"). Optimal avg prompt length is 150+ chars.
+                      </div>
+                    )}
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
                       <div className={`h-full ${getProgressColor(currentReport.scores.steering)}`} style={{ width: `${currentReport.scores.steering}%` }} />
                     </div>
@@ -540,9 +598,24 @@ function PaxelAnalyticsDashboard() {
                   {/* Execution */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium flex items-center gap-1"><TrendingUp className="h-3.5 w-3.5 text-blue-500" /> Execution Leverage</span>
+                      <span className="font-medium flex items-center gap-1">
+                        <TrendingUp className="h-3.5 w-3.5 text-blue-500" /> Execution Leverage
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => setActiveGlossaryMetric(activeGlossaryMetric === "execution" ? null : "execution")}
+                        >
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </span>
                       <span className="font-bold">{currentReport.scores.execution}/100</span>
                     </div>
+                    {activeGlossaryMetric === "execution" && (
+                      <div className="p-2.5 rounded bg-muted/40 text-[11px] text-muted-foreground border-l-2 border-blue-500 animate-fade-in">
+                        <strong>Execution leverage calculation:</strong> 50% derived from action velocity (write/edit/bash actions per hour) + 50% derived from the perfect Planning Ratio balance. Balance ratio of 1.0 to 3.0 gives a perfect score.
+                      </div>
+                    )}
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
                       <div className={`h-full ${getProgressColor(currentReport.scores.execution)}`} style={{ width: `${currentReport.scores.execution}%` }} />
                     </div>
@@ -554,9 +627,24 @@ function PaxelAnalyticsDashboard() {
                   {/* Quality */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium flex items-center gap-1"><Award className="h-3.5 w-3.5 text-emerald-500" /> Engineering Quality</span>
+                      <span className="font-medium flex items-center gap-1">
+                        <Award className="h-3.5 w-3.5 text-emerald-500" /> Engineering Quality
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => setActiveGlossaryMetric(activeGlossaryMetric === "quality" ? null : "quality")}
+                        >
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </span>
                       <span className="font-bold">{currentReport.scores.quality}/100</span>
                     </div>
+                    {activeGlossaryMetric === "quality" && (
+                      <div className="p-2.5 rounded bg-muted/40 text-[11px] text-muted-foreground border-l-2 border-emerald-500 animate-fade-in">
+                        <strong>Engineering quality calculation:</strong> 50% starting score penalized by tool failure/error rates + up to 30% bonus for unit-test calls + up to 20% bonus for commits created during the session.
+                      </div>
+                    )}
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
                       <div className={`h-full ${getProgressColor(currentReport.scores.quality)}`} style={{ width: `${currentReport.scores.quality}%` }} />
                     </div>
@@ -568,9 +656,24 @@ function PaxelAnalyticsDashboard() {
                   {/* Product Thinking */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium flex items-center gap-1"><Info className="h-3.5 w-3.5 text-indigo-500" /> Product Thinking</span>
+                      <span className="font-medium flex items-center gap-1">
+                        <Info className="h-3.5 w-3.5 text-indigo-500" /> Product Thinking
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => setActiveGlossaryMetric(activeGlossaryMetric === "product" ? null : "product")}
+                        >
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </span>
                       <span className="font-bold">{currentReport.scores.product}/100</span>
                     </div>
+                    {activeGlossaryMetric === "product" && (
+                      <div className="p-2.5 rounded bg-muted/40 text-[11px] text-muted-foreground border-l-2 border-indigo-500 animate-fade-in">
+                        <strong>Product thinking calculation:</strong> 50% based on user outcome keywords (e.g. "feel", "design", "experience", "ux") + 50% based on target bounds specification (referring to folders/extension files).
+                      </div>
+                    )}
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
                       <div className={`h-full ${getProgressColor(currentReport.scores.product)}`} style={{ width: `${currentReport.scores.product}%` }} />
                     </div>
@@ -582,9 +685,24 @@ function PaxelAnalyticsDashboard() {
                   {/* Planning */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium flex items-center gap-1"><HelpCircle className="h-3.5 w-3.5 text-violet-500" /> Pre-Flight Planning</span>
+                      <span className="font-medium flex items-center gap-1">
+                        <HelpCircle className="h-3.5 w-3.5 text-violet-500" /> Pre-Flight Planning
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => setActiveGlossaryMetric(activeGlossaryMetric === "planning" ? null : "planning")}
+                        >
+                          <Info className="h-3 w-3" />
+                        </Button>
+                      </span>
                       <span className="font-bold">{currentReport.scores.planning}/100</span>
                     </div>
+                    {activeGlossaryMetric === "planning" && (
+                      <div className="p-2.5 rounded bg-muted/40 text-[11px] text-muted-foreground border-l-2 border-violet-500 animate-fade-in">
+                        <strong>Pre-flight planning calculation:</strong> 50% based on planning instructions/checklist triggers (e.g. "plan", "design", "agents.md") + 50% based on exploratory read-to-edit tool ratios.
+                      </div>
+                    )}
                     <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
                       <div className={`h-full ${getProgressColor(currentReport.scores.planning)}`} style={{ width: `${currentReport.scores.planning}%` }} />
                     </div>
@@ -837,6 +955,25 @@ function PaxelAnalyticsDashboard() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Privacy Setting Toggle Checkbox */}
+                  <div className="flex items-start gap-3 p-3 bg-muted/40 rounded-lg border border-border">
+                    <input
+                      type="checkbox"
+                      id="anonymize"
+                      checked={anonymize}
+                      onChange={(e) => setAnonymize(e.target.checked)}
+                      className="h-4 w-4 mt-0.5 accent-blue-500 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <div className="space-y-0.5 cursor-pointer select-none" onClick={() => setAnonymize(!anonymize)}>
+                      <label htmlFor="anonymize" className="text-xs font-bold text-foreground flex items-center gap-1.5 cursor-pointer">
+                        <ShieldAlert className="h-3.5 w-3.5 text-blue-500" /> Scrub & Anonymize Session Data
+                      </label>
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        Strip absolute file paths, home directories, local IPs, and keys from prompts and actions before analyzing.
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Fake drag & drop */}
                   <div className="border-2 border-dashed border-border/80 rounded-lg p-10 text-center hover:border-blue-500/50 bg-muted/20 transition-colors relative">
                     <input
