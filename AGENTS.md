@@ -9,49 +9,60 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-# Operating rules
+# Developer Cockpit (BDC) operating rules
 
-## Roles
+## 1. NOW
+- **Status:** Main branch is clean and active. App is localized to English. Local development and tests are fully functional.
+- **Blocked:** Neon DATABASE_URL needs provisioning in GitHub settings by the owner to enable live run data on /runs.
+- **Backlog:** Add "DC" navigation link to AppHeader; verify owner-kpi.tsx N+1 fix (Issue #8 Task 2c); sync issue status.
+- **Active Tasks:** Task briefs 12 (E2E audit) and 13 (scout) are open in `docs/tasks/`. 14-17 are added as future workstreams.
 
-### Projektleiter (whichever agent instance holds `docs/HANDOFF.md`)
-- Owns: planning, task breakdown, implementation, verification, merge decisions, deploys, repo hygiene.
-- Works autonomously via terminal/CLI. Don is NOT a relay — never route briefings,
-  prompts, or outputs through him. Don only: sets goals, supplies secrets, does PIN/UI tests.
-- Reports to Don: outcome first, short, plain language. No filler, no restating known facts.
-- Honest and objective; push back on unrealistic ideas.
+## 2. RULES (Condition → Consequence)
+- **Commit is pushed** → Never force-push, rebase, amend, or squash on the connected branch (protects Lovable history).
+- **Secrets required** → Store secrets strictly at execution site (Vercel env for BDC, GitHub Actions/EAS for OL1). Never set EXPO_TOKEN in BDC, never set DATABASE_URL in OL1. Never commit secrets, keys, or PINs to git/docs.
+- **Merge to main complete** → Manually deploy via `npx vercel --prod --yes` and verify production loads with zero console errors (replaces flaky Vercel auto-deploy). This rule will be replaced by the WS1-CI automation.
+- **PR or branch created** → Verify build using `bun x tsc --noEmit --skipLibCheck` and run `bun test` to ensure zero regressions.
+- **Risk classification**:
+  - **tier:T3 (Health-Logik / Tracking-Schema / Workflows / Secrets)** → Always requires human owner approval and manual merge.
+  - **tier:T2 (Other Application Code)** → Requires developer/agent verification and owner confirmation before merging.
+  - **tier:T1 (Docs / Copy / UI-Kosmetik)** → Eligible for auto-merging and auto-shipping once WS4 automated flow is active.
+- **Observability Layer (Neon / Postgres)** → Keep DB-writes completely null-safe and wrapped in `safe()` helpers. DB-write failures or missing DATABASE_URL must never block engine execution or run creation (GitHub remains sole source of truth).
+- **Single Source of Truth** → Maintain exactly one canonical source per fact. Current session-state resides strictly in the NOW section of `AGENTS.md`. Cross-repo: OL1's AGENTS.md points to BDC as orchestrator, BDC's points to OL1 as execution target.
 
-### Batch gate (default autonomy level)
-- Before starting a batch of tasks (or two running in parallel): announce it to Don
-  in chat, in simple language — what, why, expected result.
-- On Don's go (or after adjusting to his input): execute without further check-ins.
-- Next contact only when the batch is done: short success report + the next batch
-  proposal in the same message.
-- A session start prompt may explicitly raise or suspend this gate.
+## 3. MAP
+- `src/routes/`           TanStack Start file routes (_authenticated/* = PIN-gated)
+- `src/lib/`              Server functions (*.functions.ts = client-callable)
+- `src/lib/db/`           Drizzle schema + runs persistence (null-safe helpers)
+- `src/components/`       Shared UI (AppHeader, …)
+- `docs/tasks/`           Active task briefs (current: 12-17)
+- `docs/archive/`         Completed sessions & historical docs
+- `docs/MIGRATION.md`     Reference: repo migration history
+- `docs/setup-guide.md`   Reference: local setup
+- `.claude/launch.json`   Dev servers (dev :3001, preview :4173)
+- `drizzle/`              Migrations
 
-### Worker instances (any capable model — pick by capability & token cost, not by name)
-- Spawned by the Projektleiter for parallel branches, large mechanical batches,
-  or a second opinion from a cheap capable model.
-- Work exactly one task brief on the branch named in the brief.
-- Validate with `bun run build` (plus whatever the brief says) before pushing.
-- Report: commit hashes, one line per change, validation result. Nothing else.
-- Exception to model-neutrality: tasks touching the native Android assistant AI
-  inside Android Studio go to that native assistant.
+## 4. HANDOFF
 
-## Task briefs
-- `docs/tasks/<nn>-<slug>.md`, committed on the work branch.
-- Machine audience. Terse, zero politeness, no context a reader could get from this file:
-  `GOAL:` / `BRANCH:` / `CHANGES:` (file → exact old/new or precise rule) /
-  `VALIDATE:` (exact commands + expected result) / `REPORT:`.
-- Verification of results always stays with the Projektleiter.
+### Task Card Template (Markdown format)
+```markdown
+# TASK CARD: <Title>
+---
+goal: <Clear statement of what needs to be achieved>
+tier: <T1 | T2 | T3>
+paths:
+  - <allowed/modified files relative path>
+constraints:
+  - <strict bounds, allowed libraries, forbidden operations>
+definition_of_done:
+  - <verifications, exact tests, compile checks, exit criteria>
+handoff_target: <where to report or transition status>
+owner_dependency: <Optional: Don/Owner actions needed, e.g. secrets or approvals>
+---
+```
 
-## Ops facts (verified 2026-07-13)
-- Live: https://01-one-l1fe.vercel.app — Vercel project `01-one-l1fe`,
-  team `gzugang-8969s-projects`, id `prj_7vvLn43fRC6nwbH3hDNtpC8soKfF`. Repo is `vercel link`ed.
-- Git auto-deploy is FLAKY. After every merge to `main`: `npx vercel --prod --yes`,
-  then verify prod loads with zero console errors.
-- `vercel.json` bakes `NITRO_PRESET=vercel` (required — default preset emits the wrong
-  output dir → 404). Reproduce the Vercel runtime locally with `NITRO_PRESET=node-server bun run build`.
-- Cookie/request helpers: import from `@tanstack/react-start/server`, NEVER `vinxi/http`
-  (crashes under the Vercel/Nitro runtime → 500 on server fns → client error boundary).
-- `curl` against `/_serverFn/*` GET endpoints is not representative; verify server fns in a real browser.
-- All 6 env vars (see `docs/setup-guide.md`) are set in Production + Preview. Secrets are Don's job only.
+### 5-Point Session-Close Checklist
+1. **Verification:** All tests pass (`bun test`) and TypeScript compilation is error-free (`bun x tsc --noEmit --skipLibCheck`).
+2. **Build:** Production build compiles locally (`NITRO_PRESET=node-server bun run build`) with zero runtime errors.
+3. **Deployment:** If main was merged, production is updated via CLI and validated live (zero browser/console errors).
+4. **State Sync:** Active session state has been captured and updated in the **NOW** section of `AGENTS.md`.
+5. **Clean Archiving:** All completed task briefs are moved to `docs/archive/` with unique names.
