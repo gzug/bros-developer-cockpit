@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last updated: 2026-07-15 07:31 CEST — BDC e2e connection branch_
+_Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
 
 ## Architecture
 
@@ -20,16 +20,13 @@ _Last updated: 2026-07-15 07:31 CEST — BDC e2e connection branch_
 | direct | fix(ErrorBoundary): capture and display error | 894dad5 | 2026-07-10 |
 | direct | chore: add CHECKPOINT.md | — | 2026-07-10 |
 | #10 | fix: PIN auth, ErrorBoundary, dark mode/PWA/responsive, DC dashboard | 71b71d0 | 2026-07-13 |
+| #18 | feat: wire BDC end-to-end connection | e3a70da | 2026-07-15 |
 
-## Open PRs
+## Deployment
 
-_None — all merged as of 2026-07-13._
-
-## Current branch in validation
-
-| Branch | Scope | Local gates |
-|--------|-------|-------------|
-| `feat/bdc-e2e-connection` | `/submit` form, BDC issue labels, poll trigger, guarded `bdc-hold/*` PR creation, approve/request/live controls, OTA hook handoff | `bun run typecheck`, `bun test`, `bun run build` green on 2026-07-15 |
+- Production deploy completed 2026-07-15 via `npx vercel --prod --yes`
+- Production alias: https://bros-developer-cockpit.vercel.app
+- HTTP smoke: `/auth` 200, `/submit?context=Home&type=change` 200, unauthenticated `POST /api/poll-issues` returns `Not logged in`
 
 ## Owner Queue (blocked — requires owner action)
 
