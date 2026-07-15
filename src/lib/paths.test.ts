@@ -102,7 +102,7 @@ test("dc config allows only presentation paths and denies sensitive mobile paths
   const dcRules = { allowed: config.allowed, forbidden: config.forbidden };
   expect(isPathAllowed("apps/mobile/src/components/Button.tsx", dcRules)).toBe(true);
   expect(isPathAllowed("apps/mobile/src/styles/theme.css", dcRules)).toBe(true);
-  expect(isPathAllowed("apps/mobile/src/devHarness/ScenarioCard.tsx", dcRules)).toBe(true);
+  expect(isPathAllowed("apps/mobile/src/devHarness/ScenarioCard.tsx", dcRules)).toBe(false);
   expect(isPathAllowed("apps/mobile/src/lib/designTokens.ts", dcRules)).toBe(true);
 
   expect(isPathAllowed("apps/mobile/src/lib/db/client.ts", dcRules)).toBe(false);
@@ -110,6 +110,12 @@ test("dc config allows only presentation paths and denies sensitive mobile paths
   expect(isPathAllowed("apps/mobile/src/lib/apiClient.ts", dcRules)).toBe(false);
   expect(isPathAllowed("apps/mobile/src/lib/schema.ts", dcRules)).toBe(false);
   expect(isPathAllowed("apps/mobile/src/lib/someHelper.ts", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/screens/.babelrc", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/screens/babel.config.js", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/screens/__tests__/Home.test.tsx", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/screens/Home.test.tsx", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/screens/plugin.js", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/screens/theme.json", dcRules)).toBe(false);
 });
 
 test("globMatch ** spans path separators, * does not", () => {

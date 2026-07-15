@@ -5,39 +5,38 @@ import { loginWithPin } from "@/lib/auth.server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { safeNext } from "@/lib/safe-next";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+  validateSearch: (s: Record<string, unknown>): { next?: string; owner?: boolean } => {
     const next = typeof s.next === "string" ? s.next : undefined;
-    return next ? { next } : {};
+    const owner = s.owner === true || s.owner === "1";
+    return { ...(next ? { next } : {}), ...(owner ? { owner: true } : {}) };
   },
   component: AuthPage,
 });
 
-function safeNext(candidate: string): string {
-  if (!candidate.startsWith("/") || candidate.startsWith("//")) return "";
-  return candidate;
-}
-
 function AuthPage() {
   const navigate = useNavigate();
-  const { next } = Route.useSearch();
+  const { next, owner = false } = Route.useSearch();
   const nextSafe = safeNext(next ?? "");
-  const [pin, setPin] = useState("");
+  const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^\d{4}$/.test(pin.trim())) {
-      toast.error("Please enter exactly four digits.");
+    if (owner ? secret.trim().length < 12 : !/^\d{4}$/.test(secret.trim())) {
+      toast.error(
+        owner ? "Please enter your owner passphrase." : "Please enter exactly four digits.",
+      );
       return;
     }
     setBusy(true);
     try {
-      await loginWithPin({ data: { pin: pin.trim() } });
+      const result = await loginWithPin({ data: { secret: secret.trim() } });
       if (nextSafe) window.location.replace(nextSafe);
-      else navigate({ to: "/dashboard", replace: true });
+      else navigate({ to: result.role === "owner" ? "/dc" : "/dashboard", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wrong code");
     } finally {
@@ -50,20 +49,30 @@ function AuthPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Log in</CardTitle>
-          <CardDescription>Enter the four-digit code.</CardDescription>
+          <CardDescription>
+            {owner ? "Enter your owner passphrase." : "Enter your four-digit code."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               type="password"
-              inputMode="numeric"
+              aria-label={owner ? "Owner passphrase" : "Four-digit code"}
+              inputMode={owner ? "text" : "numeric"}
               autoComplete="current-password"
-              placeholder="1234"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder={owner ? "Owner passphrase" : "••••"}
+              maxLength={owner ? 128 : 4}
+              value={secret}
+              onChange={(e) =>
+                setSecret(
+                  owner
+                    ? e.target.value.slice(0, 128)
+                    : e.target.value.replace(/\D/g, "").slice(0, 4),
+                )
+              }
               required
               autoFocus
-              className="text-center text-2xl tracking-[0.45em]"
+              className={owner ? "text-center text-lg" : "text-center text-2xl tracking-[0.45em]"}
             />
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Checking…" : "Log in"}

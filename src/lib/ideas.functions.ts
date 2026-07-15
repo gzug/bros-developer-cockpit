@@ -10,7 +10,6 @@ import {
   getEngineRunStatsBatch,
   getIdea,
   getIdeaWithPull,
-  markIdeaApproved,
   markIdeaLive,
   getOwnerActionQueue,
   listIdeaActivity,
@@ -18,6 +17,7 @@ import {
   recentIdeaCount,
   requestIdeaChanges,
   setIdeaStatus,
+  toBrotherIdea,
   type BdcSubmissionType,
   type DCIdeaStatus,
   type DCIdeaIntent,
@@ -52,17 +52,30 @@ const UpdateIdeaStatusInput = z.object({
   status: z.enum(["approved", "live", "blocked"]),
 });
 
+async function enforceBrotherSubmissionQuota(role: "brother" | "owner"): Promise<void> {
+  if (role !== "brother") return;
+  const { getRequestIP } = await import("@tanstack/react-start/server");
+  const { consumeDurableActionQuota } = await import("./login-rate-limit.server");
+  await consumeDurableActionQuota(`submit:${getRequestIP()?.trim() || "unknown"}`);
+  if ((await recentIdeaCount()) >= 5) {
+    throw new Error(
+      "Five wishes were already sent in the last five hours. Please try again later.",
+    );
+  }
+}
+
 export const createIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => CreateIdeaInput.parse(input))
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     const { checkGuardrails } = await import("./guardrails.server");
-    requireAuth();
+    const role = requireAuth();
     const guardrail = checkGuardrails({
       title: data.title,
       body: data.description,
     });
     if (!guardrail.ok) throw new Error(guardrail.message);
+    await enforceBrotherSubmissionQuota(role);
     return createIdea(data.intent as DCIdeaIntent, data.title, data.description);
   });
 
@@ -70,7 +83,7 @@ export const submitIdeaFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => input)
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const role = requireAuth();
 
     const parsed = SubmitIdeaInput.safeParse(data);
     if (!parsed.success) {
@@ -79,6 +92,15 @@ export const submitIdeaFn = createServerFn({ method: "POST" })
         error: parsed.error.issues[0]?.message ?? "Please check the form.",
       };
     }
+
+    const { checkGuardrails } = await import("./guardrails.server");
+    const guardrail = checkGuardrails({
+      title: parsed.data.title,
+      screen: parsed.data.screen,
+      body: parsed.data.description,
+    });
+    if (!guardrail.ok) return { ok: false as const, error: guardrail.message };
+    await enforceBrotherSubmissionQuota(role);
 
     try {
       const idea = await createSubmittedIdea({
@@ -105,7 +127,7 @@ export const submitIdeaFn = createServerFn({ method: "POST" })
 export const listIdeaEntries = createServerFn({ method: "GET" }).handler(async () => {
   const { requireAuth } = await import("./auth-session.server");
   requireAuth();
-  return listIdeas();
+  return (await listIdeas()).map(toBrotherIdea);
 });
 
 export const getIdeaEntry = createServerFn({ method: "GET" })
@@ -113,14 +135,14 @@ export const getIdeaEntry = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
-    return getIdea(data.id);
+    return toBrotherIdea(await getIdea(data.id));
   });
 
 export const getIdeaActivityEntry = createServerFn({ method: "GET" })
   .validator((input: unknown) => IdInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
     return listIdeaActivity(data.id);
   });
 
@@ -134,15 +156,15 @@ export const recentIdeaUsage = createServerFn({ method: "GET" }).handler(async (
 export const processContribution = createServerFn({ method: "POST" })
   .validator((input: unknown) => IdInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
     const { processTask } = await import("./engine.server");
     return processTask(data.id);
   });
 
 export const pollNewBdcIssuesFn = createServerFn({ method: "POST" }).handler(async () => {
-  const { requireAuth } = await import("./auth-session.server");
-  requireAuth();
+  const { requireOwner } = await import("./auth-session.server");
+  requireOwner();
   const { pollNewBdcIssues } = await import("./issue-poller.server");
   return pollNewBdcIssues();
 });
@@ -153,19 +175,67 @@ const STATUS_COMMENT: Record<"approved" | "live" | "blocked", string> = {
   blocked: "Owner returned this idea to manual review.",
 };
 
+async function approveHeldPullRequest(issueNumber: number, prNumber: number) {
+  const { isBdcPaused } = await import("./engine.server");
+  if (isBdcPaused()) {
+    throw new Error(
+      "BDC shipping is paused. Arm it only after the production baseline is device-verified.",
+    );
+  }
+  const pr = await getPullRequest(prNumber);
+  if (pr.state !== "open") {
+    throw new Error(`PR #${prNumber} is not open.`);
+  }
+  const { isPullRequestForIdea } = await import("./github-issues.server");
+  if (!isPullRequestForIdea(issueNumber, pr)) {
+    throw new Error(`PR #${prNumber} is not the trusted held change for issue #${issueNumber}.`);
+  }
+
+  await removeIssueLabel(prNumber, "bdc-changes-requested");
+  await removeIssueLabel(prNumber, "bdc-failed");
+  await removeIssueLabel(prNumber, "bdc-approved");
+  await removeIssueLabel(issueNumber, "bdc-changes-requested");
+  await removeIssueLabel(issueNumber, "bdc-failed");
+  await removeIssueLabel(issueNumber, "bdc-approved");
+  await removeIssueLabel(prNumber, "awaiting-owner-review");
+  await removeIssueLabel(issueNumber, "awaiting-owner-review");
+  await upsertTask({
+    issueNumber,
+    title: pr.title,
+    intent: "change",
+    status: "approved",
+  });
+  // This label starts the privileged ship workflow. Keep it as the final mutation so
+  // a failed bookkeeping call can never look like a failed approval while shipment runs.
+  await addLabelsToIssue(prNumber, ["bdc-approved"]);
+
+  return {
+    ok: true as const,
+    shipLane: "one-l1fe-bdc-ship",
+    message: "Approved. The One L1fe checks will run before the update is published.",
+  };
+}
+
 export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => UpdateIdeaStatusInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
     const { idea, pr } = await getIdeaWithPull(data.id);
 
     if (!canTransitionIdeaStatus(idea.status, data.status as DCIdeaStatus)) {
       throw new Error(`Cannot move ${idea.status} to ${data.status}.`);
     }
 
-    if (data.status === "live" && !canConfirmIdeaLive(pr)) {
-      throw new Error("Cannot confirm live until the linked PR is merged.");
+    if (data.status === "approved") {
+      if (!pr) throw new Error("Cannot approve until the linked PR exists.");
+      return approveHeldPullRequest(data.id, pr.number);
+    }
+
+    if (data.status === "live" && (idea.status !== "shipped" || !canConfirmIdeaLive(pr))) {
+      throw new Error(
+        "Cannot confirm live until the update was published and the linked PR was merged.",
+      );
     }
 
     await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
@@ -176,44 +246,25 @@ export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
 export const approvePrFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => PrActionInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
-
-    const pr = await getPullRequest(data.prNumber);
-    const expectedHeldBranch = `bdc-hold/dc-issue-${data.issueNumber}`;
-    if (pr.state !== "open") {
-      throw new Error(`PR #${data.prNumber} is not open.`);
-    }
-    if (pr.headRef !== expectedHeldBranch) {
-      throw new Error(`PR #${data.prNumber} is on ${pr.headRef}, expected ${expectedHeldBranch}.`);
-    }
-
-    await addLabelsToIssue(data.prNumber, ["bdc-approved"]);
-    await markIdeaApproved(data.issueNumber);
-    await removeIssueLabel(data.prNumber, "awaiting-owner-review");
-    await removeIssueLabel(data.issueNumber, "awaiting-owner-review");
-    await upsertTask({
-      issueNumber: data.issueNumber,
-      title: pr.title,
-      intent: "change",
-      status: "approved",
-    });
-
-    return {
-      ok: true as const,
-      shipLane: "one-l1fe-bdc-ship",
-      message: "Approved. The One L1fe BDC ship workflow will validate, merge, and publish the production OTA.",
-    };
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
+    return approveHeldPullRequest(data.issueNumber, data.prNumber);
   });
 
 export const requestChangesFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => PrActionInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
+    const { pr } = await getIdeaWithPull(data.issueNumber);
+    if (!pr || pr.number !== data.prNumber || pr.state !== "open") {
+      throw new Error(
+        `PR #${data.prNumber} is not the open held change for issue #${data.issueNumber}.`,
+      );
+    }
     await requestIdeaChanges(data.issueNumber);
-    await addLabelsToIssue(data.prNumber, ["bdc-changes-requested"]);
-    await removeIssueLabel(data.prNumber, "awaiting-owner-review");
+    await addLabelsToIssue(pr.number, ["bdc-changes-requested"]);
+    await removeIssueLabel(pr.number, "awaiting-owner-review");
     await upsertTask({
       issueNumber: data.issueNumber,
       title: `Issue #${data.issueNumber}`,
@@ -226,8 +277,14 @@ export const requestChangesFn = createServerFn({ method: "POST" })
 export const markLiveFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => IdInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
+    const { idea, pr } = await getIdeaWithPull(data.id);
+    if (idea.status !== "shipped" || !canConfirmIdeaLive(pr)) {
+      throw new Error(
+        "Cannot confirm live until the update was published and the linked PR was merged.",
+      );
+    }
     await markIdeaLive(data.id);
     await upsertTask({
       issueNumber: data.id,
@@ -239,8 +296,8 @@ export const markLiveFn = createServerFn({ method: "POST" })
   });
 
 export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () => {
-  const { requireAuth } = await import("./auth-session.server");
-  requireAuth();
+  const { requireOwner } = await import("./auth-session.server");
+  requireOwner();
   const ideas = await listIdeas();
   const statsMap = await getEngineRunStatsBatch(ideas.map((idea) => idea.id));
   const flatRuns = ideas.flatMap((idea) => statsMap.get(idea.id) ?? []);
@@ -249,6 +306,7 @@ export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () =
     totalIdeas: ideas.length,
     liveCount: ideas.filter((idea) => idea.status === "live").length,
     approvedCount: ideas.filter((idea) => idea.status === "approved").length,
+    shippedCount: ideas.filter((idea) => idea.status === "shipped").length,
     blockedCount: ideas.filter((idea) => idea.status === "blocked").length,
     sentCount: ideas.filter((idea) => idea.status === "sent").length,
     submittedCount: ideas.filter((idea) => idea.status === "submitted").length,

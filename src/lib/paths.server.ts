@@ -32,6 +32,24 @@ function hasUnsafeSegment(p: string): boolean {
   return p.split("/").some((s) => s === "" || s === "." || s === "..");
 }
 
+function hasUnsafePresentationShape(p: string): boolean {
+  const segments = p.toLowerCase().split("/");
+  const basename = segments.at(-1) ?? "";
+  if (
+    segments.some(
+      (segment) => segment.startsWith(".") || segment === "node_modules" || segment === "__tests__",
+    )
+  ) {
+    return true;
+  }
+  if (!/\.(?:tsx?|css)$/.test(basename)) return true;
+  return (
+    /(?:^|\.)(?:test|spec|config)\./.test(basename) ||
+    basename.endsWith(".d.ts") ||
+    /^(?:babel|metro|webpack|vite|jest|eslint|prettier)(?:\.|$)/.test(basename)
+  );
+}
+
 function globToRegExp(glob: string): RegExp {
   let re = "";
   for (let i = 0; i < glob.length; i++) {
@@ -71,7 +89,7 @@ export function isPathAllowed(
   const { allowed, forbidden } = rules;
 
   // 0. Traversal / malformed segments are never valid.
-  if (!p || hasUnsafeSegment(p)) return false;
+  if (!p || hasUnsafeSegment(p) || hasUnsafePresentationShape(p)) return false;
 
   const eq = (a: string, b: string) => a.toLowerCase() === normalize(b).toLowerCase();
 

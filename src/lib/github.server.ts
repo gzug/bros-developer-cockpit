@@ -7,9 +7,20 @@ const LABEL_META: Record<string, { color: string; description: string }> = {
   "from-brother": { color: "0E8A16", description: "Submitted from the brother-facing BDC flow" },
   "bdc-submitted": { color: "C2E0C6", description: "Submitted to Bros Developer Cockpit" },
   "bdc-engine-started": { color: "1D76DB", description: "BDC engine has claimed this issue" },
-  "bdc-blocked-guardrails": { color: "B60205", description: "BDC guardrails blocked the requested change" },
+  "bdc-blocked-guardrails": {
+    color: "B60205",
+    description: "BDC guardrails blocked the requested change",
+  },
   "bdc-changes-requested": { color: "D93F0B", description: "Owner requested changes in BDC" },
   "bdc-approved": { color: "0E8A16", description: "Owner approved this held BDC PR to ship" },
+  "bdc-shipped": {
+    color: "1D76DB",
+    description: "Production OTA published; device confirmation pending",
+  },
+  "bdc-publish-failed": {
+    color: "B60205",
+    description: "Merged, but production OTA publication failed",
+  },
   "bdc-live": { color: "006B75", description: "Owner confirmed the BDC change is live on device" },
   "bdc-auto": { color: "5319E7", description: "Automated BDC pull request" },
   "bdc-failed": { color: "D93F0B", description: "BDC ship check failed" },
@@ -30,6 +41,9 @@ export type PullState = {
   body: string;
   title: string;
   headRef: string;
+  headSha: string;
+  baseRef: string;
+  author: string;
 };
 
 export type RepoIssue = {
@@ -218,7 +232,9 @@ export async function removeIssueLabel(number: number, label: string): Promise<v
   }
 }
 
-export async function listPullRequests(state: "open" | "closed" | "all" = "all"): Promise<PullState[]> {
+export async function listPullRequests(
+  state: "open" | "closed" | "all" = "all",
+): Promise<PullState[]> {
   const r = repo();
   const pulls = await gh<
     Array<{
@@ -229,7 +245,9 @@ export async function listPullRequests(state: "open" | "closed" | "all" = "all")
       title: string;
       body?: string | null;
       labels?: Array<{ name: string }>;
-      head: { ref: string };
+      head: { ref: string; sha: string };
+      base: { ref: string };
+      user: { login: string };
     }>
   >(`/repos/${r.path}/pulls?state=${state}&per_page=100`);
   return pulls.map((pr) => ({
@@ -242,6 +260,9 @@ export async function listPullRequests(state: "open" | "closed" | "all" = "all")
     body: pr.body ?? "",
     title: pr.title,
     headRef: pr.head.ref,
+    headSha: pr.head.sha,
+    baseRef: pr.base.ref,
+    author: pr.user.login,
   }));
 }
 
@@ -255,7 +276,9 @@ export async function getPullRequest(number: number): Promise<PullState> {
     title: string;
     body?: string | null;
     labels?: Array<{ name: string }>;
-    head: { ref: string };
+    head: { ref: string; sha: string };
+    base: { ref: string };
+    user: { login: string };
   }>(`/repos/${r.path}/pulls/${number}`);
   return {
     number: pr.number,
@@ -267,6 +290,9 @@ export async function getPullRequest(number: number): Promise<PullState> {
     body: pr.body ?? "",
     title: pr.title,
     headRef: pr.head.ref,
+    headSha: pr.head.sha,
+    baseRef: pr.base.ref,
+    author: pr.user.login,
   };
 }
 
@@ -329,60 +355,50 @@ export async function createBranch(name: string, fromSha: string): Promise<void>
 
 export type FileEdit = { path: string; content: string };
 
-type ContentFile = {
-  type: "file";
-  sha: string;
-  content?: string;
-};
-
-async function getContentFile(path: string, ref: string): Promise<ContentFile | null> {
-  const r = repo();
-  const res = await fetch(
-    `${GH}/repos/${r.path}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref)}`,
-    { headers: headers() },
-  );
-  if (res.status === 404) return null;
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`GitHub ${res.status} contents ${path}: ${body.slice(0, 400)}`);
-  }
-  const json = (await res.json()) as ContentFile | ContentFile[];
-  if (Array.isArray(json) || json.type !== "file") {
-    throw new Error(`GitHub contents ${path} is not a file.`);
-  }
-  return json;
-}
-
-async function putFileContent(branch: string, file: FileEdit, message: string): Promise<string> {
-  const r = repo();
-  const existing = await getContentFile(file.path, branch);
-  const result = await gh<{ commit: { sha: string } }>(
-    `/repos/${r.path}/contents/${file.path.split("/").map(encodeURIComponent).join("/")}`,
-    {
-      method: "PUT",
-      body: JSON.stringify({
-        message,
-        content: Buffer.from(file.content, "utf8").toString("base64"),
-        branch,
-        sha: existing?.sha,
-      }),
-    },
-  );
-  return result.commit.sha;
-}
-
 export async function commitFiles(
   branch: string,
   baseSha: string,
   files: FileEdit[],
   message: string,
 ): Promise<string> {
-  void baseSha;
-  let lastCommit = "";
-  for (const file of files) {
-    lastCommit = await putFileContent(branch, file, message);
+  if (files.length === 0) throw new Error("Cannot create an empty commit.");
+  const branchHead = await getBranchHeadSha(branch);
+  if (branchHead !== baseSha) {
+    throw new Error(`Branch ${branch} moved from expected base ${baseSha}.`);
   }
-  return lastCommit;
+
+  const r = repo();
+  const baseCommit = await gh<{ tree: { sha: string } }>(`/repos/${r.path}/git/commits/${baseSha}`);
+  const blobs = await Promise.all(
+    files.map(async (file) => ({
+      path: file.path,
+      sha: (
+        await gh<{ sha: string }>(`/repos/${r.path}/git/blobs`, {
+          method: "POST",
+          body: JSON.stringify({ content: file.content, encoding: "utf-8" }),
+        })
+      ).sha,
+    })),
+  );
+  const tree = await gh<{ sha: string }>(`/repos/${r.path}/git/trees`, {
+    method: "POST",
+    body: JSON.stringify({
+      base_tree: baseCommit.tree.sha,
+      tree: blobs.map((blob) => ({ ...blob, mode: "100644", type: "blob" })),
+    }),
+  });
+  const commit = await gh<{ sha: string }>(`/repos/${r.path}/git/commits`, {
+    method: "POST",
+    body: JSON.stringify({ message, tree: tree.sha, parents: [baseSha] }),
+  });
+  await gh(
+    `/repos/${r.path}/git/refs/heads/${branch.split("/").map(encodeURIComponent).join("/")}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ sha: commit.sha, force: false }),
+    },
+  );
+  return commit.sha;
 }
 
 export async function openPullRequest(input: {

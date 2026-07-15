@@ -1,10 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listRunsData, type RunRow, type TaskRow } from "@/lib/runs.functions";
 
 export const Route = createFileRoute("/_authenticated/runs")({
+  beforeLoad: async () => {
+    const { checkAuth } = await import("@/lib/auth.server");
+    const auth = await checkAuth();
+    if (auth.role !== "owner") throw redirect({ to: "/dashboard" });
+  },
   component: RunsPage,
 });
 
@@ -98,12 +103,10 @@ function RunsPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader />
+      <AppHeader owner />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight">Engine runs</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Queue, run status, costs, and errors.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Queue, run status, costs, and errors.</p>
 
         <div className="mt-6 space-y-3">
           {data.isLoading && (

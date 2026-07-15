@@ -10,7 +10,6 @@
     "apps/mobile/src/components/**",
     "apps/mobile/src/screens/**",
     "apps/mobile/src/styles/**",
-    "apps/mobile/src/devHarness/**",
     "apps/mobile/src/lib/designTokens.*"
   ],
   "forbidden": [

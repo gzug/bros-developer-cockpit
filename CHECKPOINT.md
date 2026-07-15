@@ -1,76 +1,69 @@
 # BDC CHECKPOINT
 
-_Last updated: 2026-07-15 07:55 CEST — BDC approval routed through One L1fe ship lane + production redeploy_
+_Updated 2026-07-15 — readiness/security repair in validation; production handoff remains blocked._
 
-## Architecture
+## Current verdict
 
-- **Stack:** TanStack Start + Drizzle ORM + Neon (GitHub-native auth)
-- **DB:** Neon (owner must provision `DATABASE_URL` secret in repo settings)
-- **Auth:** PIN via `APP_PIN` env var, timing-safe SHA-256 comparison
-- **No Postgres/Drizzle migrations run by PL** — owner-only action
-- **Target repo:** GitHub writes are hard-limited in code to `gzug/01-One-L1fe`
-- **Release lane:** BDC approval labels the held PR `bdc-approved`; the trusted One L1fe `bdc-ship` GitHub Action validates, merges, and publishes production OTA to the Android app
+The web app and local build are functional, but the brother handoff is **not complete**. No real BDC
+wish has yet passed issue → held PR → owner approval → GitHub Action → EAS update group → phone
+confirmation. Do not send the production PIN or claim the pipeline works end to end until that proof exists.
 
-## Merged into main
+## Verified production identity
 
-| PR | Title | SHA | Date |
-|----|-------|-----|------|
-| #9 | feat: dc-ui — engine runs page | 368bbf6 | 2026-07-10 |
-| direct | fix(auth): PIN SHA-256 + timingSafeEqual | ea08a78 | 2026-07-10 |
-| direct | fix(ErrorBoundary): capture and display error | 894dad5 | 2026-07-10 |
-| direct | chore: add CHECKPOINT.md | — | 2026-07-10 |
-| #10 | fix: PIN auth, ErrorBoundary, dark mode/PWA/responsive, DC dashboard | 71b71d0 | 2026-07-13 |
-| #18 | feat: wire BDC end-to-end connection | e3a70da | 2026-07-15 |
-| #19 | fix: route bdc approval through ship lane | 6db0540 | 2026-07-15 |
+- URL: https://bros-developer-cockpit.vercel.app
+- Vercel project: `bros-developer-cockpit`
+- Project ID: `prj_S53pvisoyTbyrCx2Or0DVJsq4mwb`
+- Team: `gzugang-8969s-projects`
+- The previously documented `https://01-one-l1fe.vercel.app` deployment is not the BDC production app.
 
-## Deployment
+## Readiness repair
 
-- Production deploy completed 2026-07-15 via `npx vercel --prod --yes`
-- Production alias: https://bros-developer-cockpit.vercel.app
-- HTTP smoke: `/auth` 200, `/submit?context=Home&type=change` 200, unauthenticated `POST /api/poll-issues` returns `Not logged in`
+- Separate signed `brother` and `owner` sessions.
+- Same-origin CSRF middleware protects every TanStack server-function request.
+- Login attempts and brother actions have durable database-backed quotas in production.
+- `BROTHER_PIN` is the four-digit brother code; `APP_PIN` is an owner-only passphrase of at least
+  12 characters. Malformed credentials fail closed.
+- Owner-only server guards cover `/dc`, `/runs`, `/owner-kpi`, polling, processing, approvals,
+  change requests, run data, KPI data, and live confirmation.
+- Brother navigation contains only wishes and new submission; idea details expose no GitHub/PR controls.
+- Direct contextual submission links survive login.
+- Both submission routes apply server-side guardrails; model input is fenced as untrusted text.
+- The engine defaults to paused unless `BDC_PAUSED=false` is set explicitly.
+- Approval is also blocked while paused; GitHub must separately have `BDC_SHIP_ENABLED=true`.
+- Multi-file engine patches use one atomic Git tree/commit and abort if the held branch moved.
+- Model retries finish before GitHub mutation; deterministic issue branches reconcile lost responses and
+  concurrent retries instead of creating duplicate branches, commits, or PRs.
+- Lifecycle now distinguishes `approved`, `shipped` (OTA published), `live` (phone-confirmed), and
+  post-merge `publish failed`.
+- Unknown dashboard usage and GitHub failures no longer render as reassuring zero/empty states.
+- Correct privacy copy discloses private GitHub/OpenRouter processing and asks for no health data.
 
-## Owner Queue (blocked — requires owner action)
+## Validation evidence
 
-1. **Run one owner PIN smoke:** submit a harmless test wish, verify the issue appears in `gzug/01-One-L1fe`, then decide whether to close it or let BDC process it
-2. **Approve one held PR from `/dc`:** verify the One L1fe `bdc-ship` workflow validates, merges, publishes EAS production OTA, and comments the update group
+- `bun test`: 129 passed, 0 failed.
+- `bun run typecheck`: passed after route generation/build.
+- `NITRO_PRESET=node-server bun run build`: passed.
+- Local browser smoke at 390 × 844:
+  - brother code lands on `/dashboard`;
+  - brother `/dc` access redirects to `/dashboard`;
+  - owner code lands on `/dc` and owner navigation is available;
+  - logged-out `/submit?context=Home&type=change` returns to the same populated form after login;
+  - landing, auth, wish picker, submission form, dashboard errors, and owner console were visually checked.
 
-## Issue #8 Status
+## Blocking owner/release actions
 
-- [x] Task 1: Merge PR #7 prerequisites — DONE (already merged)
-- [x] Task 2a: `timingSafeEqual` for PIN auth — DONE (SHA-256 hash)
-- [x] Task 2b: Localize UI to English — DONE (100% confirmed)
-- [ ] Task 2c: Fix N+1 API calls on KPI page — PENDING CHECK
-- [x] Task 3: Polish branch — DONE (dark mode, PWA, skeletons, ErrorBoundary, responsive)
-- [x] Task 4: Minimal DC operational UI (`dc.tsx`) — DONE (Queue, Run Log, Costs, Approvals)
+1. Set a distinct four-digit `BROTHER_PIN` in Vercel Production and Preview. Do not share `APP_PIN`.
+2. Redeploy and repeat the two-role browser smoke on production.
+3. Resolve the One L1fe Android native-baseline/runtime gap and establish an intentional, phone-confirmed
+   production baseline before any BDC shipment.
+4. Set One L1fe repository variable `BDC_PRODUCTION_BASE_SHA` to that exact confirmed main SHA.
+5. Run one harmless copy-only wish through the full production path and retain the issue, PR, Action run,
+   EAS group, runtime, merge SHA, and phone confirmation as evidence.
 
-## Autonomous Backlog (PL-executable)
+## Open PR disposition
 
-- [ ] owner-kpi.tsx: verify N+1 fix (Issue #8 Task 2c)
-- [ ] gzug/01-One-L1fe track: sync issue status
-- [ ] With owner PIN: verify /runs and /dc live DB-backed data
-- [ ] With owner PIN: approve one held PR and verify the One L1fe `bdc-ship` workflow publishes the OTA
+- BDC #16: unrelated analytics/privacy expansion; do not merge into this handoff lane.
+- BDC #17: stale/conflicting consolidation; close rather than resolve.
+- One L1fe #280: oversized mixed foundation/UI change with a fail-open sync proposal; do not merge as-is.
 
-## Live flow
-
-PIN unlock opens the BDC web app. `/submit?context=<screen>&type=idea|change` creates one structured issue in `gzug/01-One-L1fe` with `from-brother`, `bdc-submitted`, `idea|change`, `ui-only`, and `one-l1fe-design`. `/dc` polls for unclaimed submissions, labels them `bdc-engine-started`, runs the scoped OpenRouter engine, blocks out-of-scope diffs before any GitHub write, and opens a held PR from `bdc-hold/dc-issue-<nr>`. Owner approval in `/dc` labels the held PR and issue `bdc-approved`; the One L1fe `bdc-ship` workflow then validates, squash-merges, publishes the production EAS OTA, and comments the update group. Final `bdc-live` confirmation remains manual after the owner/device check.
-
-## State Snapshot
-
-```
-git log origin/main --oneline -5
-6db0540 fix: route bdc approval through ship lane (#19)
-0273b37 fix: expose bdc readiness state
-5bb8a09 docs: sync bdc owner env queue
-b90c47c docs: record bdc e2e deployment
-e3a70da feat: wire BDC end-to-end connection
-
-Open PRs: #17, #16
-Open Issues: #13, #8
-```
-
-## Rules Reference
-
-- Ladder of Authority: git log > CHECKPOINT.md > AGENTS.md > briefs
-- Git wins over docs — if doc contradicts live state, flag doc as STALE
-- Never idle on owner-blockers; continue code track
-- Merge only after gate green + diff re-read
+Canonical architecture: `docs/MIGRATION.md`. Environment and acceptance: `docs/setup-guide.md`.

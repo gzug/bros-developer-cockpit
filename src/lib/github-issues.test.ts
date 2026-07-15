@@ -6,8 +6,37 @@ import {
   describeIdeaStatus,
   getOwnerActionQueue,
   groupEngineRunStats,
+  isPullRequestForIdea,
   toIdeaActivity,
 } from "./github-issues.server";
+import type { PullState } from "./github.server";
+
+function pull(overrides: Partial<PullState> = {}): PullState {
+  return {
+    number: 42,
+    html_url: "https://github.com/gzug/01-One-L1fe/pull/42",
+    state: "open",
+    merged: false,
+    merged_at: null,
+    labels: [],
+    body: "Resolves: gzug/01-One-L1fe#7",
+    title: "BDC change",
+    headRef: "bdc-hold/dc-issue-7",
+    headSha: "abc123",
+    baseRef: "main",
+    author: "gzug",
+    ...overrides,
+  };
+}
+
+test("pull binding requires exact branch, base, author, and source marker", () => {
+  expect(isPullRequestForIdea(7, pull())).toBe(true);
+  expect(isPullRequestForIdea(7, pull({ headRef: "feature/other" }))).toBe(false);
+  expect(isPullRequestForIdea(7, pull({ baseRef: "release" }))).toBe(false);
+  expect(isPullRequestForIdea(7, pull({ author: "attacker" }))).toBe(false);
+  expect(isPullRequestForIdea(7, pull({ body: "Mentions #7 only" }))).toBe(false);
+  expect(isPullRequestForIdea(7, pull({ body: "Resolves: gzug/01-One-L1fe#70" }))).toBe(false);
+});
 
 test("open pull request derives sent status", () => {
   expect(
@@ -68,6 +97,20 @@ test("explicit approved label derives approved status", () => {
 test("bdc lifecycle labels derive processing, blocked, approved, and live", () => {
   expect(
     deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-shipped"],
+      issueState: "open",
+      pr: { labels: [], merged: true },
+    }),
+  ).toBe("shipped");
+  expect(
+    deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-approved", "bdc-publish-failed"],
+      issueState: "open",
+      pr: { labels: [], merged: true },
+    }),
+  ).toBe("blocked");
+  expect(
+    deriveIdeaStatus({
       issueLabels: ["from-brother", "bdc-submitted", "bdc-engine-started"],
       issueState: "open",
     }),
@@ -98,10 +141,11 @@ test("sent ideas can move to approved or blocked", () => {
   expect(canTransitionIdeaStatus("sent", "live")).toBe(false);
 });
 
-test("approved ideas can move to live or blocked", () => {
-  expect(canTransitionIdeaStatus("approved", "live")).toBe(true);
+test("only shipped ideas can move to live", () => {
+  expect(canTransitionIdeaStatus("approved", "live")).toBe(false);
   expect(canTransitionIdeaStatus("approved", "blocked")).toBe(true);
   expect(canTransitionIdeaStatus("approved", "sent")).toBe(false);
+  expect(canTransitionIdeaStatus("shipped", "live")).toBe(true);
 });
 
 test("other statuses cannot enter the owner lane directly", () => {
@@ -111,9 +155,9 @@ test("other statuses cannot enter the owner lane directly", () => {
 });
 
 test("status descriptions explain the next operator step", () => {
-  expect(describeIdeaStatus("sent")).toContain("approve shipping");
-  expect(describeIdeaStatus("approved")).toContain("ship lane");
-  expect(describeIdeaStatus("blocked")).toBe("Stopped for manual review.");
+  expect(describeIdeaStatus("sent")).toContain("Don to review");
+  expect(describeIdeaStatus("approved")).toContain("safety checks");
+  expect(describeIdeaStatus("blocked")).toContain("Don's help");
 });
 
 test("idea activity removes blank comments and returns newest first", () => {
@@ -157,7 +201,7 @@ test("idea activity removes blank comments and returns newest first", () => {
   ]);
 });
 
-test("owner action queue prioritizes approved then sent then blocked", () => {
+test("owner action queue prioritizes shipped, sent, blocked, then approved", () => {
   expect(
     getOwnerActionQueue([
       {
@@ -190,11 +234,25 @@ test("owner action queue prioritizes approved then sent then blocked", () => {
         description: "",
         intent: "idea",
         status: "sent",
-        statusSummary: "A held PR exists. Review it and either approve shipping or return it to manual review.",
+        statusSummary:
+          "A held PR exists. Review it and either approve shipping or return it to manual review.",
         createdAt: "2026-07-13T10:00:00Z",
         issueUrl: "https://example.com/issues/3",
         prNumber: 30,
         prUrl: "https://example.com/pulls/30",
+        labels: [],
+      },
+      {
+        id: 5,
+        title: "Published",
+        description: "",
+        intent: "idea",
+        status: "shipped",
+        statusSummary: "Update published. Check the phone.",
+        createdAt: "2026-07-13T12:00:00Z",
+        issueUrl: "https://example.com/issues/5",
+        prNumber: 50,
+        prUrl: "https://example.com/pulls/50",
         labels: [],
       },
       {
@@ -210,9 +268,10 @@ test("owner action queue prioritizes approved then sent then blocked", () => {
       },
     ]).map((idea) => ({ id: idea.id, status: idea.status })),
   ).toEqual([
-    { id: 2, status: "approved" },
+    { id: 5, status: "shipped" },
     { id: 3, status: "sent" },
     { id: 1, status: "blocked" },
+    { id: 2, status: "approved" },
   ]);
 });
 
@@ -242,7 +301,13 @@ test("groupEngineRunStats groups engine comments by issue number", () => {
     { model: "gpt-x", promptTokens: 100, completionTokens: 50, costUsd: 0.0123, prNumber: 10 },
   ]);
   expect(stats.get(2)).toEqual([
-    { model: "claude-y", promptTokens: 200, completionTokens: 80, costUsd: 0.0456, prNumber: undefined },
+    {
+      model: "claude-y",
+      promptTokens: 200,
+      completionTokens: 80,
+      costUsd: 0.0456,
+      prNumber: undefined,
+    },
   ]);
   expect(stats.get(3)).toEqual([]);
   expect(stats.has(99)).toBe(false);
