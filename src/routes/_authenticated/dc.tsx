@@ -32,6 +32,11 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(asyn
   const { requireAuth } = await import("@/lib/auth-session.server");
   requireAuth();
 
+  const envStatus = {
+    githubTokenSet: Boolean(process.env.GITHUB_TOKEN),
+    openrouterKeySet: Boolean(process.env.OPENROUTER_API_KEY),
+    otaHookSet: Boolean(process.env.ONE_L1FE_OTA_DEPLOY_HOOK_URL),
+  };
   let githubConnected = true;
   let githubError: string | null = null;
   const { listIdeas } = await import("@/lib/github-issues.server");
@@ -44,6 +49,7 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(asyn
   const db = getDb();
   if (!db) {
     return {
+      envStatus,
       githubConnected,
       githubError,
       dbConnected: false,
@@ -64,6 +70,7 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(asyn
     ]);
 
     return {
+      envStatus,
       githubConnected,
       githubError,
       dbConnected: true,
@@ -81,6 +88,7 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(asyn
   } catch (error) {
     console.error("[db] getDcDashboardData query failed:", error);
     return {
+      envStatus,
       githubConnected,
       githubError,
       dbConnected: false,
@@ -210,6 +218,7 @@ function DcOperationalDashboard() {
   const runsList = data?.runs ?? [];
   const dbConnected = data?.dbConnected ?? false;
   const githubConnected = data?.githubConnected ?? false;
+  const envStatus = data?.envStatus;
   const totalCost = runsList.reduce((sum: number, run: any) => sum + parseFloat(run.costUsd || "0"), 0);
 
   return (
@@ -237,8 +246,21 @@ function DcOperationalDashboard() {
           </div>
         </div>
 
-        {(!dbConnected || !githubConnected) && (
+        {(!dbConnected || !githubConnected || envStatus?.otaHookSet === false || envStatus?.openrouterKeySet === false) && (
           <div className="mb-6 grid gap-3">
+            {envStatus?.openrouterKeySet === false && (
+              <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+                  <div>
+                    <h2 className="text-sm font-semibold text-rose-600">OpenRouter not connected</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      OPENROUTER_API_KEY is missing. BDC can collect ideas, but the engine cannot create held PRs.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {!githubConnected && (
               <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4">
                 <div className="flex gap-3">
@@ -246,6 +268,19 @@ function DcOperationalDashboard() {
                   <div>
                     <h2 className="text-sm font-semibold text-rose-600">GitHub not connected</h2>
                     <p className="mt-1 text-xs text-muted-foreground">{data?.githubError ?? "Set GITHUB_TOKEN."}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {envStatus?.otaHookSet === false && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                  <div>
+                    <h2 className="text-sm font-semibold text-amber-600">OTA hook not connected</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      ONE_L1FE_OTA_DEPLOY_HOOK_URL is missing. Approval can still merge the held PR, but it will not trigger the One L1fe OTA lane.
+                    </p>
                   </div>
                 </div>
               </div>
