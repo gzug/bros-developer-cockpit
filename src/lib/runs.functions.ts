@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { desc } from "drizzle-orm";
 import { getDb, dbSchema } from "./db/index";
+import { listMemoryRuns, listMemoryTasks } from "./db/runs.server";
 
 export type TaskRow = {
   issueNumber: number;
@@ -37,7 +38,32 @@ export const listRunsData = createServerFn({ method: "GET" }).handler(
     requireAuth();
 
     const db = getDb();
-    if (!db) return { tasks: [], runs: [] };
+    if (!db) {
+      return {
+        tasks: listMemoryTasks().slice(0, 50).map((t) => ({
+          issueNumber: t.issueNumber,
+          title: t.title,
+          intent: t.intent,
+          status: t.status,
+          updatedAt: t.updatedAt.toISOString(),
+        })),
+        runs: listMemoryRuns().slice(0, 100).map((r) => ({
+          id: r.id,
+          issueNumber: r.issueNumber,
+          status: r.status,
+          tier: r.tier,
+          model: r.model,
+          tokensPrompt: r.tokensPrompt,
+          tokensCompletion: r.tokensCompletion,
+          costUsd: r.costUsd,
+          githubBranchRef: r.githubBranchRef,
+          githubPrNumber: r.githubPrNumber,
+          error: r.error,
+          startedAt: r.startedAt.toISOString(),
+          finishedAt: r.finishedAt?.toISOString() ?? null,
+        })),
+      };
+    }
 
     const [taskRows, runRows] = await Promise.all([
       db

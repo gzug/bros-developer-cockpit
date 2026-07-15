@@ -1,5 +1,6 @@
 import {
   addIssueComment,
+  addLabelsToIssue,
   createIssue,
   getIssue,
   getPullRequest,
@@ -14,8 +15,9 @@ import {
   type RepoIssueComment,
 } from "./github.server";
 
-export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea";
-export type DCIdeaStatus = "submitted" | "sent" | "approved" | "live" | "blocked" | "closed";
+export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea" | "change";
+export type DCIdeaStatus = "submitted" | "processing" | "sent" | "approved" | "live" | "blocked" | "closed";
+export type BdcSubmissionType = "idea" | "change";
 
 export interface DCIdea {
   id: number;
@@ -54,6 +56,15 @@ type ParsedMeta = {
 };
 
 const DC_LABEL = "dc";
+const FROM_BROTHER_LABEL = "from-brother";
+const BDC_SUBMITTED_LABEL = "bdc-submitted";
+const BDC_ENGINE_STARTED_LABEL = "bdc-engine-started";
+const BDC_BLOCKED_GUARDRAILS_LABEL = "bdc-blocked-guardrails";
+const BDC_CHANGES_REQUESTED_LABEL = "bdc-changes-requested";
+const BDC_APPROVED_LABEL = "bdc-approved";
+const BDC_LIVE_LABEL = "bdc-live";
+const UI_ONLY_LABEL = "ui-only";
+const DESIGN_LABEL = "one-l1fe-design";
 const STATUS_PREFIX = "dc:status:";
 const INTENT_PREFIX = "dc:";
 const META_RE = /<!--\s*dc:(\{[\s\S]*?\})\s*-->/;
@@ -70,12 +81,15 @@ function cleanDescription(body: string): string {
 
 function parseMeta(issue: RepoIssue): ParsedMeta {
   const labels = issue.labels.map((label) => label.name);
+  if (labels.includes("change")) return { intent: "change" };
+  if (labels.includes("idea")) return { intent: "idea" };
+
   const labelIntent = labels.find(
     (label) => label.startsWith(INTENT_PREFIX) && label !== DC_LABEL && !label.startsWith(STATUS_PREFIX),
   );
   if (labelIntent) {
     const candidate = labelIntent.slice(INTENT_PREFIX.length);
-    if (candidate === "wording" || candidate === "look" || candidate === "wrong" || candidate === "idea") {
+    if (candidate === "wording" || candidate === "look" || candidate === "wrong" || candidate === "idea" || candidate === "change") {
       return { intent: candidate };
     }
   }
@@ -84,7 +98,7 @@ function parseMeta(issue: RepoIssue): ParsedMeta {
   if (!match) return { intent: "idea" };
   try {
     const parsed = JSON.parse(match[1]) as Partial<ParsedMeta>;
-    if (parsed.intent === "wording" || parsed.intent === "look" || parsed.intent === "wrong" || parsed.intent === "idea") {
+    if (parsed.intent === "wording" || parsed.intent === "look" || parsed.intent === "wrong" || parsed.intent === "idea" || parsed.intent === "change") {
       return { intent: parsed.intent };
     }
   } catch {}
@@ -94,7 +108,16 @@ function parseMeta(issue: RepoIssue): ParsedMeta {
 function matchPullRequest(issueNumber: number, pulls: PullState[]): PullState | undefined {
   return pulls.find((pull) => {
     const ref = `#${issueNumber}`;
-    return pull.body.includes(`Closes ${ref}`) || pull.title.includes(ref) || pull.body.includes(ref);
+    const fullRef = `gzug/01-One-L1fe#${issueNumber}`;
+    const branch = `bdc-hold/dc-issue-${issueNumber}`;
+    return (
+      pull.headRef === branch ||
+      pull.body.includes(`Closes ${ref}`) ||
+      pull.body.includes(`Resolves: ${fullRef}`) ||
+      pull.body.includes(fullRef) ||
+      pull.title.includes(ref) ||
+      pull.body.includes(ref)
+    );
   });
 }
 
@@ -110,11 +133,16 @@ export function deriveIdeaStatus(input: {
 }): DCIdeaStatus {
   const labels = new Set([...input.issueLabels, ...(input.pr?.labels ?? [])]);
 
-  if (labels.has("bdc-failed")) return "blocked";
+  if (labels.has("bdc-failed") || labels.has(BDC_BLOCKED_GUARDRAILS_LABEL) || labels.has(BDC_CHANGES_REQUESTED_LABEL)) {
+    return "blocked";
+  }
+  if (labels.has(BDC_LIVE_LABEL)) return "live";
+  if (labels.has(BDC_APPROVED_LABEL)) return "approved";
   if (labels.has(statusLabel("live"))) return "live";
   if (labels.has(statusLabel("approved"))) return "approved";
   if (labels.has(statusLabel("blocked"))) return "blocked";
   if (input.pr) return "sent";
+  if (labels.has(BDC_ENGINE_STARTED_LABEL)) return "processing";
   if (input.issueState === "closed") return "closed";
   return "submitted";
 }
@@ -123,6 +151,8 @@ export function canTransitionIdeaStatus(from: DCIdeaStatus, to: DCIdeaStatus): b
   if (from === to) return true;
 
   switch (from) {
+    case "processing":
+      return to === "sent" || to === "blocked";
     case "sent":
       return to === "approved" || to === "blocked";
     case "approved":
@@ -140,6 +170,8 @@ export function describeIdeaStatus(status: DCIdeaStatus): string {
   switch (status) {
     case "submitted":
       return "Ready to start the bridge pipeline.";
+    case "processing":
+      return "BDC is preparing a held PR.";
     case "sent":
       return "A held PR exists. Review it and either approve shipping or return it to manual review.";
     case "approved":
@@ -222,32 +254,76 @@ function truncateTitle(title: string): string {
   return title.trim().slice(0, 80);
 }
 
+function submissionTypeForIntent(intent: DCIdeaIntent): BdcSubmissionType {
+  return intent === "idea" ? "idea" : "change";
+}
+
+function issueTitle(type: BdcSubmissionType, title: string): string {
+  return `[${type === "idea" ? "Idea" : "Change"}] ${truncateTitle(title)}`;
+}
+
+function issueBody(input: {
+  type: BdcSubmissionType;
+  title: string;
+  description: string;
+  screen?: string;
+}): string {
+  const screen = input.screen?.trim() || "not specified";
+  return [
+    "## Description",
+    input.description.trim(),
+    "",
+    "## Context",
+    `Screen: ${screen}`,
+    `Type: ${input.type}`,
+    "",
+    "---",
+    `_Submitted via BDC on ${new Date().toISOString()}_`,
+    "",
+    `<!-- dc:${JSON.stringify({ intent: input.type })} -->`,
+  ].join("\n");
+}
+
+function baseSubmissionLabels(type: BdcSubmissionType): string[] {
+  return [FROM_BROTHER_LABEL, BDC_SUBMITTED_LABEL, type, UI_ONLY_LABEL, DESIGN_LABEL];
+}
+
 export async function createIdea(
   intent: DCIdeaIntent,
   title: string,
   description: string,
 ): Promise<DCIdea> {
+  const type = submissionTypeForIntent(intent);
+  return createSubmittedIdea({ type, title, description });
+}
+
+export async function createSubmittedIdea(input: {
+  type: BdcSubmissionType;
+  title: string;
+  description: string;
+  screen?: string;
+}): Promise<DCIdea> {
   const issue = await createIssue({
-    title: truncateTitle(title),
-    body: `${description.trim()}\n\n<!-- dc:${JSON.stringify({ intent })} -->`,
-    labels: [DC_LABEL, `${INTENT_PREFIX}${intent}`, statusLabel("submitted")],
+    title: issueTitle(input.type, input.title),
+    body: issueBody(input),
+    labels: baseSubmissionLabels(input.type),
   });
   return {
     id: issue.number,
     title: issue.title,
-    description: description.trim(),
-    intent,
+    description: input.description.trim(),
+    intent: input.type,
     status: "submitted",
     statusSummary: describeIdeaStatus("submitted"),
     createdAt: issue.created_at,
     issueUrl: issue.html_url,
-    labels: [DC_LABEL, `${INTENT_PREFIX}${intent}`, statusLabel("submitted")],
+    labels: baseSubmissionLabels(input.type),
   };
 }
 
 export async function listIdeas(): Promise<DCIdea[]> {
   const [issues, pulls] = await Promise.all([
-    listIssues({ labels: DC_LABEL, state: "all", sort: "created", direction: "desc", perPage: 50 }),
+    listIssues({ labels: BDC_SUBMITTED_LABEL, state: "all", sort: "created", direction: "desc", perPage: 50 }),
     listPullRequests("all"),
   ]);
   const realIssues = issues.filter((issue) => !issue.pull_request);
@@ -262,7 +338,7 @@ export async function getIdea(issueNumber: number): Promise<DCIdea> {
 export async function recentIdeaCount(): Promise<number> {
   const sinceDate = new Date(Date.now() - 5 * 60 * 60 * 1000);
   const issues = await listIssues({
-    labels: DC_LABEL,
+    labels: BDC_SUBMITTED_LABEL,
     state: "all",
     sort: "created",
     direction: "desc",
@@ -275,11 +351,66 @@ export async function recentIdeaCount(): Promise<number> {
 export async function setIdeaStatus(issueNumber: number, status: DCIdeaStatus, intent?: DCIdeaIntent): Promise<void> {
   const issue = await getIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
-  const next = labels.filter((label) => !label.startsWith(STATUS_PREFIX));
-  next.push(statusLabel(status));
-  if (!next.includes(DC_LABEL)) next.push(DC_LABEL);
-  if (intent && !next.includes(`${INTENT_PREFIX}${intent}`)) next.push(`${INTENT_PREFIX}${intent}`);
+  const next = labels.filter(
+    (label) =>
+      !label.startsWith(STATUS_PREFIX) &&
+      label !== BDC_APPROVED_LABEL &&
+      label !== BDC_LIVE_LABEL &&
+      label !== BDC_CHANGES_REQUESTED_LABEL &&
+      label !== BDC_BLOCKED_GUARDRAILS_LABEL,
+  );
+  if (!next.includes(FROM_BROTHER_LABEL)) next.push(FROM_BROTHER_LABEL);
+  if (!next.includes(BDC_SUBMITTED_LABEL)) next.push(BDC_SUBMITTED_LABEL);
+  if (!next.includes(UI_ONLY_LABEL)) next.push(UI_ONLY_LABEL);
+  if (!next.includes(DESIGN_LABEL)) next.push(DESIGN_LABEL);
+  const type = intent ? submissionTypeForIntent(intent) : "idea";
+  if (!next.includes(type)) next.push(type);
+  if (status === "processing" || status === "sent") {
+    if (!next.includes(BDC_ENGINE_STARTED_LABEL)) next.push(BDC_ENGINE_STARTED_LABEL);
+  }
+  if (status === "approved") next.push(BDC_APPROVED_LABEL);
+  if (status === "live") next.push(BDC_LIVE_LABEL);
+  if (status === "blocked") next.push(BDC_CHANGES_REQUESTED_LABEL);
   await updateIssueLabels(issueNumber, Array.from(new Set(next)));
+}
+
+export async function claimIdeaForEngine(issueNumber: number): Promise<void> {
+  await addLabelsToIssue(issueNumber, [BDC_ENGINE_STARTED_LABEL]);
+}
+
+export async function markIdeaGuardrailBlocked(issueNumber: number, reason: string): Promise<void> {
+  await addLabelsToIssue(issueNumber, [BDC_BLOCKED_GUARDRAILS_LABEL]);
+  await addIssueComment(issueNumber, `Blocked by BDC guardrails.\n\n${reason}`);
+}
+
+export async function markIdeaApproved(issueNumber: number): Promise<void> {
+  await addLabelsToIssue(issueNumber, [BDC_APPROVED_LABEL]);
+  await addIssueComment(issueNumber, "Approved and merged by owner.");
+}
+
+export async function markIdeaLive(issueNumber: number): Promise<void> {
+  await addLabelsToIssue(issueNumber, [BDC_LIVE_LABEL]);
+  await addIssueComment(issueNumber, "Owner confirmed this OTA is live on the brother device.");
+}
+
+export async function requestIdeaChanges(issueNumber: number): Promise<void> {
+  await addLabelsToIssue(issueNumber, [BDC_CHANGES_REQUESTED_LABEL]);
+  await addIssueComment(issueNumber, "Owner requested changes. Check /dc for details.");
+}
+
+export async function listNewBdcIssues(): Promise<RepoIssue[]> {
+  const issues = await listIssues({
+    labels: BDC_SUBMITTED_LABEL,
+    state: "open",
+    sort: "created",
+    direction: "asc",
+    perPage: 50,
+  });
+  return issues.filter((issue) => {
+    if (issue.pull_request) return false;
+    const labels = new Set(issue.labels.map((label) => label.name));
+    return !labels.has(BDC_ENGINE_STARTED_LABEL) && !labels.has(BDC_BLOCKED_GUARDRAILS_LABEL);
+  });
 }
 
 export async function addIdeaComment(issueNumber: number, body: string): Promise<void> {

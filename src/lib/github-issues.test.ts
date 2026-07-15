@@ -65,6 +65,33 @@ test("explicit approved label derives approved status", () => {
   ).toBe("approved");
 });
 
+test("bdc lifecycle labels derive processing, blocked, approved, and live", () => {
+  expect(
+    deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-engine-started"],
+      issueState: "open",
+    }),
+  ).toBe("processing");
+  expect(
+    deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-blocked-guardrails"],
+      issueState: "open",
+    }),
+  ).toBe("blocked");
+  expect(
+    deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-approved"],
+      issueState: "open",
+    }),
+  ).toBe("approved");
+  expect(
+    deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-live"],
+      issueState: "open",
+    }),
+  ).toBe("live");
+});
+
 test("sent ideas can move to approved or blocked", () => {
   expect(canTransitionIdeaStatus("sent", "approved")).toBe(true);
   expect(canTransitionIdeaStatus("sent", "blocked")).toBe(true);

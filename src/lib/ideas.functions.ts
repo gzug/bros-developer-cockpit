@@ -5,19 +5,25 @@ import {
   canTransitionIdeaStatus,
   canConfirmIdeaLive,
   createIdea,
+  createSubmittedIdea,
   describeIdeaStatus,
   getEngineRunStatsBatch,
   getIdea,
   getIdeaWithPull,
+  markIdeaApproved,
+  markIdeaLive,
   getOwnerActionQueue,
   listIdeaActivity,
   listIdeas,
   recentIdeaCount,
+  requestIdeaChanges,
   setIdeaStatus,
+  type BdcSubmissionType,
   type DCIdeaStatus,
   type DCIdeaIntent,
 } from "./github-issues.server";
-import { checkGuardrails } from "./guardrails.server";
+import { addLabelsToIssue, getPullRequest, mergePullRequest, removeIssueLabel } from "./github.server";
+import { upsertTask } from "./db/runs.server";
 
 const CreateIdeaInput = z.object({
   intent: z.enum(["wording", "look", "wrong", "idea"]),
@@ -25,8 +31,20 @@ const CreateIdeaInput = z.object({
   description: z.string().trim().min(3).max(4000),
 });
 
+const SubmitIdeaInput = z.object({
+  type: z.enum(["idea", "change"]),
+  title: z.string().trim().min(1).max(80),
+  description: z.string().trim().min(1).max(600),
+  screen: z.string().trim().max(80).optional(),
+});
+
 const IdInput = z.object({
   id: z.number().int().positive(),
+});
+
+const PrActionInput = z.object({
+  issueNumber: z.number().int().positive(),
+  prNumber: z.number().int().positive(),
 });
 
 const UpdateIdeaStatusInput = z.object({
@@ -46,6 +64,42 @@ export const createIdeaEntry = createServerFn({ method: "POST" })
     });
     if (!guardrail.ok) throw new Error(guardrail.message);
     return createIdea(data.intent as DCIdeaIntent, data.title, data.description);
+  });
+
+export const submitIdeaFn = createServerFn({ method: "POST" })
+  .validator((input: unknown) => input)
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+
+    const parsed = SubmitIdeaInput.safeParse(data);
+    if (!parsed.success) {
+      return {
+        ok: false as const,
+        error: parsed.error.issues[0]?.message ?? "Please check the form.",
+      };
+    }
+
+    try {
+      const idea = await createSubmittedIdea({
+        type: parsed.data.type as BdcSubmissionType,
+        title: parsed.data.title,
+        description: parsed.data.description,
+        screen: parsed.data.screen,
+      });
+      await upsertTask({
+        issueNumber: idea.id,
+        title: idea.title,
+        intent: idea.intent,
+        status: idea.status,
+      });
+      return { ok: true as const, issueNumber: idea.id, issueUrl: idea.issueUrl };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   });
 
 export const listIdeaEntries = createServerFn({ method: "GET" }).handler(async () => {
@@ -86,6 +140,13 @@ export const processContribution = createServerFn({ method: "POST" })
     return processTask(data.id);
   });
 
+export const pollNewBdcIssuesFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { requireAuth } = await import("./auth-session.server");
+  requireAuth();
+  const { pollNewBdcIssues } = await import("./issue-poller.server");
+  return pollNewBdcIssues();
+});
+
 const STATUS_COMMENT: Record<"approved" | "live" | "blocked", string> = {
   approved: "Owner marked this PR approved to ship.",
   live: "Owner confirmed this change live in OL1.",
@@ -110,6 +171,80 @@ export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
     await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
     await addIdeaComment(data.id, STATUS_COMMENT[data.status]);
     return { ok: true as const, statusSummary: describeIdeaStatus(data.status as DCIdeaStatus) };
+  });
+
+async function triggerOtaHook(): Promise<{ triggered: boolean; warning?: string }> {
+  const hookUrl = process.env.ONE_L1FE_OTA_DEPLOY_HOOK_URL;
+  if (!hookUrl) {
+    const warning = "ONE_L1FE_OTA_DEPLOY_HOOK_URL is not set; OTA trigger skipped.";
+    console.warn(`[ota] ${warning}`);
+    return { triggered: false, warning };
+  }
+
+  const response = await fetch(hookUrl, { method: "POST" });
+  if (!response.ok) {
+    throw new Error(`OTA hook failed with HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
+  }
+  return { triggered: true };
+}
+
+export const approvePrFn = createServerFn({ method: "POST" })
+  .validator((input: unknown) => PrActionInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+
+    const pr = await getPullRequest(data.prNumber);
+    const merge = await mergePullRequest({
+      prNumber: data.prNumber,
+      commitTitle: `[BDC] ${pr.title}`,
+      commitMessage: `Approved from Bros Developer Cockpit for issue #${data.issueNumber}.`,
+    });
+
+    await markIdeaApproved(data.issueNumber);
+    await removeIssueLabel(data.prNumber, "awaiting-owner-review");
+    await removeIssueLabel(data.issueNumber, "awaiting-owner-review");
+    await upsertTask({
+      issueNumber: data.issueNumber,
+      title: pr.title,
+      intent: "change",
+      status: "approved",
+    });
+
+    const ota = await triggerOtaHook();
+    return { ok: true as const, mergeSha: merge.sha, ota };
+  });
+
+export const requestChangesFn = createServerFn({ method: "POST" })
+  .validator((input: unknown) => PrActionInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await requestIdeaChanges(data.issueNumber);
+    await addLabelsToIssue(data.prNumber, ["bdc-changes-requested"]);
+    await removeIssueLabel(data.prNumber, "awaiting-owner-review");
+    await upsertTask({
+      issueNumber: data.issueNumber,
+      title: `Issue #${data.issueNumber}`,
+      intent: "change",
+      status: "blocked",
+    });
+    return { ok: true as const };
+  });
+
+export const markLiveFn = createServerFn({ method: "POST" })
+  .validator((input: unknown) => IdInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await markIdeaLive(data.id);
+    await upsertTask({
+      issueNumber: data.id,
+      title: `Issue #${data.id}`,
+      intent: "change",
+      status: "live",
+    });
+    return { ok: true as const };
   });
 
 export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () => {

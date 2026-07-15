@@ -17,7 +17,7 @@
 
 ## 3. Vercel Deploy
 
-Diese sechs Variablen setzen:
+Diese Variablen setzen:
 
 | Variable | Value |
 | --- | --- |
@@ -25,5 +25,8 @@ Diese sechs Variablen setzen:
 | `APP_SECRET` | zufälliger String, z. B. `openssl rand -hex 32` |
 | `OPENROUTER_API_KEY` | OpenRouter-Key |
 | `GITHUB_TOKEN` | PAT aus Schritt 1 |
-| `GITHUB_REPO_OWNER` | `gzug` |
-| `GITHUB_REPO_NAME` | `01-One-L1fe` |
+| `DATABASE_URL` | Neon Postgres URL für Run-/Task-Log |
+| `ONE_L1FE_OTA_DEPLOY_HOOK_URL` | Owner-provisionierter Hook für die One-L1fe OTA/EAS-Update-Lane |
+
+Die GitHub-Zielrepo-Verbindung ist im Code fest auf `gzug/01-One-L1fe` begrenzt. `GITHUB_REPO_OWNER`
+und `GITHUB_REPO_NAME` werden nicht mehr benötigt.
