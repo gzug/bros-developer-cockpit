@@ -26,7 +26,8 @@ Diese Variablen setzen:
 | `OPENROUTER_API_KEY` | OpenRouter-Key |
 | `GITHUB_TOKEN` | PAT aus Schritt 1 |
 | `DATABASE_URL` | Neon Postgres URL für Run-/Task-Log |
-| `ONE_L1FE_OTA_DEPLOY_HOOK_URL` | Owner-provisionierter Hook für die One-L1fe OTA/EAS-Update-Lane |
 
 Die GitHub-Zielrepo-Verbindung ist im Code fest auf `gzug/01-One-L1fe` begrenzt. `GITHUB_REPO_OWNER`
-und `GITHUB_REPO_NAME` werden nicht mehr benötigt.
+und `GITHUB_REPO_NAME` werden nicht mehr benötigt. Die OTA-Veröffentlichung läuft nicht über einen
+BDC-Webhook, sondern über den trusted `bdc-ship` GitHub-Actions-Workflow im One-L1fe-Repo; dafür muss
+`EXPO_TOKEN` dort als Actions Secret gesetzt sein.

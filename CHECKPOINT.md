@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
+_Last updated: 2026-07-15 08:18 CEST — BDC approval routed through One L1fe ship lane_
 
 ## Architecture
 
@@ -9,7 +9,7 @@ _Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
 - **Auth:** PIN via `APP_PIN` env var, timing-safe SHA-256 comparison
 - **No Postgres/Drizzle migrations run by PL** — owner-only action
 - **Target repo:** GitHub writes are hard-limited in code to `gzug/01-One-L1fe`
-- **Release lane:** BDC can call `ONE_L1FE_OTA_DEPLOY_HOOK_URL` after owner approval; One L1fe remains the Android app
+- **Release lane:** BDC approval labels the held PR `bdc-approved`; the trusted One L1fe `bdc-ship` GitHub Action validates, merges, and publishes production OTA to the Android app
 
 ## Merged into main
 
@@ -30,8 +30,8 @@ _Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
 
 ## Owner Queue (blocked — requires owner action)
 
-1. **Provision `ONE_L1FE_OTA_DEPLOY_HOOK_URL`** secret in `gzug/bros-developer-cockpit` Production + Preview → enables the post-merge OTA release trigger
-2. **Run one owner PIN smoke:** submit a harmless test wish, verify the issue appears in `gzug/01-One-L1fe`, then decide whether to close it or let BDC process it
+1. **Run one owner PIN smoke:** submit a harmless test wish, verify the issue appears in `gzug/01-One-L1fe`, then decide whether to close it or let BDC process it
+2. **Approve one held PR from `/dc`:** verify the One L1fe `bdc-ship` workflow validates, merges, publishes EAS production OTA, and comments the update group
 
 ## Issue #8 Status
 
@@ -47,11 +47,11 @@ _Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
 - [ ] owner-kpi.tsx: verify N+1 fix (Issue #8 Task 2c)
 - [ ] gzug/01-One-L1fe track: sync issue status
 - [ ] With owner PIN: verify /runs and /dc live DB-backed data
-- [ ] After OTA hook provisioned: approve one held PR and verify the OTA trigger reaches the One L1fe release lane
+- [ ] With owner PIN: approve one held PR and verify the One L1fe `bdc-ship` workflow publishes the OTA
 
 ## Live flow
 
-PIN unlock opens the BDC web app. `/submit?context=<screen>&type=idea|change` creates one structured issue in `gzug/01-One-L1fe` with `from-brother`, `bdc-submitted`, `idea|change`, `ui-only`, and `one-l1fe-design`. `/dc` polls for unclaimed submissions, labels them `bdc-engine-started`, runs the scoped OpenRouter engine, blocks out-of-scope diffs before any GitHub write, and opens a held PR from `bdc-hold/dc-issue-<nr>`. Owner approval in `/dc` squash-merges the PR, labels the issue `bdc-approved`, calls the OTA hook if configured, and leaves final `bdc-live` confirmation to the owner/device check.
+PIN unlock opens the BDC web app. `/submit?context=<screen>&type=idea|change` creates one structured issue in `gzug/01-One-L1fe` with `from-brother`, `bdc-submitted`, `idea|change`, `ui-only`, and `one-l1fe-design`. `/dc` polls for unclaimed submissions, labels them `bdc-engine-started`, runs the scoped OpenRouter engine, blocks out-of-scope diffs before any GitHub write, and opens a held PR from `bdc-hold/dc-issue-<nr>`. Owner approval in `/dc` labels the held PR and issue `bdc-approved`; the One L1fe `bdc-ship` workflow then validates, squash-merges, publishes the production EAS OTA, and comments the update group. Final `bdc-live` confirmation remains manual after the owner/device check.
 
 ## State Snapshot
 

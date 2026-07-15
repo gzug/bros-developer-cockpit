@@ -175,7 +175,7 @@ export function describeIdeaStatus(status: DCIdeaStatus): string {
     case "sent":
       return "A held PR exists. Review it and either approve shipping or return it to manual review.";
     case "approved":
-      return "Approved in Cockpit. Ship it in OL1, then confirm it live here.";
+      return "Approved in Cockpit. The One L1fe ship lane will validate, merge, and publish OTA.";
     case "live":
       return "Confirmed live in OL1.";
     case "blocked":
@@ -385,7 +385,7 @@ export async function markIdeaGuardrailBlocked(issueNumber: number, reason: stri
 
 export async function markIdeaApproved(issueNumber: number): Promise<void> {
   await addLabelsToIssue(issueNumber, [BDC_APPROVED_LABEL]);
-  await addIssueComment(issueNumber, "Approved and merged by owner.");
+  await addIssueComment(issueNumber, "Approved by owner. The One L1fe BDC ship lane will validate, merge, and publish the OTA.");
 }
 
 export async function markIdeaLive(issueNumber: number): Promise<void> {

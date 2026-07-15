@@ -87,8 +87,9 @@ PAT stays fine-grained: THIS one repo, `contents:write` + `pull-requests:write`,
 
 - Stand up a Supabase project (or keep Lovable Cloud's), run migrations.
 - Set backend secrets: `OPENROUTER_API_KEY` (+ load OpenRouter $10–20), `GITHUB_TOKEN`
-  (fine-grained to `gzug/01-One-L1fe`), `APP_PIN`, `APP_SECRET`, `DATABASE_URL`,
-  and `ONE_L1FE_OTA_DEPLOY_HOOK_URL`.
+  (fine-grained to `gzug/01-One-L1fe`), `APP_PIN`, `APP_SECRET`, and `DATABASE_URL`.
+- Keep `EXPO_TOKEN` as a GitHub Actions secret in `gzug/01-One-L1fe`; the trusted `bdc-ship`
+  workflow owns validate, merge, and production OTA publish after BDC approval.
 - 1-click deploy the frontend (Vercel / Cloudflare).
 
 ## Hard rules (inherited from One L1fe)

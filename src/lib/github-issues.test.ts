@@ -112,7 +112,7 @@ test("other statuses cannot enter the owner lane directly", () => {
 
 test("status descriptions explain the next operator step", () => {
   expect(describeIdeaStatus("sent")).toContain("approve shipping");
-  expect(describeIdeaStatus("approved")).toContain("confirm it live");
+  expect(describeIdeaStatus("approved")).toContain("ship lane");
   expect(describeIdeaStatus("blocked")).toBe("Stopped for manual review.");
 });
 

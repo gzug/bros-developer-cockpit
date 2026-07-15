@@ -1,6 +1,24 @@
 const GH = "https://api.github.com";
 const TARGET_OWNER = "gzug";
 const TARGET_REPO = "01-One-L1fe";
+const ensuredLabels = new Set<string>();
+
+const LABEL_META: Record<string, { color: string; description: string }> = {
+  "from-brother": { color: "0E8A16", description: "Submitted from the brother-facing BDC flow" },
+  "bdc-submitted": { color: "C2E0C6", description: "Submitted to Bros Developer Cockpit" },
+  "bdc-engine-started": { color: "1D76DB", description: "BDC engine has claimed this issue" },
+  "bdc-blocked-guardrails": { color: "B60205", description: "BDC guardrails blocked the requested change" },
+  "bdc-changes-requested": { color: "D93F0B", description: "Owner requested changes in BDC" },
+  "bdc-approved": { color: "0E8A16", description: "Owner approved this held BDC PR to ship" },
+  "bdc-live": { color: "006B75", description: "Owner confirmed the BDC change is live on device" },
+  "bdc-auto": { color: "5319E7", description: "Automated BDC pull request" },
+  "bdc-failed": { color: "D93F0B", description: "BDC ship check failed" },
+  "ui-only": { color: "BFDADC", description: "Presentation-layer-only change" },
+  "one-l1fe-design": { color: "BFD4F2", description: "Preserve One L1fe design preset" },
+  "awaiting-owner-review": { color: "FBCA04", description: "Held for owner review" },
+  idea: { color: "D4C5F9", description: "New idea submitted through BDC" },
+  change: { color: "C5DEF5", description: "Change proposal submitted through BDC" },
+};
 
 export type PullState = {
   number: number;
@@ -53,6 +71,21 @@ export function repo() {
   return { owner, name, path: `${owner}/${name}` };
 }
 
+function normalizeLabels(labels: string[]): string[] {
+  return Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)));
+}
+
+function labelMeta(label: string): { color: string; description: string } {
+  if (LABEL_META[label]) return LABEL_META[label];
+  if (label.startsWith("dc:status:")) {
+    return { color: "C2E0C6", description: "BDC lifecycle status" };
+  }
+  if (label.startsWith("dc:")) {
+    return { color: "D4C5F9", description: "BDC metadata" };
+  }
+  return { color: "EDEDED", description: "Managed by Bros Developer Cockpit" };
+}
+
 export async function gh<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${GH}${path}`, {
     ...init,
@@ -66,12 +99,36 @@ export async function gh<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export async function ensureRepoLabels(labels: string[]): Promise<void> {
+  const r = repo();
+  for (const label of normalizeLabels(labels)) {
+    if (ensuredLabels.has(label)) continue;
+    const meta = labelMeta(label);
+    const res = await fetch(`${GH}/repos/${r.path}/labels`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        name: label,
+        color: meta.color,
+        description: meta.description,
+      }),
+    });
+    if (res.ok || res.status === 422) {
+      ensuredLabels.add(label);
+      continue;
+    }
+    const body = await res.text();
+    throw new Error(`GitHub ${res.status} create label ${label}: ${body.slice(0, 400)}`);
+  }
+}
+
 export async function createIssue(input: {
   title: string;
   body: string;
   labels?: string[];
 }): Promise<{ number: number; html_url: string; body: string; title: string; created_at: string }> {
   const r = repo();
+  if (input.labels?.length) await ensureRepoLabels(input.labels);
   return gh(`/repos/${r.path}/issues`, {
     method: "POST",
     body: JSON.stringify(input),
@@ -132,6 +189,7 @@ export async function addIssueComment(number: number, body: string): Promise<Rep
 
 export async function updateIssueLabels(number: number, labels: string[]): Promise<void> {
   const r = repo();
+  await ensureRepoLabels(labels);
   await gh(`/repos/${r.path}/issues/${number}`, {
     method: "PATCH",
     body: JSON.stringify({ labels }),
@@ -140,6 +198,7 @@ export async function updateIssueLabels(number: number, labels: string[]): Promi
 
 export async function addLabelsToIssue(number: number, labels: string[]): Promise<void> {
   const r = repo();
+  await ensureRepoLabels(labels);
   await gh(`/repos/${r.path}/issues/${number}/labels`, {
     method: "POST",
     body: JSON.stringify({ labels }),

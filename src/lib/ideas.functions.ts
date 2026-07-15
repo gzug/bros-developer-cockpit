@@ -22,7 +22,7 @@ import {
   type DCIdeaStatus,
   type DCIdeaIntent,
 } from "./github-issues.server";
-import { addLabelsToIssue, getPullRequest, mergePullRequest, removeIssueLabel } from "./github.server";
+import { addLabelsToIssue, getPullRequest, removeIssueLabel } from "./github.server";
 import { upsertTask } from "./db/runs.server";
 
 const CreateIdeaInput = z.object({
@@ -173,21 +173,6 @@ export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
     return { ok: true as const, statusSummary: describeIdeaStatus(data.status as DCIdeaStatus) };
   });
 
-async function triggerOtaHook(): Promise<{ triggered: boolean; warning?: string }> {
-  const hookUrl = process.env.ONE_L1FE_OTA_DEPLOY_HOOK_URL;
-  if (!hookUrl) {
-    const warning = "ONE_L1FE_OTA_DEPLOY_HOOK_URL is not set; OTA trigger skipped.";
-    console.warn(`[ota] ${warning}`);
-    return { triggered: false, warning };
-  }
-
-  const response = await fetch(hookUrl, { method: "POST" });
-  if (!response.ok) {
-    throw new Error(`OTA hook failed with HTTP ${response.status}: ${(await response.text()).slice(0, 300)}`);
-  }
-  return { triggered: true };
-}
-
 export const approvePrFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => PrActionInput.parse(input))
   .handler(async ({ data }) => {
@@ -195,12 +180,15 @@ export const approvePrFn = createServerFn({ method: "POST" })
     requireAuth();
 
     const pr = await getPullRequest(data.prNumber);
-    const merge = await mergePullRequest({
-      prNumber: data.prNumber,
-      commitTitle: `[BDC] ${pr.title}`,
-      commitMessage: `Approved from Bros Developer Cockpit for issue #${data.issueNumber}.`,
-    });
+    const expectedHeldBranch = `bdc-hold/dc-issue-${data.issueNumber}`;
+    if (pr.state !== "open") {
+      throw new Error(`PR #${data.prNumber} is not open.`);
+    }
+    if (pr.headRef !== expectedHeldBranch) {
+      throw new Error(`PR #${data.prNumber} is on ${pr.headRef}, expected ${expectedHeldBranch}.`);
+    }
 
+    await addLabelsToIssue(data.prNumber, ["bdc-approved"]);
     await markIdeaApproved(data.issueNumber);
     await removeIssueLabel(data.prNumber, "awaiting-owner-review");
     await removeIssueLabel(data.issueNumber, "awaiting-owner-review");
@@ -211,8 +199,11 @@ export const approvePrFn = createServerFn({ method: "POST" })
       status: "approved",
     });
 
-    const ota = await triggerOtaHook();
-    return { ok: true as const, mergeSha: merge.sha, ota };
+    return {
+      ok: true as const,
+      shipLane: "one-l1fe-bdc-ship",
+      message: "Approved. The One L1fe BDC ship workflow will validate, merge, and publish the production OTA.",
+    };
   });
 
 export const requestChangesFn = createServerFn({ method: "POST" })

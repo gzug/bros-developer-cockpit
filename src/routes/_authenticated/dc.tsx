@@ -35,7 +35,6 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(asyn
   const envStatus = {
     githubTokenSet: Boolean(process.env.GITHUB_TOKEN),
     openrouterKeySet: Boolean(process.env.OPENROUTER_API_KEY),
-    otaHookSet: Boolean(process.env.ONE_L1FE_OTA_DEPLOY_HOOK_URL),
   };
   let githubConnected = true;
   let githubError: string | null = null;
@@ -182,7 +181,7 @@ function DcOperationalDashboard() {
   const approveMutation = useMutation({
     mutationFn: (input: { issueNumber: number; prNumber: number }) => approvePrFn({ data: input }),
     onSuccess: (result) => {
-      toast.success(result.ota.triggered ? "Approved, merged, OTA trigger sent." : "Approved and merged. OTA hook not set.");
+      toast.success(result.message);
       invalidate();
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Approve failed."),
@@ -232,7 +231,7 @@ function DcOperationalDashboard() {
               <Badge variant="outline" className="text-xs">BDC</Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Issue queue, held PRs, approval, and OTA release trigger.
+              Issue queue, held PRs, approval, and One L1fe ship lane.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -246,7 +245,7 @@ function DcOperationalDashboard() {
           </div>
         </div>
 
-        {(!dbConnected || !githubConnected || envStatus?.otaHookSet === false || envStatus?.openrouterKeySet === false) && (
+        {(!dbConnected || !githubConnected || envStatus?.openrouterKeySet === false) && (
           <div className="mb-6 grid gap-3">
             {envStatus?.openrouterKeySet === false && (
               <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4">
@@ -268,19 +267,6 @@ function DcOperationalDashboard() {
                   <div>
                     <h2 className="text-sm font-semibold text-rose-600">GitHub not connected</h2>
                     <p className="mt-1 text-xs text-muted-foreground">{data?.githubError ?? "Set GITHUB_TOKEN."}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {envStatus?.otaHookSet === false && (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4">
-                <div className="flex gap-3">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-                  <div>
-                    <h2 className="text-sm font-semibold text-amber-600">OTA hook not connected</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      ONE_L1FE_OTA_DEPLOY_HOOK_URL is missing. Approval can still merge the held PR, but it will not trigger the One L1fe OTA lane.
-                    </p>
                   </div>
                 </div>
               </div>
