@@ -27,7 +27,6 @@ _Last updated: 2026-07-15 07:55 CEST — BDC approval routed through One L1fe sh
 
 - Production deploy completed 2026-07-15 via `npx vercel --prod --yes`
 - Production alias: https://bros-developer-cockpit.vercel.app
-- Deployment URL: https://bros-developer-cockpit-3rpng90pd-gzugang-8969s-projects.vercel.app
 - HTTP smoke: `/auth` 200, `/submit?context=Home&type=change` 200, unauthenticated `POST /api/poll-issues` returns `Not logged in`
 
 ## Owner Queue (blocked — requires owner action)
