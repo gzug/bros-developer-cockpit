@@ -30,10 +30,8 @@ _Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
 
 ## Owner Queue (blocked — requires owner action)
 
-1. **Provision Neon `DATABASE_URL`** secret in `gzug/bros-developer-cockpit` repo settings → enables live data on `/runs` and `/dc` pages
-2. **Provision `ONE_L1FE_OTA_DEPLOY_HOOK_URL`** secret in `gzug/bros-developer-cockpit` repo settings → enables the post-merge OTA release trigger
-3. **Ensure Production/Preview secrets are present:** `APP_PIN`, `APP_SECRET`, `OPENROUTER_API_KEY`, `GITHUB_TOKEN`, `DATABASE_URL`, `ONE_L1FE_OTA_DEPLOY_HOOK_URL`
-4. **Deploy** the BDC web app after merge; after every merge to `main`, run `npx vercel --prod --yes` and verify prod loads
+1. **Provision `ONE_L1FE_OTA_DEPLOY_HOOK_URL`** secret in `gzug/bros-developer-cockpit` Production + Preview → enables the post-merge OTA release trigger
+2. **Run one owner PIN smoke:** submit a harmless test wish, verify the issue appears in `gzug/01-One-L1fe`, then decide whether to close it or let BDC process it
 
 ## Issue #8 Status
 
@@ -48,7 +46,7 @@ _Last updated: 2026-07-15 07:36 CEST — BDC e2e connection merged + deployed_
 
 - [ ] owner-kpi.tsx: verify N+1 fix (Issue #8 Task 2c)
 - [ ] gzug/01-One-L1fe track: sync issue status
-- [ ] After DATABASE_URL provisioned: verify /runs and /dc live data
+- [ ] With owner PIN: verify /runs and /dc live DB-backed data
 - [ ] After OTA hook provisioned: approve one held PR and verify the OTA trigger reaches the One L1fe release lane
 
 ## Live flow
