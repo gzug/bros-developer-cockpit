@@ -3,13 +3,19 @@
     "wording": "tier0",
     "look": "tier1",
     "wrong": "tier1",
-    "idea": "review"
+    "idea": "tier1",
+    "change": "tier1"
   },
   "allowed": [
-    "apps/mobile/src/**"
+    "apps/mobile/src/components/**",
+    "apps/mobile/src/screens/**",
+    "apps/mobile/src/styles/**",
+    "apps/mobile/src/devHarness/**",
+    "apps/mobile/src/lib/designTokens.*"
   ],
   "forbidden": [
     "**/.env*",
+    "**/schema.*",
     "**/package.json",
     "**/package-lock.json",
     "**/bun.lock*",
@@ -24,7 +30,10 @@
     "apps/mobile/android/**",
     "apps/mobile/ios/**",
     "apps/mobile/supabase/**",
-    "apps/mobile/src/data/**"
+    "apps/mobile/src/data/**",
+    "apps/mobile/src/lib/db/**",
+    "apps/mobile/src/lib/auth*",
+    "apps/mobile/src/lib/api*"
   ],
   "promptTemplate": "smallest-correct-ui-change",
   "templateVersion": "github-native-v1"

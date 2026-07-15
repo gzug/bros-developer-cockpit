@@ -11,6 +11,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 const STATUS_TEXT = {
   submitted: "Submitted",
+  processing: "Processing",
   sent: "PR waiting",
   approved: "Approved to ship",
   live: "Confirmed live",
@@ -20,6 +21,7 @@ const STATUS_TEXT = {
 
 const STATUS_CLASS = {
   submitted: "bg-amber-500",
+  processing: "bg-sky-500",
   sent: "bg-amber-500",
   approved: "bg-sky-500",
   live: "bg-emerald-500",

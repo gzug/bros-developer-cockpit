@@ -98,6 +98,20 @@ test("dc config allows OL1 UI files and rejects package/config files", () => {
   ).toBe(false);
 });
 
+test("dc config allows only presentation paths and denies sensitive mobile paths", () => {
+  const dcRules = { allowed: config.allowed, forbidden: config.forbidden };
+  expect(isPathAllowed("apps/mobile/src/components/Button.tsx", dcRules)).toBe(true);
+  expect(isPathAllowed("apps/mobile/src/styles/theme.css", dcRules)).toBe(true);
+  expect(isPathAllowed("apps/mobile/src/devHarness/ScenarioCard.tsx", dcRules)).toBe(true);
+  expect(isPathAllowed("apps/mobile/src/lib/designTokens.ts", dcRules)).toBe(true);
+
+  expect(isPathAllowed("apps/mobile/src/lib/db/client.ts", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/lib/auth.ts", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/lib/apiClient.ts", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/lib/schema.ts", dcRules)).toBe(false);
+  expect(isPathAllowed("apps/mobile/src/lib/someHelper.ts", dcRules)).toBe(false);
+});
+
 test("globMatch ** spans path separators, * does not", () => {
   expect(globMatch("a/b/c.ts", "a/**")).toBe(true);
   expect(globMatch("a/b/c.ts", "a/*")).toBe(false);

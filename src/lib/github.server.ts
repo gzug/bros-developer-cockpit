@@ -1,4 +1,6 @@
 const GH = "https://api.github.com";
+const TARGET_OWNER = "gzug";
+const TARGET_REPO = "01-One-L1fe";
 
 export type PullState = {
   number: number;
@@ -9,6 +11,7 @@ export type PullState = {
   labels: string[];
   body: string;
   title: string;
+  headRef: string;
 };
 
 export type RepoIssue = {
@@ -45,9 +48,8 @@ function headers(extra?: HeadersInit): HeadersInit {
 }
 
 export function repo() {
-  const owner = process.env.GITHUB_REPO_OWNER;
-  const name = process.env.GITHUB_REPO_NAME;
-  if (!owner || !name) throw new Error("GITHUB_REPO_OWNER or GITHUB_REPO_NAME is missing.");
+  const owner = TARGET_OWNER;
+  const name = TARGET_REPO;
   return { owner, name, path: `${owner}/${name}` };
 }
 
@@ -136,6 +138,27 @@ export async function updateIssueLabels(number: number, labels: string[]): Promi
   });
 }
 
+export async function addLabelsToIssue(number: number, labels: string[]): Promise<void> {
+  const r = repo();
+  await gh(`/repos/${r.path}/issues/${number}/labels`, {
+    method: "POST",
+    body: JSON.stringify({ labels }),
+  });
+}
+
+export async function removeIssueLabel(number: number, label: string): Promise<void> {
+  const r = repo();
+  try {
+    await gh(`/repos/${r.path}/issues/${number}/labels/${encodeURIComponent(label)}`, {
+      method: "DELETE",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("GitHub 404")) return;
+    throw error;
+  }
+}
+
 export async function listPullRequests(state: "open" | "closed" | "all" = "all"): Promise<PullState[]> {
   const r = repo();
   const pulls = await gh<
@@ -147,6 +170,7 @@ export async function listPullRequests(state: "open" | "closed" | "all" = "all")
       title: string;
       body?: string | null;
       labels?: Array<{ name: string }>;
+      head: { ref: string };
     }>
   >(`/repos/${r.path}/pulls?state=${state}&per_page=100`);
   return pulls.map((pr) => ({
@@ -158,6 +182,7 @@ export async function listPullRequests(state: "open" | "closed" | "all" = "all")
     labels: (pr.labels ?? []).map((label) => label.name),
     body: pr.body ?? "",
     title: pr.title,
+    headRef: pr.head.ref,
   }));
 }
 
@@ -171,6 +196,7 @@ export async function getPullRequest(number: number): Promise<PullState> {
     title: string;
     body?: string | null;
     labels?: Array<{ name: string }>;
+    head: { ref: string };
   }>(`/repos/${r.path}/pulls/${number}`);
   return {
     number: pr.number,
@@ -181,6 +207,7 @@ export async function getPullRequest(number: number): Promise<PullState> {
     labels: (pr.labels ?? []).map((label) => label.name),
     body: pr.body ?? "",
     title: pr.title,
+    headRef: pr.head.ref,
   };
 }
 
@@ -243,43 +270,60 @@ export async function createBranch(name: string, fromSha: string): Promise<void>
 
 export type FileEdit = { path: string; content: string };
 
+type ContentFile = {
+  type: "file";
+  sha: string;
+  content?: string;
+};
+
+async function getContentFile(path: string, ref: string): Promise<ContentFile | null> {
+  const r = repo();
+  const res = await fetch(
+    `${GH}/repos/${r.path}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(ref)}`,
+    { headers: headers() },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`GitHub ${res.status} contents ${path}: ${body.slice(0, 400)}`);
+  }
+  const json = (await res.json()) as ContentFile | ContentFile[];
+  if (Array.isArray(json) || json.type !== "file") {
+    throw new Error(`GitHub contents ${path} is not a file.`);
+  }
+  return json;
+}
+
+async function putFileContent(branch: string, file: FileEdit, message: string): Promise<string> {
+  const r = repo();
+  const existing = await getContentFile(file.path, branch);
+  const result = await gh<{ commit: { sha: string } }>(
+    `/repos/${r.path}/contents/${file.path.split("/").map(encodeURIComponent).join("/")}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        message,
+        content: Buffer.from(file.content, "utf8").toString("base64"),
+        branch,
+        sha: existing?.sha,
+      }),
+    },
+  );
+  return result.commit.sha;
+}
+
 export async function commitFiles(
   branch: string,
   baseSha: string,
   files: FileEdit[],
   message: string,
 ): Promise<string> {
-  const r = repo();
-  const baseCommit = await gh<{ tree: { sha: string } }>(
-    `/repos/${r.path}/git/commits/${baseSha}`,
-  );
-
-  const tree = await Promise.all(
-    files.map(async (file) => {
-      const blob = await gh<{ sha: string }>(`/repos/${r.path}/git/blobs`, {
-        method: "POST",
-        body: JSON.stringify({ content: file.content, encoding: "utf-8" }),
-      });
-      return { path: file.path, mode: "100644", type: "blob", sha: blob.sha };
-    }),
-  );
-
-  const newTree = await gh<{ sha: string }>(`/repos/${r.path}/git/trees`, {
-    method: "POST",
-    body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree }),
-  });
-
-  const commit = await gh<{ sha: string }>(`/repos/${r.path}/git/commits`, {
-    method: "POST",
-    body: JSON.stringify({ message, tree: newTree.sha, parents: [baseSha] }),
-  });
-
-  await gh(`/repos/${r.path}/git/refs/heads/${encodeURIComponent(branch)}`, {
-    method: "PATCH",
-    body: JSON.stringify({ sha: commit.sha, force: true }),
-  });
-
-  return commit.sha;
+  void baseSha;
+  let lastCommit = "";
+  for (const file of files) {
+    lastCommit = await putFileContent(branch, file, message);
+  }
+  return lastCommit;
 }
 
 export async function openPullRequest(input: {
@@ -291,6 +335,22 @@ export async function openPullRequest(input: {
   const r = repo();
   return gh(`/repos/${r.path}/pulls`, {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, draft: false }),
+  });
+}
+
+export async function mergePullRequest(input: {
+  prNumber: number;
+  commitTitle: string;
+  commitMessage?: string;
+}): Promise<{ sha: string; merged: boolean; message: string }> {
+  const r = repo();
+  return gh(`/repos/${r.path}/pulls/${input.prNumber}/merge`, {
+    method: "PUT",
+    body: JSON.stringify({
+      merge_method: "squash",
+      commit_title: input.commitTitle,
+      commit_message: input.commitMessage,
+    }),
   });
 }
