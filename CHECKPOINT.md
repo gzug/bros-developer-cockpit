@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last updated: 2026-07-15 08:18 CEST — BDC approval routed through One L1fe ship lane_
+_Last updated: 2026-07-15 07:55 CEST — BDC approval routed through One L1fe ship lane + production redeploy_
 
 ## Architecture
 
@@ -21,11 +21,13 @@ _Last updated: 2026-07-15 08:18 CEST — BDC approval routed through One L1fe sh
 | direct | chore: add CHECKPOINT.md | — | 2026-07-10 |
 | #10 | fix: PIN auth, ErrorBoundary, dark mode/PWA/responsive, DC dashboard | 71b71d0 | 2026-07-13 |
 | #18 | feat: wire BDC end-to-end connection | e3a70da | 2026-07-15 |
+| #19 | fix: route bdc approval through ship lane | 6db0540 | 2026-07-15 |
 
 ## Deployment
 
 - Production deploy completed 2026-07-15 via `npx vercel --prod --yes`
 - Production alias: https://bros-developer-cockpit.vercel.app
+- Deployment URL: https://bros-developer-cockpit-3rpng90pd-gzugang-8969s-projects.vercel.app
 - HTTP smoke: `/auth` 200, `/submit?context=Home&type=change` 200, unauthenticated `POST /api/poll-issues` returns `Not logged in`
 
 ## Owner Queue (blocked — requires owner action)
@@ -57,13 +59,14 @@ PIN unlock opens the BDC web app. `/submit?context=<screen>&type=idea|change` cr
 
 ```
 git log origin/main --oneline -5
-71b71d0 Merge pull request #10 from gzug/fix/issue-8-bdc-engine-polish-...
-9cd37e4 Merge branch 'main' into fix/issue-8-bdc-engine-polish-...
-...
+6db0540 fix: route bdc approval through ship lane (#19)
+0273b37 fix: expose bdc readiness state
+5bb8a09 docs: sync bdc owner env queue
+b90c47c docs: record bdc e2e deployment
+e3a70da feat: wire BDC end-to-end connection
 
-Open PRs: 0
-Open Issues: 1 (Issue #8 — Task 2c pending)
-Branches: main only (all feature branches deleted)
+Open PRs: #17, #16
+Open Issues: #13, #8
 ```
 
 ## Rules Reference
