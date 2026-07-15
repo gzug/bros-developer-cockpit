@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Updated 2026-07-15 — readiness/security repair in validation; production handoff remains blocked._
+_Updated 2026-07-15 — readiness/security repair merged to `claude/brother-readiness-handoff-4b0kt7`; production handoff remains blocked pending owner secrets and device proof._
 
 ## Current verdict
 
@@ -62,8 +62,8 @@ confirmation. Do not send the production PIN or claim the pipeline works end to 
 
 ## Open PR disposition
 
-- BDC #16: unrelated analytics/privacy expansion; do not merge into this handoff lane.
-- BDC #17: stale/conflicting consolidation; close rather than resolve.
-- One L1fe #280: oversized mixed foundation/UI change with a fail-open sync proposal; do not merge as-is.
+Stale Jules PRs #16 (Paxel analytics) and #17 (context consolidation) were closed 2026-07-15 — both were several commits behind main and unreviewed. Branches are preserved.
+
+The readiness repair (PR #20, branch `fix/readiness-pipeline-20260715`) is merged into the integration branch `claude/brother-readiness-handoff-4b0kt7`. A draft PR is open for owner review.
 
 Canonical architecture: `docs/MIGRATION.md`. Environment and acceptance: `docs/setup-guide.md`.
