@@ -1,5 +1,9 @@
 # Session start prompt — Projektleiter
 
+> 🛑 **SUPERSEDED 2026-07-16 by `pl-prompt-v2.md`. Do not use.** This snapshot is stale: it claims the
+> app is "live and healthy" and describes retired systems (batch gate, `bdc-hold/*`, reviewer era). Kept
+> only as version history.
+
 Paste this (or point the agent at this file) to start a lead session:
 
 ---
