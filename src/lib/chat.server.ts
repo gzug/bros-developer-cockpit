@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { validateChatModelOptions } from "./model-presets";
+import { callModel } from "./openrouter.server";
 
 type Intent = "wording" | "look" | "wrong" | "idea";
 
@@ -11,11 +13,17 @@ const InputSchema = z.object({
       content: z.string().min(1).max(2000),
     }),
   ),
+  model: z.string().min(1),
+  systemPrompt: z.string().min(1),
+  params: z.object({
+    temperature: z.number(),
+    maxTokens: z.number(),
+  }),
 });
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+export type RefineIdeaInput = z.infer<typeof InputSchema>;
 
-function systemPrompt(intent: Intent): string {
+export function defaultSystemPrompt(intent: Intent): string {
   return `You are a friendly assistant inside Developer Cockpit. The user is not a developer and wants help turning a rough app feedback note into a clear, useful message. Keep every reply short, warm, and practical: 2 to 3 sentences max.
 
 Category: ${intent}.
@@ -38,41 +46,32 @@ If the user's wording is already clear, say so briefly and keep it close to thei
 If the user wants to keep their original text, respect that.`;
 }
 
+export async function refineIdeaChat(input: RefineIdeaInput): Promise<{ message: string }> {
+  const options = validateChatModelOptions({
+    model: input.model,
+    systemPrompt: input.systemPrompt || defaultSystemPrompt(input.intent),
+    params: input.params,
+  });
+
+  const result = await callModel({
+    model: options.model,
+    messages: [
+      { role: "system", content: options.systemPrompt },
+      ...input.messages,
+    ],
+    temperature: options.params.temperature,
+    maxTokens: options.params.maxTokens,
+  });
+
+  const content = result.content.trim();
+  if (!content) throw new Error("No response received.");
+  return { message: content };
+}
+
 export const refineIdea = createServerFn({ method: "POST" })
   .validator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
-    const key = process.env.OPENROUTER_API_KEY;
-    if (!key) throw new Error("OPENROUTER_API_KEY is missing.");
-
-    const res = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/gzug/bros-developer-cockpit",
-        "X-Title": "Bros Developer Cockpit",
-      },
-      body: JSON.stringify({
-        model: "meta-llama/llama-3.1-8b-instruct:free",
-        messages: [
-          { role: "system", content: systemPrompt(data.intent) },
-          ...data.messages,
-        ],
-        temperature: 0.4,
-        max_tokens: 300,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`OpenRouter ${res.status}`);
-    }
-
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = json.choices?.[0]?.message?.content?.trim();
-    if (!content) throw new Error("No response received.");
-    return { message: content };
+    return refineIdeaChat(data);
   });

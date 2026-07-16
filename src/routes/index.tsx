@@ -20,7 +20,7 @@ function Landing() {
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           What bugs you, what's missing, what should be different? Write it in
-          your own words — I'll sort it out and send it to your brother.
+          your own words. I'll sort it out and send it to your brother.
         </p>
         <p className="mt-3 text-xs text-muted-foreground">
           No health data here. Nothing is shared with anyone else.
