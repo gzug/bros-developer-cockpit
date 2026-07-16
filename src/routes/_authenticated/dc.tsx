@@ -254,7 +254,7 @@ function DcOperationalDashboard() {
                   <div>
                     <h2 className="text-sm font-semibold text-rose-600">OpenRouter not connected</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      OPENROUTER_API_KEY is missing. BDC can collect ideas, but the engine cannot create held PRs.
+                      The OpenRouter server key is missing. BDC can collect ideas, but the engine cannot create held PRs.
                     </p>
                   </div>
                 </div>

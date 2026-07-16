@@ -70,7 +70,7 @@ function SubmitPage() {
 
         {submitted ? (
           <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-5">
-            <h2 className="text-lg font-semibold">Idea submitted — we'll take a look.</h2>
+            <h2 className="text-lg font-semibold">Idea submitted. We'll take a look.</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Issue #{submitted.issueNumber} is now in the BDC queue.
             </p>

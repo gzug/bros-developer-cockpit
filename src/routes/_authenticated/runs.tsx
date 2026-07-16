@@ -29,7 +29,7 @@ function dot(cls: string) {
 }
 
 function usd(val: string | null) {
-  if (!val) return "—";
+  if (!val) return "-";
   const n = parseFloat(val);
   return n < 0.0001 ? "<$0.0001" : `$${n.toFixed(4)}`;
 }
@@ -59,7 +59,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           rel="noreferrer"
           className="text-xs text-sky-500 hover:underline"
         >
-          PR #{latestRun.githubPrNumber} →
+          PR #{latestRun.githubPrNumber} &gt;
         </a>
       )}
 
@@ -68,8 +68,8 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           {taskRuns.map((run) => (
             <div key={run.id} className="flex items-center gap-2 text-xs text-muted-foreground">
               {dot(RUN_STATUS_CLASS[run.status] ?? "bg-zinc-400")}
-              <span className="font-mono">{run.tier ?? "—"}</span>
-              <span className="truncate">{run.model ?? "—"}</span>
+              <span className="font-mono">{run.tier ?? "-"}</span>
+              <span className="truncate">{run.model ?? "-"}</span>
               <span className="ml-auto shrink-0">{usd(run.costUsd)}</span>
             </div>
           ))}

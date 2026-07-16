@@ -77,13 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "One L1fe — Developer Cockpit" },
+      { title: "One L1fe Developer Cockpit" },
       {
         name: "description",
         content:
           "Submit wishes and bug reports for the One L1fe app. No health data, no jargon.",
       },
-      { property: "og:title", content: "One L1fe — Developer Cockpit" },
+      { property: "og:title", content: "One L1fe Developer Cockpit" },
       {
         property: "og:description",
         content:

@@ -34,8 +34,6 @@ GitHub issue → held PR on `bdc-hold/*` → owner approval in Cockpit → separ
 OL1 ship/live confirmation. Do not describe merged PRs as live unless the owner
 explicitly marks them live.
 
-Cross-repo state: treat the mobile repo `CHECKPOINT.md` as the sibling truth surface for current One L1fe state.
-
 ## ADD-ON — valid for THIS session only (delete this section afterwards)
 
 The batch gate is suspended: no go from Don required. In exchange, work
