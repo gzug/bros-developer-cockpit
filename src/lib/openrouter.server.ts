@@ -2,9 +2,10 @@
 // turns a tier into a concrete model call, with same-tier retry on transient
 // errors. Tier ESCALATION (on parse/validation failure) is the engine's job.
 //
-// Model IDs are env-driven so exact OpenRouter model names can change WITHOUT a
-// code deploy (they drift). Defaults are sane starting points — verify against
+// Model IDs are env-driven for engine tiers and JSON-driven for chat presets.
+// Defaults are sane starting points — verify against
 // https://openrouter.ai/models and set BDC_MODEL_TIER{0,1,2} to pin them.
+import { validateModelId, validateModelParams, MAX_MAX_TOKENS_ENGINE } from "./model-presets";
 
 export type Tier = "tier0" | "tier1" | "tier2";
 
@@ -104,7 +105,8 @@ function isRetryableTransportError(error: unknown): boolean {
  * engine catches and decides whether to escalate a tier.
  */
 export async function callModel(opts: {
-  tier: Tier;
+  tier?: Tier;
+  model?: string;
   messages: ChatMessage[];
   maxTokens?: number;
   temperature?: number;
@@ -116,15 +118,26 @@ export async function callModel(opts: {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new Error("OPENROUTER_API_KEY not set");
 
-  const model = modelForTier(opts.tier);
+  if (!opts.tier && !opts.model) throw new Error("Either tier or model is required.");
+  // Chat/preset calls (opts.model) are untrusted client input — cap at the chat limit.
+  // Engine tier calls (opts.tier) are trusted server config and use the higher engine
+  // ceiling, so the code-editor step's 8192 passes (behaviour parity with pre-preset).
+  const params = validateModelParams(
+    {
+      temperature: opts.temperature ?? (opts.model ? undefined : 0.2),
+      maxTokens: opts.maxTokens ?? (opts.model ? undefined : 4096),
+    },
+    opts.model ? undefined : MAX_MAX_TOKENS_ENGINE,
+  );
+  const model = opts.model ? validateModelId(opts.model) : modelForTier(opts.tier!);
   const retries = normalizeModelRetries(opts.retries);
   const requestTimeoutMs = normalizeModelRequestTimeout(opts.requestTimeoutMs);
 
   const body: Record<string, unknown> = {
     model,
     messages: opts.messages,
-    max_tokens: opts.maxTokens ?? 4096,
-    temperature: opts.temperature ?? 0.2,
+    max_tokens: params.maxTokens,
+    temperature: params.temperature,
     // Ask OpenRouter to include real cost (USD) in the usage block, same number
     // the Activity page shows.
     usage: { include: true },

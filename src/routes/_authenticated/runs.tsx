@@ -64,7 +64,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           rel="noreferrer"
           className="text-xs text-sky-500 hover:underline"
         >
-          PR #{latestRun.githubPrNumber} →
+          PR #{latestRun.githubPrNumber} &gt;
         </a>
       )}
 
