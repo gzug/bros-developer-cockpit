@@ -3,7 +3,7 @@
 // errors. Tier ESCALATION (on parse/validation failure) is the engine's job.
 //
 // Model IDs are env-driven for engine tiers and JSON-driven for chat presets.
-// Defaults are sane starting points — verify against
+// Defaults are sane starting points, verify against
 // https://openrouter.ai/models and set BDC_MODEL_TIER{0,1,2} to pin them.
 import { validateModelId, validateModelParams, MAX_MAX_TOKENS_ENGINE } from "./model-presets";
 
@@ -47,7 +47,7 @@ function sleep(ms: number): Promise<void> {
 
 /**
  * Call one tier's model. Retries the SAME tier on 429/5xx (transient) with
- * backoff. Throws on non-transient errors or after exhausting retries — the
+ * backoff. Throws on non-transient errors or after exhausting retries, the
  * engine catches and decides whether to escalate a tier.
  */
 export async function callModel(opts: {

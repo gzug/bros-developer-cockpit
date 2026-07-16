@@ -6,7 +6,10 @@ import {
   canConfirmIdeaLive,
   createIdea,
   createSubmittedIdea,
+  closeIdeaAsDeleted,
+  completeIdea,
   describeIdeaStatus,
+  getUndoLastChangeStatus,
   getEngineRunStatsBatch,
   getIdea,
   getIdeaWithPull,
@@ -14,13 +17,21 @@ import {
   markIdeaLive,
   getOwnerActionQueue,
   listIdeaActivity,
+  listDoneIdeas,
   listIdeas,
+  listPipelineIdeas,
   recentIdeaCount,
   requestIdeaChanges,
+  setIdeaContext,
+  setIdeaPipelineState,
   setIdeaStatus,
+  setIdeaWeight,
   type BdcSubmissionType,
+  type DoneCategorySlug,
   type DCIdeaStatus,
   type DCIdeaIntent,
+  type IdeaPipelineState,
+  type IdeaWeight,
 } from "./github-issues.server";
 import { addLabelsToIssue, getPullRequest, removeIssueLabel } from "./github.server";
 import { upsertTask } from "./db/runs.server";
@@ -38,8 +49,31 @@ const SubmitIdeaInput = z.object({
   screen: z.string().trim().max(80).optional(),
 });
 
+const ParkedIdeaInput = z.object({
+  title: z.string().trim().min(1).max(80),
+  description: z.string().trim().min(1).max(600),
+  weight: z.enum(["light", "heavy"]),
+  context: z.string().trim().max(280).optional(),
+});
+
 const IdInput = z.object({
   id: z.number().int().positive(),
+});
+
+const PipelineStateInput = IdInput.extend({
+  state: z.enum(["active", "parked", "archived"]),
+});
+
+const WeightInput = IdInput.extend({
+  weight: z.enum(["light", "heavy"]),
+});
+
+const ContextInput = IdInput.extend({
+  context: z.string().trim().max(280).optional(),
+});
+
+const DoneInput = IdInput.extend({
+  category: z.enum(["home", "sleep", "nutrition", "activity", "statistics", "general"]),
 });
 
 const PrActionInput = z.object({
@@ -107,6 +141,90 @@ export const listIdeaEntries = createServerFn({ method: "GET" }).handler(async (
   requireAuth();
   return listIdeas();
 });
+
+export const listPipelineEntries = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireAuth } = await import("./auth-session.server");
+  requireAuth();
+  return listPipelineIdeas();
+});
+
+export const listDoneIdeaEntries = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireAuth } = await import("./auth-session.server");
+  requireAuth();
+  return listDoneIdeas();
+});
+
+export const getUndoLastChangeEntry = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireAuth } = await import("./auth-session.server");
+  requireAuth();
+  return getUndoLastChangeStatus();
+});
+
+export const createParkedIdeaEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => ParkedIdeaInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    const { checkGuardrails } = await import("./guardrails.server");
+    requireAuth();
+    const guardrail = checkGuardrails({
+      title: data.title,
+      body: `${data.description}\n${data.context ?? ""}`,
+    });
+    if (!guardrail.ok) throw new Error(guardrail.message);
+    return createSubmittedIdea({
+      type: "idea",
+      title: data.title,
+      description: data.description,
+      parked: true,
+      weight: data.weight as IdeaWeight,
+      context: data.context,
+    });
+  });
+
+export const updateIdeaPipelineEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => PipelineStateInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await setIdeaPipelineState(data.id, data.state as IdeaPipelineState);
+    return { ok: true as const };
+  });
+
+export const updateIdeaWeightEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => WeightInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await setIdeaWeight(data.id, data.weight as IdeaWeight);
+    return { ok: true as const };
+  });
+
+export const updateIdeaContextEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => ContextInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await setIdeaContext(data.id, data.context);
+    return { ok: true as const };
+  });
+
+export const deleteIdeaEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => IdInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await closeIdeaAsDeleted(data.id);
+    return { ok: true as const };
+  });
+
+export const completeIdeaEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => DoneInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await completeIdea(data.id, data.category as DoneCategorySlug);
+    return { ok: true as const };
+  });
 
 export const getIdeaEntry = createServerFn({ method: "GET" })
   .validator((input: unknown) => IdInput.parse(input))

@@ -50,10 +50,25 @@ export function AppHeader() {
           </Link>
           <Link
             to="/chat"
+            search={{}}
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
           >
             New
+          </Link>
+          <Link
+            to="/pipeline"
+            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+          >
+            Pipeline
+          </Link>
+          <Link
+            to="/done"
+            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+          >
+            Done
           </Link>
           <Link
             to="/runs"

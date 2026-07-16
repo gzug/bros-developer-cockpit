@@ -1,0 +1,32 @@
+[
+  {
+    "id": "sleep-winddown-card",
+    "title": "Sleep winddown card",
+    "sentence": "Show a short evening card that helps plan bedtime based on the last few nights.",
+    "weight": "light"
+  },
+  {
+    "id": "nutrition-pattern-note",
+    "title": "Nutrition pattern note",
+    "sentence": "Add a plain note when food logging shows the same missed pattern several days in a row.",
+    "weight": "light"
+  },
+  {
+    "id": "activity-recovery-check",
+    "title": "Recovery check before activity",
+    "sentence": "Before suggesting hard activity, show whether sleep and recent load make that a good idea.",
+    "weight": "heavy"
+  },
+  {
+    "id": "home-trust-source-copy",
+    "title": "Home source clarity",
+    "sentence": "Make each Home insight say whether it comes from device data, manual input, or demo data.",
+    "weight": "light"
+  },
+  {
+    "id": "statistics-weekly-retro",
+    "title": "Weekly retro in statistics",
+    "sentence": "Group the week into Home, Sleep, Nutrition, Activity, and General so progress is easier to scan.",
+    "weight": "heavy"
+  }
+]
