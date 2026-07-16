@@ -87,3 +87,43 @@ test("callModel keeps legacy tier defaults for engine calls", async () => {
   expect(body?.temperature).toBe(0.2);
   expect(body?.max_tokens).toBe(4096);
 });
+
+test("callModel allows the engine editor's 8192 maxTokens on the tier path", async () => {
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let body: Record<string, unknown> | null = null;
+  globalThis.fetch = (async (_url, init) => {
+    body = JSON.parse(String(init?.body));
+    return new Response(
+      JSON.stringify({ model: "google/gemini-2.5-flash", choices: [{ message: { content: "ok" } }] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  await callModel({
+    tier: "tier0",
+    messages: [{ role: "user", content: "Run editor" }],
+    maxTokens: 8192,
+    retries: 0,
+  });
+
+  expect(body?.max_tokens).toBe(8192);
+});
+
+test("callModel still caps chat/preset maxTokens at the chat limit", async () => {
+  process.env.OPENROUTER_API_KEY = "test-key";
+  let called = false;
+  globalThis.fetch = (async () => {
+    called = true;
+    throw new Error("fetch should not run");
+  }) as typeof fetch;
+
+  await expect(
+    callModel({
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "user", content: "hi" }],
+      maxTokens: 8192,
+      retries: 0,
+    }),
+  ).rejects.toThrow("Max tokens");
+  expect(called).toBe(false);
+});

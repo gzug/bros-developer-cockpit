@@ -34,6 +34,9 @@ const MIN_TEMPERATURE = 0;
 const MAX_TEMPERATURE = 2;
 const MIN_MAX_TOKENS = 64;
 const MAX_MAX_TOKENS = 4096;
+// Trusted engine tier calls are server-controlled (not client input) and may exceed the
+// chat/preset cap — the code-editor step (engine.server.ts) runs at 8192.
+export const MAX_MAX_TOKENS_ENGINE = 8192;
 const MAX_SYSTEM_PROMPT_LENGTH = 4000;
 
 export const curatedModels = modelsConfig as ModelConfig[];
@@ -57,7 +60,10 @@ export function validateModelId(model: string): string {
   return value;
 }
 
-export function validateModelParams(params: Partial<ModelParams> | undefined): ModelParams {
+export function validateModelParams(
+  params: Partial<ModelParams> | undefined,
+  maxTokensCeiling: number = MAX_MAX_TOKENS,
+): ModelParams {
   const temperature = params?.temperature ?? 0.4;
   const maxTokens = params?.maxTokens ?? 300;
   assertFiniteNumber(temperature, "Temperature");
@@ -65,8 +71,8 @@ export function validateModelParams(params: Partial<ModelParams> | undefined): M
   if (temperature < MIN_TEMPERATURE || temperature > MAX_TEMPERATURE) {
     throw new Error(`Temperature must be between ${MIN_TEMPERATURE} and ${MAX_TEMPERATURE}.`);
   }
-  if (!Number.isInteger(maxTokens) || maxTokens < MIN_MAX_TOKENS || maxTokens > MAX_MAX_TOKENS) {
-    throw new Error(`Max tokens must be an integer between ${MIN_MAX_TOKENS} and ${MAX_MAX_TOKENS}.`);
+  if (!Number.isInteger(maxTokens) || maxTokens < MIN_MAX_TOKENS || maxTokens > maxTokensCeiling) {
+    throw new Error(`Max tokens must be an integer between ${MIN_MAX_TOKENS} and ${maxTokensCeiling}.`);
   }
   return { temperature, maxTokens };
 }

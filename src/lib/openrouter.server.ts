@@ -5,7 +5,7 @@
 // Model IDs are env-driven for engine tiers and JSON-driven for chat presets.
 // Defaults are sane starting points — verify against
 // https://openrouter.ai/models and set BDC_MODEL_TIER{0,1,2} to pin them.
-import { validateModelId, validateModelParams } from "./model-presets";
+import { validateModelId, validateModelParams, MAX_MAX_TOKENS_ENGINE } from "./model-presets";
 
 export type Tier = "tier0" | "tier1" | "tier2";
 
@@ -64,10 +64,16 @@ export async function callModel(opts: {
   if (!key) throw new Error("OPENROUTER_API_KEY not set");
 
   if (!opts.tier && !opts.model) throw new Error("Either tier or model is required.");
-  const params = validateModelParams({
-    temperature: opts.temperature ?? (opts.model ? undefined : 0.2),
-    maxTokens: opts.maxTokens ?? (opts.model ? undefined : 4096),
-  });
+  // Chat/preset calls (opts.model) are untrusted client input — cap at the chat limit.
+  // Engine tier calls (opts.tier) are trusted server config and use the higher engine
+  // ceiling, so the code-editor step's 8192 passes (behaviour parity with pre-preset).
+  const params = validateModelParams(
+    {
+      temperature: opts.temperature ?? (opts.model ? undefined : 0.2),
+      maxTokens: opts.maxTokens ?? (opts.model ? undefined : 4096),
+    },
+    opts.model ? undefined : MAX_MAX_TOKENS_ENGINE,
+  );
   const model = opts.model ? validateModelId(opts.model) : modelForTier(opts.tier!);
   const retries = opts.retries ?? 2;
 
