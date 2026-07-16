@@ -1,25 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
-  addIdeaComment,
-  canTransitionIdeaStatus,
   canConfirmIdeaLive,
   createIdea,
   createSubmittedIdea,
-  describeIdeaStatus,
   getEngineRunStatsBatch,
   getIdea,
   getIdeaWithPull,
   markIdeaLive,
   getOwnerActionQueue,
-  listIdeaActivity,
   listIdeas,
   recentIdeaCount,
   requestIdeaChanges,
-  setIdeaStatus,
   toBrotherIdea,
   type BdcSubmissionType,
-  type DCIdeaStatus,
   type DCIdeaIntent,
 } from "./github-issues.server";
 import { addLabelsToIssue, getPullRequest, removeIssueLabel } from "./github.server";
@@ -47,11 +41,6 @@ const PrActionInput = z.object({
   prNumber: z.number().int().positive(),
 });
 
-const UpdateIdeaStatusInput = z.object({
-  id: z.number().int().positive(),
-  status: z.enum(["approved", "live", "blocked"]),
-});
-
 async function enforceBrotherSubmissionQuota(role: "brother" | "owner"): Promise<void> {
   if (role !== "brother") return;
   const { getRequestIP } = await import("@tanstack/react-start/server");
@@ -76,7 +65,14 @@ export const createIdeaEntry = createServerFn({ method: "POST" })
     });
     if (!guardrail.ok) throw new Error(guardrail.message);
     await enforceBrotherSubmissionQuota(role);
-    return createIdea(data.intent as DCIdeaIntent, data.title, data.description);
+    const idea = await createIdea(data.intent as DCIdeaIntent, data.title, data.description);
+    await upsertTask({
+      issueNumber: idea.id,
+      title: idea.title,
+      intent: idea.intent,
+      status: idea.status,
+    });
+    return idea;
   });
 
 export const submitIdeaFn = createServerFn({ method: "POST" })
@@ -138,14 +134,6 @@ export const getIdeaEntry = createServerFn({ method: "GET" })
     return toBrotherIdea(await getIdea(data.id));
   });
 
-export const getIdeaActivityEntry = createServerFn({ method: "GET" })
-  .validator((input: unknown) => IdInput.parse(input))
-  .handler(async ({ data }) => {
-    const { requireOwner } = await import("./auth-session.server");
-    requireOwner();
-    return listIdeaActivity(data.id);
-  });
-
 export const recentIdeaUsage = createServerFn({ method: "GET" }).handler(async () => {
   const { requireAuth } = await import("./auth-session.server");
   requireAuth();
@@ -168,12 +156,6 @@ export const pollNewBdcIssuesFn = createServerFn({ method: "POST" }).handler(asy
   const { pollNewBdcIssues } = await import("./issue-poller.server");
   return pollNewBdcIssues();
 });
-
-const STATUS_COMMENT: Record<"approved" | "live" | "blocked", string> = {
-  approved: "Owner marked this PR approved to ship.",
-  live: "Owner confirmed this change live in OL1.",
-  blocked: "Owner returned this idea to manual review.",
-};
 
 async function approveHeldPullRequest(issueNumber: number, prNumber: number) {
   const { isBdcPaused } = await import("./engine.server");
@@ -215,33 +197,6 @@ async function approveHeldPullRequest(issueNumber: number, prNumber: number) {
     message: "Approved. The One L1fe checks will run before the update is published.",
   };
 }
-
-export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
-  .validator((input: unknown) => UpdateIdeaStatusInput.parse(input))
-  .handler(async ({ data }) => {
-    const { requireOwner } = await import("./auth-session.server");
-    requireOwner();
-    const { idea, pr } = await getIdeaWithPull(data.id);
-
-    if (!canTransitionIdeaStatus(idea.status, data.status as DCIdeaStatus)) {
-      throw new Error(`Cannot move ${idea.status} to ${data.status}.`);
-    }
-
-    if (data.status === "approved") {
-      if (!pr) throw new Error("Cannot approve until the linked PR exists.");
-      return approveHeldPullRequest(data.id, pr.number);
-    }
-
-    if (data.status === "live" && (idea.status !== "shipped" || !canConfirmIdeaLive(pr))) {
-      throw new Error(
-        "Cannot confirm live until the update was published and the linked PR was merged.",
-      );
-    }
-
-    await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
-    await addIdeaComment(data.id, STATUS_COMMENT[data.status]);
-    return { ok: true as const, statusSummary: describeIdeaStatus(data.status as DCIdeaStatus) };
-  });
 
 export const approvePrFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => PrActionInput.parse(input))

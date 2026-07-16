@@ -414,18 +414,3 @@ export async function openPullRequest(input: {
   });
 }
 
-export async function mergePullRequest(input: {
-  prNumber: number;
-  commitTitle: string;
-  commitMessage?: string;
-}): Promise<{ sha: string; merged: boolean; message: string }> {
-  const r = repo();
-  return gh(`/repos/${r.path}/pulls/${input.prNumber}/merge`, {
-    method: "PUT",
-    body: JSON.stringify({
-      merge_method: "squash",
-      commit_title: input.commitTitle,
-      commit_message: input.commitMessage,
-    }),
-  });
-}

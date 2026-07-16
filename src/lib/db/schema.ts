@@ -1,19 +1,5 @@
 import { integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export const sessions = pgTable("sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const loginRateLimits = pgTable("login_rate_limits", {
-  keyHash: text("key_hash").primaryKey(),
-  attempts: integer("attempts").notNull().default(0),
-  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull().defaultNow(),
-  lockedUntil: timestamp("locked_until", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
 export const tasks = pgTable("tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
   issueNumber: integer("issue_number").notNull().unique(),
@@ -40,11 +26,3 @@ export const runs = pgTable("runs", {
   finishedAt: timestamp("finished_at", { withTimezone: true }),
 });
 
-export const approvals = pgTable("approvals", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  issueNumber: integer("issue_number").notNull(),
-  prNumber: integer("pr_number"),
-  fromStatus: text("from_status"),
-  toStatus: text("to_status").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});

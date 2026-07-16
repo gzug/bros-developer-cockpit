@@ -33,7 +33,5 @@
     "apps/mobile/src/lib/db/**",
     "apps/mobile/src/lib/auth*",
     "apps/mobile/src/lib/api*"
-  ],
-  "promptTemplate": "smallest-correct-ui-change",
-  "templateVersion": "github-native-v1"
+  ]
 }
