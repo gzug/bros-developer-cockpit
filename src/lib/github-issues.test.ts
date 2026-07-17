@@ -8,6 +8,9 @@ import {
   groupEngineRunStats,
   groupDoneIdeasForRetro,
   isParkedOlderThanDays,
+  isBdcPipelineIssue,
+  readTextMeta,
+  replaceTextMeta,
   toIdeaActivity,
   type DCIdea,
 } from "./github-issues.server";
@@ -291,4 +294,33 @@ test("done retro groups ideas by category with counts and newest closed first", 
     { category: "general", count: 1 },
   ]);
   expect(groups[0].ideas.map((idea) => idea.title)).toEqual(["New Home", "Old Home"]);
+});
+
+test("destructive mutations only accept real BDC wish issues, never pull requests", () => {
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] })).toBe(true);
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(false);
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }], pull_request: {} })).toBe(false);
+});
+
+test("context metadata ignores a description line that literally starts with context:", () => {
+  // The hostile line starts with `context:` inside the free-text Description, which the
+  // pre-fix whole-body matcher would misread AND rewrite. Both reads and writes must stay
+  // scoped to the structured `## Context` block, leaving the user's text untouched.
+  const hostileLine = "context: this is the user's own wish text and must stay untouched.";
+  const body = [
+    "## Description",
+    hostileLine,
+    "",
+    "## Context",
+    "context: Original context",
+    "Screen: Home",
+    "Type: idea",
+    "",
+    "---",
+  ].join("\n");
+  expect(readTextMeta(body, "context")).toBe("Original context");
+  const updated = replaceTextMeta(body, "context", "Updated context");
+  expect(updated).toContain(hostileLine);
+  expect(updated).toContain("context: Updated context");
+  expect(readTextMeta(updated, "context")).toBe("Updated context");
 });

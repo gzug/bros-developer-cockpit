@@ -12,6 +12,11 @@ import {
 export const SUPPORTED_SKILL_EXPORT_FORMATS =
   "Claude data-export ZIP with conversations.json, ChatGPT data-export ZIP with conversations.json, Google/Gemini Takeout JSON or HTML, and PNG metadata";
 
+export const MAX_ZIP_UPLOAD_BYTES = 30 * 1024 * 1024;
+export const MAX_ZIP_ENTRY_COUNT = 2_000;
+export const MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES = 20 * 1024 * 1024;
+export const MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
+
 export type ParsedSkillUploadBatch =
   | {
       ok: true;
@@ -265,29 +270,66 @@ function findEndOfCentralDirectory(buffer: Buffer): number {
 }
 
 export function readZipEntries(buffer: Buffer): ZipEntry[] {
+  if (buffer.length > MAX_ZIP_UPLOAD_BYTES) {
+    throw new Error("ZIP upload is too large. Maximum size is 30 MB.");
+  }
   const eocdOffset = findEndOfCentralDirectory(buffer);
   const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  if (entryCount > MAX_ZIP_ENTRY_COUNT) {
+    throw new Error("ZIP contains too many entries. Maximum is 2000.");
+  }
   const centralDirectoryOffset = buffer.readUInt32LE(eocdOffset + 16);
+  const centralDirectorySize = buffer.readUInt32LE(eocdOffset + 12);
+  if (centralDirectoryOffset + centralDirectorySize > buffer.length) {
+    throw new Error("Invalid ZIP central directory.");
+  }
   const entries: ZipEntry[] = [];
   let offset = centralDirectoryOffset;
+  let totalUncompressedBytes = 0;
 
   for (let i = 0; i < entryCount; i++) {
+    if (offset + 46 > buffer.length) throw new Error("Invalid ZIP central directory.");
     if (buffer.readUInt32LE(offset) !== 0x02014b50) throw new Error("Invalid ZIP central directory.");
     const method = buffer.readUInt16LE(offset + 10);
     const compressedSize = buffer.readUInt32LE(offset + 20);
+    const declaredUncompressedSize = buffer.readUInt32LE(offset + 24);
+    if (declaredUncompressedSize > MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES) {
+      throw new Error("ZIP entry exceeds the 20 MB decompressed limit.");
+    }
     const fileNameLength = buffer.readUInt16LE(offset + 28);
     const extraLength = buffer.readUInt16LE(offset + 30);
     const commentLength = buffer.readUInt16LE(offset + 32);
     const localHeaderOffset = buffer.readUInt32LE(offset + 42);
     const name = buffer.subarray(offset + 46, offset + 46 + fileNameLength).toString("utf8");
 
-    if (buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) throw new Error("Invalid ZIP local header.");
+    if (localHeaderOffset + 30 > buffer.length || buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
+      throw new Error("Invalid ZIP local header.");
+    }
     const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
     const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
     const dataOffset = localHeaderOffset + 30 + localNameLength + localExtraLength;
+    if (dataOffset + compressedSize > buffer.length) throw new Error("Invalid ZIP entry bounds.");
     const compressed = buffer.subarray(dataOffset, dataOffset + compressedSize);
-    const data = method === 0 ? compressed : method === 8 ? inflateRawSync(compressed) : undefined;
-    if (data && !name.endsWith("/")) entries.push({ name, data });
+    let data: Buffer | undefined;
+    try {
+      data = method === 0
+        ? compressed
+        : method === 8
+          ? inflateRawSync(compressed, { maxOutputLength: MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES })
+          : undefined;
+    } catch {
+      throw new Error("ZIP entry exceeds the 20 MB decompressed limit or is invalid.");
+    }
+    if (data) {
+      if (data.length > MAX_ZIP_ENTRY_UNCOMPRESSED_BYTES) {
+        throw new Error("ZIP entry exceeds the 20 MB decompressed limit.");
+      }
+      totalUncompressedBytes += data.length;
+      if (totalUncompressedBytes > MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES) {
+        throw new Error("ZIP decompressed data exceeds the 50 MB total limit.");
+      }
+      if (!name.endsWith("/")) entries.push({ name, data });
+    }
 
     offset += 46 + fileNameLength + extraLength + commentLength;
   }
@@ -321,6 +363,9 @@ function parseZipExport(buffer: Buffer, fileName: string): ParsedFile[] {
 }
 
 async function parseFile(file: File): Promise<ParsedFile[]> {
+  if (file.size > MAX_ZIP_UPLOAD_BYTES) {
+    throw new Error("Upload is too large. Maximum size is 30 MB.");
+  }
   const lowerName = file.name.toLowerCase();
   if (lowerName.endsWith(".zip") || file.type.includes("zip")) {
     return parseZipExport(Buffer.from(await file.arrayBuffer()), file.name);
