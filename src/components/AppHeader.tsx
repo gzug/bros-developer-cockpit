@@ -13,6 +13,7 @@ const OWNER_LINKS = [
   { to: "/runs", label: "Runs" },
   { to: "/dc", label: "DC" },
   { to: "/skills", label: "Skills" },
+  { to: "/prompts", label: "Prompts" },
   { to: "/owner-kpi", label: "Stats" },
 ] as const;
 
@@ -47,11 +48,11 @@ export function AppHeader({ owner = false }: { owner?: boolean }) {
 
   return (
     <header className="border-b border-border bg-background">
-      <div className="mx-auto flex max-w-md items-center justify-between px-3 py-3 sm:max-w-2xl sm:px-4">
+      <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-3 py-3 sm:max-w-5xl sm:px-4">
         <Link to="/dashboard" className="shrink-0 text-sm font-semibold">
           {owner ? "OL1 · Owner" : "One L1fe · Wishes"}
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm">
           <Link
             to="/dashboard"
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"

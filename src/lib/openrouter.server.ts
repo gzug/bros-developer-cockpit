@@ -23,7 +23,7 @@ const DEFAULT_MODELS: Record<Tier, string> = {
 };
 
 export function modelForTier(t: Tier): string {
-  const env = process.env[`BDC_MODEL_${t.toUpperCase()}`];
+  const env = process.env[`BDC_MODEL_${t.toUpperCase()}`]?.trim();
   return (env && env.trim()) || DEFAULT_MODELS[t];
 }
 
@@ -92,6 +92,20 @@ export function isTransientOpenRouterStatus(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
+function openRouterErrorMessage(status: number, detail: string): string {
+  if (status === 401) {
+    return "OpenRouter rejected the API key. Check OPENROUTER_API_KEY.";
+  }
+  if (status === 402) {
+    return "OpenRouter credits or model access are unavailable for this account.";
+  }
+  if (status === 403) {
+    return "OpenRouter blocked this model or request for the current account.";
+  }
+  const normalized = detail.replace(/\s+/g, " ").trim();
+  return `OpenRouter ${status}: ${normalized.slice(0, isTransientOpenRouterStatus(status) ? 200 : 300)}`;
+}
+
 function isRetryableTransportError(error: unknown): boolean {
   return (
     error instanceof TypeError ||
@@ -115,7 +129,7 @@ export async function callModel(opts: {
   retries?: number;
   requestTimeoutMs?: number;
 }): Promise<ModelResult> {
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OPENROUTER_API_KEY not set");
 
   if (!opts.tier && !opts.model) throw new Error("Either tier or model is required.");
@@ -164,9 +178,10 @@ export async function callModel(opts: {
       });
 
       if (!res.ok) {
+        const detail = await res.text();
         throw new OpenRouterHttpError(
           res.status,
-          `OpenRouter ${res.status}: ${(await res.text()).slice(0, isTransientOpenRouterStatus(res.status) ? 200 : 300)}`,
+          openRouterErrorMessage(res.status, detail),
         );
       }
 

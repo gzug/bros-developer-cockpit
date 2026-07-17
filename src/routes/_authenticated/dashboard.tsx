@@ -3,33 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getIdeaStatusDotClass, getIdeaStatusLabel } from "@/lib/idea-status";
 import { listIdeaEntries, recentIdeaUsage } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
-
-const STATUS_TEXT = {
-  submitted: "Received",
-  processing: "Being prepared",
-  sent: "Ready for Don to review",
-  approved: "Approved, safety checks are running",
-  shipped: "Update published, check your phone",
-  live: "Checked on the phone",
-  blocked: "Needs Don's help",
-  closed: "Closed",
-} as const;
-
-const STATUS_CLASS = {
-  submitted: "bg-amber-500",
-  processing: "bg-sky-500",
-  sent: "bg-amber-500",
-  approved: "bg-sky-500",
-  shipped: "bg-violet-500",
-  live: "bg-emerald-500",
-  blocked: "bg-rose-500",
-  closed: "bg-zinc-500",
-} as const;
 
 function Dashboard() {
   const router = useRouter();
@@ -56,8 +35,8 @@ function Dashboard() {
               <p className="mt-1 text-xs text-rose-600">Recent activity is unavailable.</p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              Every wish travels: received → prepared → Don reviews → shipped to the phone. Tap one
-              to see where it is.
+              A wish can move through these steps: received → shipping requested → being prepared →
+              Don review → published → checked on the phone. Tap one to see where it is.
             </p>
             {usage.data && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -69,6 +48,37 @@ function Dashboard() {
             <Link to="/chat" search={{}}>New</Link>
           </Button>
         </div>
+
+        <section className="mt-4 rounded-xl border border-border bg-card p-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <h2 className="text-sm font-semibold">What appears here</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                This list shows your own wishes. Newer wishes usually appear first.
+              </p>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">What request shipping means</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Requesting shipping only asks Don to start the path. It does not mean the update is
+                already published.
+              </p>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">What shipped means</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Shipped means the update was published. Fully close One L1fe and open it twice to check
+                the phone.
+              </p>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">What live means</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Live means someone already confirmed the change on the phone.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <div className="mt-6 space-y-2">
           {list.isLoading && (
@@ -102,7 +112,7 @@ function Dashboard() {
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2">
                   <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_CLASS[idea.status]}`}
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${getIdeaStatusDotClass(idea.status)}`}
                     aria-hidden
                   />
                   <span className="truncate text-sm font-medium">{idea.title}</span>
@@ -115,7 +125,7 @@ function Dashboard() {
                 </span>
               </div>
               <span className="mt-1 pl-[18px] text-xs text-muted-foreground">
-                {STATUS_TEXT[idea.status]}
+                {idea.statusSummary || getIdeaStatusLabel(idea.status)}
               </span>
             </button>
           ))}

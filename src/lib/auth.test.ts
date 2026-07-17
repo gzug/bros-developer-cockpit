@@ -49,18 +49,23 @@ test("login codes resolve to separate brother and owner roles", () => {
   expect(resolveLoginRole("0000", pins)).toBeNull();
 });
 
-test("malformed or colliding four-digit credentials fail closed", () => {
-  // owner pin must be exactly four digits
-  expect(validateLoginConfiguration({ ownerPin: "98", brotherPin: "1234" })).toContain(
+test("login trims whitespace and keeps the valid role usable", () => {
+  expect(resolveLoginRole("1234", { ownerPin: "legacy-owner-passphrase", brotherPin: " 1234 " })).toBe(
+    "brother",
+  );
+  expect(validateLoginConfiguration({ ownerPin: " 4321 ", brotherPin: " 1234 " })).toBeNull();
+});
+
+test("malformed credentials still fail closed when no valid role remains", () => {
+  expect(validateLoginConfiguration({ ownerPin: "98", brotherPin: undefined })).toContain(
     "four digits",
   );
-  // brother pin must be exactly four digits
-  expect(
-    validateLoginConfiguration({ ownerPin: "4321", brotherPin: "12ab" }),
-  ).toContain("four digits");
+  expect(validateLoginConfiguration({ ownerPin: undefined, brotherPin: "12ab" })).toContain(
+    "four digits",
+  );
   // the two codes must differ
   expect(
     validateLoginConfiguration({ ownerPin: "1234", brotherPin: "1234" }),
   ).toContain("different");
-  expect(resolveLoginRole("98", { ownerPin: "98", brotherPin: "1234" })).toBeNull();
+  expect(resolveLoginRole("98", { ownerPin: "98", brotherPin: undefined })).toBeNull();
 });

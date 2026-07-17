@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last verified: 2026-07-17 CEST against `origin/main` `2e3b080` and GitHub._
+_Last verified: 2026-07-17 CEST against `origin/main` `f94ac79` and GitHub._
 
 ## Operating truth
 
@@ -20,11 +20,13 @@ _Last verified: 2026-07-17 CEST against `origin/main` `2e3b080` and GitHub._
 | #26 | AI engine presets | `9677693` | 2026-07-16 |
 | #27 | current PL prompt pointer | `488d4c0` | 2026-07-16 |
 | #32 | ZIP limits + pipeline mutation guards (closed #29/#30) | `83fee83` | 2026-07-17 |
+| #33 | sync CHECKPOINT to post-#32 truth | `2e3b080` | 2026-07-17 |
 
 ## Open pull requests
 
 | PR | Scope | Status | Rule |
 |---|---|---|---|
+| #35 | Co-Dev Flow v2 draft on the #21 foundation; includes honest shipping semantics, prompt/help cleanup, prompt versions, import checks, and timeline tracking | Draft, clean | owner-gated; current integration path, do not merge before owner go |
 | #20 | readiness pipeline hardening | Draft, conflict | owner-gated; do not merge or repair by assumption |
 | #21 | role and security readiness | Draft, conflict | owner-gated; do not merge or repair by assumption |
 | #28 | product-generalization handoff | Draft, clean | documentation draft; keep separate from readiness integration |
@@ -40,11 +42,17 @@ _Closed 2026-07-17:_ **#29** (ZIP size limits) and **#30** (close guard + contex
 
 ## Next safe sequence
 
-1. #32 integrated (ZIP + mutation-guard hardening); #29/#30 closed; residual tracked in #34.
-2. Co-Dev Flow v2 spec owner-confirmed 2026-07-17: `docs/planning/codev-flow-v2-spec.md` (one screen PIN-gated, OTA vs Next-APK, brother chat-ship). Build runs as a draft PR on top of the #21 foundation; merging that PR stays owner-gated.
-3. Owner decisions still pending on #20, #21, and One L1fe PR #283 — all owner-gated.
-4. After approval, integrate the #21 foundation (via the Co-Dev Flow v2 draft PR), then #31 Builder Profile (needs #21 first).
+1. `origin/main` now includes the post-#32 checkpoint sync (#33) and the owner-confirmed Co-Dev Flow v2 spec commit `f94ac79`.
+2. PR #35 is the active draft implementation path. It supersedes the old integration story of #20/#21 but remains owner-gated until explicitly approved.
+3. After PR #35 is reviewed and merged, close or rewrite the superseded readiness drafts (#20/#21) deliberately instead of letting them drift.
+4. Then integrate #31 Builder Profile if still wanted; it depends on the readiness/roles foundation.
 5. Only then deploy with `BDC_PAUSED=true`, test the PIN flow with the owner, and record a real result.
+
+## Known follow-ups after PR #35
+
+- GitHub issue #289 may still need a manual record cleanup because the old test run mixed cockpit actions with direct GitHub clicks. Do not automate a repair by assumption.
+- Prompt-effect remains a small-sample GitHub signal, not real runtime telemetry for the actually served prompts.
+- The help/chat layer knows BDC workflow facts, but it still lacks a live One L1fe product-context packet. That is the next high-value truth upgrade after the current draft lands.
 
 ## Validation and cleanup rules
 

@@ -253,7 +253,17 @@ export const requestShipEntry = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
-    return requestBrotherShip(data.id);
+    const result = await requestBrotherShip(data.id);
+    if (result.ok) {
+      const idea = await getIdea(data.id);
+      await upsertTask({
+        issueNumber: idea.id,
+        title: idea.title,
+        intent: idea.intent,
+        status: idea.status,
+      });
+    }
+    return result;
   });
 
 export const deleteIdeaEntry = createServerFn({ method: "POST" })
@@ -268,8 +278,8 @@ export const deleteIdeaEntry = createServerFn({ method: "POST" })
 export const completeIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => DoneInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
     await completeIdea(data.id, data.category as DoneCategorySlug);
     return { ok: true as const };
   });
@@ -412,6 +422,7 @@ export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () =
     shippedCount: ideas.filter((idea) => idea.status === "shipped").length,
     blockedCount: ideas.filter((idea) => idea.status === "blocked").length,
     sentCount: ideas.filter((idea) => idea.status === "sent").length,
+    requestedCount: ideas.filter((idea) => idea.status === "requested").length,
     submittedCount: ideas.filter((idea) => idea.status === "submitted").length,
     closedCount: ideas.filter((idea) => idea.status === "closed").length,
     totalCostUsd: flatRuns.reduce((sum, run) => sum + run.costUsd, 0),

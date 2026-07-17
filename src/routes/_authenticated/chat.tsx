@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BDC_HELP_QUICK_QUESTIONS } from "@/lib/app-knowledge";
 import {
   Select,
   SelectContent,
@@ -150,11 +151,11 @@ function ChatPage() {
       setShipResult({
         ok: result.ok,
         message: result.ok
-          ? "Sent to ship. It runs the safety checks and publishes once shipping is armed."
+          ? "Shipping requested. Don still has to start the checks before anything is published."
           : result.reason,
       }),
     onError: (error) =>
-      setShipResult({ ok: false, message: error instanceof Error ? error.message : "Could not ship." }),
+      setShipResult({ ok: false, message: error instanceof Error ? error.message : "Could not request shipping." }),
   });
   const [intent, setIntent] = useState<Intent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -378,6 +379,18 @@ function ChatPage() {
           </section>
         )}
         <section className="mb-4 rounded-md border border-border bg-card p-4">
+          <details className="mb-3 rounded-md border border-border bg-background p-3 text-sm">
+            <summary className="cursor-pointer font-medium">What the preset controls</summary>
+            <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+              <p>
+                Preset is the saved behavior: tone, rules, model, and default length for this chat.
+              </p>
+              <p>
+                Model chooses the provider through OpenRouter. Temperature controls looseness; max
+                tokens controls answer length.
+              </p>
+            </div>
+          </details>
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
             <div className="space-y-2">
               <Label htmlFor="preset">Preset</Label>
@@ -474,7 +487,8 @@ function ChatPage() {
           <div className="grid gap-2">
             <h1 className="text-xl font-semibold">What kind of wish?</h1>
             <p className="text-sm text-muted-foreground">
-              Pick a direction, then we'll chat about it.
+              Pick a direction, then we&rsquo;ll chat about it. You can also ask what this app, a
+              status, or Don means before you submit anything.
             </p>
             {INTENTS.map((entry) => (
               <button
@@ -506,6 +520,42 @@ function ChatPage() {
                 Switch
               </Button>
             </div>
+
+            <section className="mb-4 rounded-xl border border-border bg-card p-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <h2 className="text-sm font-semibold">What happens here</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This chat can explain the app or turn your rough note into a clear wish.
+                  </p>
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Nothing is sent yet</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    GitHub and the pipeline only start after you accept a refined version or keep your
+                    own text.
+                  </p>
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Phone timing</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    OTA changes can reach the phone fast. Next APK changes wait for the next app build.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {BDC_HELP_QUICK_QUESTIONS.map((question) => (
+                  <button
+                    key={question}
+                    type="button"
+                    onClick={() => setInput(question)}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+            </section>
 
             <div className="flex-1 space-y-3 overflow-y-auto pb-4">
               {messages.map((message, index) => (
@@ -584,7 +634,7 @@ function ChatPage() {
                   aria-label="Describe your wish"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Describe your wish in your own words..."
+                  placeholder="Describe your wish or ask what something in this app means..."
                   className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
                   rows={2}
                 />

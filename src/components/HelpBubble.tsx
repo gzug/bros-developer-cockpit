@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { MessageCircle, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BDC_HELP_QUICK_QUESTIONS } from "@/lib/app-knowledge";
 import { askAppHelp } from "@/lib/app-help.server";
 
 type HelpMessage = { role: "user" | "assistant"; content: string };
@@ -30,7 +31,11 @@ export function HelpBubble() {
   });
 
   function send() {
-    const text = input.trim();
+    sendQuestion(input);
+  }
+
+  function sendQuestion(value: string) {
+    const text = value.trim();
     if (!text || ask.isPending) return;
     const next: HelpMessage[] = [...messages, { role: "user", content: text.slice(0, 1000) }];
     setMessages(next);
@@ -44,7 +49,7 @@ export function HelpBubble() {
         onClick={() => setOpen(true)}
         aria-label="Open app help"
         title="Questions about this app? Ask here."
-        className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full p-0 shadow-lg"
+        className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full border border-primary/30 p-0 shadow-lg"
       >
         <MessageCircle className="h-5 w-5" />
       </Button>
@@ -52,9 +57,12 @@ export function HelpBubble() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] flex-col rounded-xl border border-border bg-card shadow-xl">
+    <div className="fixed bottom-4 right-4 z-50 flex max-h-[75vh] w-[min(24rem,calc(100vw-2rem))] flex-col rounded-xl border border-border bg-card shadow-xl">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="text-sm font-semibold">App help</span>
+        <div>
+          <span className="text-sm font-semibold">App help</span>
+          <p className="text-[11px] text-muted-foreground">Ask what a screen, status, or task means.</p>
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -66,6 +74,20 @@ export function HelpBubble() {
         </Button>
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        {messages.length === 1 && (
+          <div className="flex flex-wrap gap-2">
+            {BDC_HELP_QUICK_QUESTIONS.map((question) => (
+              <button
+                key={question}
+                type="button"
+                onClick={() => sendQuestion(question)}
+                className="rounded-full border border-border px-3 py-1.5 text-left text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        )}
         {messages.map((message, index) => (
           <div
             key={`${message.role}-${index}`}

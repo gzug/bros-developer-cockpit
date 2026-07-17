@@ -17,6 +17,21 @@ type LoginThrottleBucket = {
 
 const loginThrottle = new Map<string, LoginThrottleBucket>();
 
+function normalizeCredential(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function normalizePins(pins: { ownerPin?: string; brotherPin?: string }): {
+  ownerPin?: string;
+  brotherPin?: string;
+} {
+  return {
+    ownerPin: normalizeCredential(pins.ownerPin),
+    brotherPin: normalizeCredential(pins.brotherPin),
+  };
+}
+
 export function throttleKey(ip?: string | null): string {
   const value = ip?.trim();
   return value ? `ip:${value}` : "global";
@@ -72,13 +87,22 @@ export function validateLoginConfiguration(pins: {
   ownerPin?: string;
   brotherPin?: string;
 }): string | null {
-  if (pins.ownerPin && !validOwnerSecret(pins.ownerPin)) {
+  const normalized = normalizePins(pins);
+  const ownerPin = normalized.ownerPin;
+  const brotherPin = normalized.brotherPin;
+  const ownerValid = validOwnerSecret(ownerPin);
+  const brotherValid = validBrotherPin(brotherPin);
+
+  if (!ownerPin && !brotherPin) {
+    return "Login codes are missing.";
+  }
+  if (ownerPin && !ownerValid && !brotherValid) {
     return "APP_PIN must contain exactly four digits.";
   }
-  if (pins.brotherPin && !validBrotherPin(pins.brotherPin)) {
+  if (brotherPin && !brotherValid && !ownerValid) {
     return "BROTHER_PIN must contain exactly four digits.";
   }
-  if (pins.ownerPin && pins.brotherPin && pins.ownerPin === pins.brotherPin) {
+  if (ownerValid && brotherValid && ownerPin === brotherPin) {
     return "Owner and brother credentials must be different.";
   }
   return null;
@@ -88,18 +112,22 @@ export function resolveLoginRole(
   input: string,
   pins: { ownerPin?: string; brotherPin?: string },
 ): AuthRole | null {
-  if (validateLoginConfiguration(pins)) return null;
-  if (validOwnerSecret(pins.ownerPin) && secretMatches(input, pins.ownerPin)) return "owner";
-  if (validBrotherPin(pins.brotherPin) && secretMatches(input, pins.brotherPin)) return "brother";
+  const normalized = normalizePins(pins);
+  if (validateLoginConfiguration(normalized)) return null;
+  if (validOwnerSecret(normalized.ownerPin) && secretMatches(input, normalized.ownerPin)) {
+    return "owner";
+  }
+  if (validBrotherPin(normalized.brotherPin) && secretMatches(input, normalized.brotherPin)) {
+    return "brother";
+  }
   return null;
 }
 
 export const loginWithPin = createServerFn({ method: "POST" })
   .validator((input: unknown) => LoginInput.parse(input))
   .handler(async ({ data }) => {
-    const ownerPin = process.env.APP_PIN;
-    const brotherPin = process.env.BROTHER_PIN;
-    if (!ownerPin && !brotherPin) throw new Error("Login codes are missing.");
+    const ownerPin = normalizeCredential(process.env.APP_PIN);
+    const brotherPin = normalizeCredential(process.env.BROTHER_PIN);
     const configurationError = validateLoginConfiguration({ ownerPin, brotherPin });
     if (configurationError) throw new Error(configurationError);
     const key = throttleKey(getRequestIP());

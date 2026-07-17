@@ -16,10 +16,10 @@ import {
   type RepoIssue,
   type RepoIssueComment,
 } from "./github.server";
+import type { IdeaStatus } from "./idea-status";
 
 export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea" | "change";
-export type DCIdeaStatus =
-  "submitted" | "processing" | "sent" | "approved" | "shipped" | "live" | "blocked" | "closed";
+export type DCIdeaStatus = IdeaStatus;
 export type BdcSubmissionType = "idea" | "change";
 export type IdeaWeight = "light" | "heavy";
 export type IdeaDelivery = "ota" | "next-apk";
@@ -244,6 +244,9 @@ export function canBrotherShip(idea: Pick<DCIdea, "delivery" | "status">): Broth
   if (idea.delivery === "next-apk") {
     return { ok: false, reason: "This change needs a new app version (APK) and cannot ship over the air." };
   }
+  if (idea.status === "requested") {
+    return { ok: false, reason: "Shipping was already requested for this task." };
+  }
   if (idea.status === "shipped" || idea.status === "live") {
     return { ok: false, reason: "This task has already been shipped." };
   }
@@ -378,6 +381,7 @@ export function deriveIdeaStatus(input: {
   if (labels.has(statusLabel("blocked"))) return "blocked";
   if (input.pr) return "sent";
   if (labels.has(BDC_ENGINE_STARTED_LABEL)) return "processing";
+  if (labels.has(BROTHER_SHIP_REQUESTED_LABEL)) return "requested";
   if (input.issueState === "closed") return "closed";
   return "submitted";
 }
@@ -386,6 +390,8 @@ export function canTransitionIdeaStatus(from: DCIdeaStatus, to: DCIdeaStatus): b
   if (from === to) return true;
 
   switch (from) {
+    case "requested":
+      return to === "processing" || to === "blocked";
     case "processing":
       return to === "sent" || to === "blocked";
     case "sent":
@@ -407,6 +413,8 @@ export function describeIdeaStatus(status: DCIdeaStatus): string {
   switch (status) {
     case "submitted":
       return "Received. Don can start preparing it.";
+    case "requested":
+      return "Shipping was requested. It is waiting for Don to start the checks.";
     case "processing":
       return "The change is being prepared safely.";
     case "sent":
@@ -439,8 +447,9 @@ export function toIdeaActivity(comments: RepoComment[]): DCIdeaActivity[] {
 const OWNER_ACTION_PRIORITY: Partial<Record<DCIdeaStatus, number>> = {
   shipped: 0,
   sent: 1,
-  blocked: 2,
-  approved: 3,
+  requested: 2,
+  blocked: 3,
+  approved: 4,
 };
 
 export function getOwnerActionQueue(ideas: DCIdea[]): OwnerActionIdea[] {
@@ -666,6 +675,7 @@ export async function setIdeaStatus(
   const next = labels.filter(
     (label) =>
       !label.startsWith(STATUS_PREFIX) &&
+      label !== BROTHER_SHIP_REQUESTED_LABEL &&
       label !== BDC_APPROVED_LABEL &&
       label !== BDC_LIVE_LABEL &&
       label !== BDC_CHANGES_REQUESTED_LABEL &&
@@ -677,6 +687,7 @@ export async function setIdeaStatus(
   if (!next.includes(DESIGN_LABEL)) next.push(DESIGN_LABEL);
   const type = intent ? submissionTypeForIntent(intent) : "idea";
   if (!next.includes(type)) next.push(type);
+  if (status === "requested") next.push(BROTHER_SHIP_REQUESTED_LABEL);
   if (status === "processing" || status === "sent") {
     if (!next.includes(BDC_ENGINE_STARTED_LABEL)) next.push(BDC_ENGINE_STARTED_LABEL);
   }
@@ -737,7 +748,7 @@ export async function requestBrotherShip(issueNumber: number): Promise<BrotherSh
   await addLabelsToIssue(issueNumber, [BROTHER_SHIP_REQUESTED_LABEL]);
   await addIssueComment(
     issueNumber,
-    "Ship requested from the cockpit. It will run the safety checks and publish once shipping is armed.",
+    "Shipping was requested from the cockpit. This records the request only. Don still has to start the checks and approve any real publication.",
   );
   return { ok: true, reason: "" };
 }
@@ -752,7 +763,6 @@ export async function completeIdea(issueNumber: number, category: DoneCategorySl
   const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   const next = setLabel(labels, `${DONE_CATEGORY_PREFIX}${category}`, (label) => label.startsWith(DONE_CATEGORY_PREFIX));
-  if (!next.includes(BDC_LIVE_LABEL)) next.push(BDC_LIVE_LABEL);
   await updateIssueLabels(issueNumber, next);
   await addIssueComment(issueNumber, `Completed in BDC. Retro category: ${doneCategoryLabel(category)}.`);
   await closeIssue(issueNumber, "completed");

@@ -32,10 +32,12 @@ test("callModel rejects a model id outside models.json before fetch", async () =
 });
 
 test("callModel sends validated preset model and params to OpenRouter", async () => {
-  process.env.OPENROUTER_API_KEY = "test-key";
+  process.env.OPENROUTER_API_KEY = " test-key ";
   let body: Record<string, unknown> | null = null;
+  let authHeader = "";
   globalThis.fetch = (async (_url, init) => {
     body = JSON.parse(String(init?.body));
+    authHeader = String((init?.headers as Record<string, string>)?.Authorization ?? "");
     return new Response(
       JSON.stringify({
         model: "google/gemini-2.5-flash",
@@ -61,7 +63,25 @@ test("callModel sends validated preset model and params to OpenRouter", async ()
   expect(body?.model).toBe("google/gemini-2.5-flash");
   expect(body?.temperature).toBe(0.7);
   expect(body?.max_tokens).toBe(512);
+  expect(authHeader).toBe("Bearer test-key");
   expect(result.content).toBe("Refined version: Clear text");
+});
+
+test("callModel returns a helpful auth error for rejected keys", async () => {
+  process.env.OPENROUTER_API_KEY = "test-key";
+  globalThis.fetch = (async () =>
+    new Response("invalid key", {
+      status: 401,
+      headers: { "Content-Type": "text/plain" },
+    })) as typeof fetch;
+
+  await expect(
+    callModel({
+      model: "google/gemini-2.5-flash",
+      messages: [{ role: "user", content: "Hello" }],
+      retries: 0,
+    }),
+  ).rejects.toThrow("OpenRouter rejected the API key");
 });
 
 test("callModel keeps legacy tier defaults for engine calls", async () => {

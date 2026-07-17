@@ -141,6 +141,13 @@ function statusBadge(status: string) {
       </Badge>
     );
   }
+  if (normalized === "requested") {
+    return (
+      <Badge variant="outline" className="border-indigo-500/30 text-indigo-600">
+        Ship requested
+      </Badge>
+    );
+  }
   if (normalized === "processing") {
     return (
       <Badge variant="outline" className="border-blue-500/30 text-blue-600">
@@ -299,7 +306,7 @@ function DcOperationalDashboard() {
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Issue queue, held PRs, approval, and One L1fe ship lane.
+              Issue queue, held PRs, approval, and the real One L1fe shipping path.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -349,8 +356,9 @@ function DcOperationalDashboard() {
                       OpenRouter not connected
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      OPENROUTER_API_KEY is missing. BDC can collect ideas, but the engine cannot
-                      create held PRs.
+                      OPENROUTER_API_KEY is missing. Every chat model on the New/help screens and the
+                      engine itself uses this same OpenRouter key, so BDC can collect ideas but cannot
+                      refine them or create held PRs.
                     </p>
                   </div>
                 </div>
@@ -398,7 +406,7 @@ function DcOperationalDashboard() {
                   <div>
                     <CardTitle className="text-base font-semibold">Queue</CardTitle>
                     <CardDescription className="text-xs">
-                      Live issues from gzug/01-One-L1fe
+                      Live issues from gzug/01-One-L1fe. "Ship requested" means the cockpit recorded a request, not a publication.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
@@ -462,7 +470,9 @@ function DcOperationalDashboard() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              {(idea.status === "submitted" || idea.status === "processing") && (
+                              {(idea.status === "submitted" ||
+                                idea.status === "requested" ||
+                                idea.status === "processing") && (
                                 <Button
                                   size="sm"
                                   variant="outline"

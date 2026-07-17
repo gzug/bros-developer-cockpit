@@ -70,6 +70,7 @@ function QueueRow({ idea }: { idea: DCIdea }) {
             <DeliveryBadge delivery={idea.delivery} />
           </div>
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{idea.statusSummary}</p>
           {nextApk && (
             <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
               This change needs a new app version (APK) and cannot ship over the air. It stays queued for
@@ -86,7 +87,7 @@ function QueueRow({ idea }: { idea: DCIdea }) {
         {!nextApk && (
           <Button size="sm" asChild>
             <a href={chatUrl({ ship: String(idea.id), idea: idea.title, description: idea.description })}>
-              <Rocket className="mr-1 h-3 w-3" /> Ship
+              <Rocket className="mr-1 h-3 w-3" /> Request ship
             </a>
           </Button>
         )}
@@ -184,9 +185,33 @@ function PipelinePage() {
           <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Your tasks are split by how they reach the phone: over the air now, or bundled into the next
-            app version.
+            app version. Shipping stays visible as requests, review, publication, and phone confirmation.
           </p>
         </div>
+
+        <section className="mt-5 rounded-xl border border-border bg-card p-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <h2 className="text-sm font-semibold">OTA Queue</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Changes here can go out without a new install after Don reviews and approves them.
+              </p>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">Next APK</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                These changes wait for the next full app version, so they will not appear on the phone yet.
+              </p>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold">Request vs Shipped vs Live</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Request ship means "please start". Shipped means published. Live means confirmed on the
+                phone after reopening One L1fe.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="mt-5 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Add an idea</h2>
@@ -240,7 +265,7 @@ function PipelinePage() {
 
         <List
           title="OTA Queue"
-          hint="Surface changes ready to ship over the air. Ship, change, or delete each one."
+          hint="Surface changes that can go out over the air. Request shipping, refine them, or delete them."
           ideas={otaQueue}
           empty="No OTA tasks waiting."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}

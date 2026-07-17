@@ -1,22 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
+import { IdeaStatusTimeline } from "@/components/IdeaStatusTimeline";
+import { getIdeaStatusLabel } from "@/lib/idea-status";
 import { getIdeaEntry } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/idea/$id")({
   component: IdeaPage,
 });
-
-const STATUS_TEXT = {
-  submitted: "Received",
-  processing: "Being prepared",
-  sent: "Ready for Don to review",
-  approved: "Approved, safety checks are running",
-  shipped: "Update published, check your phone",
-  live: "Checked on the phone",
-  blocked: "Needs Don's help",
-  closed: "Closed",
-} as const;
 
 function IdeaPage() {
   const { id } = Route.useParams();
@@ -46,8 +37,7 @@ function IdeaPage() {
             <div className="mt-3">
               <h1 className="text-xl font-semibold">{idea.data.title}</h1>
               <p className="mt-1 text-xs text-muted-foreground">
-                Current status:{" "}
-                {STATUS_TEXT[idea.data.status as keyof typeof STATUS_TEXT] ?? idea.data.status}
+                Current status: {getIdeaStatusLabel(idea.data.status)}
               </p>
             </div>
             <p className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
@@ -69,6 +59,10 @@ function IdeaPage() {
                 </div>
               )}
             </section>
+
+            <div className="mt-6">
+              <IdeaStatusTimeline status={idea.data.status} />
+            </div>
           </>
         )}
       </main>

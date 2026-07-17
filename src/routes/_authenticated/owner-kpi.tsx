@@ -64,7 +64,8 @@ function OwnerKpiPage() {
               <Stat label="Published; phone check" value={query.data.shippedCount} />
               <Stat label="Blocked" value={query.data.blockedCount} />
               <Stat label="PR waiting" value={query.data.sentCount} />
-              <Stat label="Open" value={query.data.submittedCount} />
+              <Stat label="Ship requested" value={query.data.requestedCount} />
+              <Stat label="Fresh intake" value={query.data.submittedCount} />
               <Stat label="Closed" value={query.data.closedCount} />
               <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
             </div>

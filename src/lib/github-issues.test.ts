@@ -103,7 +103,7 @@ test("explicit approved label derives approved status", () => {
   ).toBe("approved");
 });
 
-test("bdc lifecycle labels derive processing, blocked, approved, and live", () => {
+test("bdc lifecycle labels derive requested, processing, blocked, approved, and live", () => {
   expect(
     deriveIdeaStatus({
       issueLabels: ["from-brother", "bdc-submitted", "bdc-shipped"],
@@ -118,6 +118,12 @@ test("bdc lifecycle labels derive processing, blocked, approved, and live", () =
       pr: { labels: [], merged: true },
     }),
   ).toBe("blocked");
+  expect(
+    deriveIdeaStatus({
+      issueLabels: ["from-brother", "bdc-submitted", "bdc-ship-requested"],
+      issueState: "open",
+    }),
+  ).toBe("requested");
   expect(
     deriveIdeaStatus({
       issueLabels: ["from-brother", "bdc-submitted", "bdc-engine-started"],
@@ -159,11 +165,14 @@ test("only shipped ideas can move to live", () => {
 
 test("other statuses cannot enter the owner lane directly", () => {
   expect(canTransitionIdeaStatus("submitted", "approved")).toBe(false);
+  expect(canTransitionIdeaStatus("requested", "processing")).toBe(true);
+  expect(canTransitionIdeaStatus("requested", "approved")).toBe(false);
   expect(canTransitionIdeaStatus("blocked", "approved")).toBe(false);
   expect(canTransitionIdeaStatus("live", "blocked")).toBe(false);
 });
 
 test("status descriptions explain the next operator step", () => {
+  expect(describeIdeaStatus("requested")).toContain("waiting for Don");
   expect(describeIdeaStatus("sent")).toContain("Don to review");
   expect(describeIdeaStatus("approved")).toContain("safety checks");
   expect(describeIdeaStatus("blocked")).toContain("Don's help");
@@ -210,7 +219,7 @@ test("idea activity removes blank comments and returns newest first", () => {
   ]);
 });
 
-test("owner action queue prioritizes shipped, sent, blocked, then approved", () => {
+test("owner action queue prioritizes shipped, sent, requested, blocked, then approved", () => {
   const idea = (overrides: Partial<DCIdea>): DCIdea => ({
     id: 0,
     title: "",
@@ -259,6 +268,14 @@ test("owner action queue prioritizes shipped, sent, blocked, then approved", () 
         prUrl: "https://example.com/pulls/30",
       }),
       idea({
+        id: 6,
+        title: "Requested",
+        status: "requested",
+        statusSummary: "Shipping was requested. It is waiting for Don to start the checks.",
+        createdAt: "2026-07-13T10:30:00Z",
+        issueUrl: "https://example.com/issues/6",
+      }),
+      idea({
         id: 5,
         title: "Published",
         status: "shipped",
@@ -280,6 +297,7 @@ test("owner action queue prioritizes shipped, sent, blocked, then approved", () 
   ).toEqual([
     { id: 5, status: "shipped" },
     { id: 3, status: "sent" },
+    { id: 6, status: "requested" },
     { id: 1, status: "blocked" },
     { id: 2, status: "approved" },
   ]);
@@ -406,9 +424,10 @@ test("parseDelivery reads the delivery label, defaulting to ota", () => {
   expect(parseDelivery(["from-brother", "delivery:next-apk"])).toBe("next-apk");
 });
 
-test("canBrotherShip allows open OTA tasks and rejects next-apk, shipped, blocked, closed", () => {
+test("canBrotherShip allows open OTA tasks and rejects requested, next-apk, shipped, blocked, closed", () => {
   expect(canBrotherShip({ delivery: "ota", status: "submitted" }).ok).toBe(true);
   expect(canBrotherShip({ delivery: "ota", status: "sent" }).ok).toBe(true);
+  expect(canBrotherShip({ delivery: "ota", status: "requested" }).ok).toBe(false);
   expect(canBrotherShip({ delivery: "next-apk", status: "submitted" }).ok).toBe(false);
   expect(canBrotherShip({ delivery: "next-apk", status: "submitted" }).reason).toContain("APK");
   expect(canBrotherShip({ delivery: "ota", status: "shipped" }).ok).toBe(false);
