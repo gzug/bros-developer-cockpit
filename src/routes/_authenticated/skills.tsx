@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from "recharts";
+import { UploadCloud } from "lucide-react";
+import { FormEvent } from "react";
+import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ChartContainer,
   ChartLegend,
@@ -16,23 +23,11 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { getSkillDashboardData, uploadSkillExports } from "@/lib/skills.functions";
 
 export const Route = createFileRoute("/_authenticated/skills")({
   component: Skills,
 });
-
-// Prototype data. Replace with real values once the upload / session-metadata
-// source is wired (see docs/planning/bdc-idea-pipeline-v2-roadmap.md, pt 10).
-type SkillRow = { skill: string; start: number; now: number };
-
-const SKILL_DATA: SkillRow[] = [
-  { skill: "Prompting", start: 50, now: 82 },
-  { skill: "Debugging", start: 40, now: 74 },
-  { skill: "Architecture", start: 35, now: 68 },
-  { skill: "Testing", start: 30, now: 62 },
-  { skill: "Reviewing", start: 45, now: 78 },
-  { skill: "Shipping", start: 55, now: 88 },
-];
 
 const chartConfig = {
   now: { label: "Now", color: "var(--chart-1)" },
@@ -40,25 +35,65 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 function Skills() {
+  const queryClient = useQueryClient();
+  const dashboard = useQuery({
+    queryKey: ["skill-dashboard"],
+    queryFn: () => getSkillDashboardData(),
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (formData: FormData) => uploadSkillExports({ data: formData }),
+    onSuccess: (result) => {
+      if (result.ok) {
+        toast.success(result.message);
+        void queryClient.invalidateQueries({ queryKey: ["skill-dashboard"] });
+      } else {
+        toast.error(result.message);
+      }
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Upload failed.");
+    },
+  });
+
+  function submitUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    uploadMutation.mutate(formData);
+  }
+
+  const data = dashboard.data;
+  const skillData = data?.chartData ?? [];
+  const latest = data?.latest ?? null;
+  const hasSnapshots = data?.hasSnapshots ?? false;
+  const measurement = data?.measurement;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
-      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
+      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-3xl">
         <div className="mb-4">
-          <h1 className="text-2xl font-semibold tracking-tight">Skill tracking</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">Skill tracking</h1>
+            <Badge variant="outline">{hasSnapshots ? "Snapshot data" : "Sample data"}</Badge>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            How your development skills have grown, at a glance.
+            Upload Claude, ChatGPT, or Google exports to replace the sample radar with measured snapshots.
           </p>
         </div>
 
         <Card>
           <CardHeader className="items-center pb-2">
             <CardTitle>Skill radar</CardTitle>
-            <CardDescription>Start vs. now, across six areas</CardDescription>
+            <CardDescription>
+              {hasSnapshots
+                ? `Start is the earliest snapshot. Now is the latest of ${data?.snapshotCount ?? 0}.`
+                : "Sample data until the first real snapshot is saved."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="pb-2">
             <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[340px]">
-              <RadarChart data={SKILL_DATA}>
+              <RadarChart data={skillData}>
                 <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
                 <PolarGrid className="stroke-border" />
                 <PolarAngleAxis dataKey="skill" className="text-xs" />
@@ -85,7 +120,7 @@ function Skills() {
 
         {/* Text/table view so values are never color-only (accessibility). */}
         <div className="mt-4 space-y-1">
-          {SKILL_DATA.map((row) => {
+          {skillData.map((row) => {
             const delta = row.now - row.start;
             return (
               <div
@@ -95,16 +130,126 @@ function Skills() {
                 <span className="font-medium">{row.skill}</span>
                 <span className="text-muted-foreground tabular-nums">
                   {row.start} to {row.now}
-                  <span className="ml-2 text-emerald-600">+{delta}</span>
+                  <span className={delta >= 0 ? "ml-2 text-emerald-600" : "ml-2 text-rose-600"}>
+                    {delta >= 0 ? "+" : ""}
+                    {delta}
+                  </span>
                 </span>
               </div>
             );
           })}
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground">
-          Sample values for now. The real numbers arrive once session uploads are connected.
-        </p>
+        {!hasSnapshots && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            These are the prototype values from the radar page. They are labeled sample data until GitHub has at least one `skill-snapshot` issue.
+          </p>
+        )}
+
+        {data?.githubError && (
+          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+            GitHub snapshots are not available: {data.githubError}
+          </div>
+        )}
+
+        {latest?.smallData && (
+          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+            Small data sample. The latest snapshot has {latest.provenance.conversationCount} conversations and {latest.provenance.userPromptCount} user prompts, so treat the scores as directional.
+          </div>
+        )}
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Upload AI-session exports</CardTitle>
+            <CardDescription>
+              Raw text is parsed server-side and discarded. The issue stores only scores, counts, provider, dates, and PNG metadata.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-3" onSubmit={submitUpload}>
+              <label className="grid gap-1 text-sm font-medium">
+                Export files
+                <input
+                  name="files"
+                  type="file"
+                  multiple
+                  accept=".zip,.json,.html,.htm,.png,application/zip,application/json,text/html,image/png"
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Optional PNG note
+                <Textarea
+                  name="note"
+                  placeholder="Short context for a screenshot. Screenshots are not parsed or stored as files."
+                  className="min-h-20"
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="submit" disabled={uploadMutation.isPending}>
+                  <UploadCloud className="h-4 w-4" />
+                  {uploadMutation.isPending ? "Processing" : "Process upload"}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Supports Claude ZIP, ChatGPT ZIP, Google/Gemini JSON or HTML, and PNG metadata.
+                </span>
+              </div>
+              {uploadMutation.data?.warnings.length ? (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+                  {uploadMutation.data.warnings.map((warning) => (
+                    <div key={warning}>{warning}</div>
+                  ))}
+                </div>
+              ) : null}
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>How this is measured</CardTitle>
+            <CardDescription>Every score is based on countable metadata from normalized conversations.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 text-sm">
+            <div>
+              <h2 className="mb-2 text-sm font-semibold">Signals</h2>
+              <div className="grid gap-2">
+                {measurement?.signals.map((signal) => (
+                  <div key={signal.key} className="rounded-md border border-border p-3">
+                    <div className="font-medium">{signal.label}</div>
+                    <div className="text-xs text-muted-foreground">{signal.description}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="mb-2 text-sm font-semibold">Formulas</h2>
+              <div className="grid gap-2">
+                {measurement?.dimensions.map((dimension) => (
+                  <details key={dimension.key} className="rounded-md border border-border p-3">
+                    <summary className="cursor-pointer font-medium">{dimension.key}</summary>
+                    <code className="mt-2 block whitespace-pre-wrap text-xs text-muted-foreground">
+                      {dimension.formula}
+                    </code>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Inputs: {dimension.inputs.join(", ")}
+                    </div>
+                    {latest?.dimensionDetails?.[dimension.key as keyof typeof latest.dimensionDetails] && (
+                      <div className="mt-2 grid gap-1 text-xs">
+                        {latest.dimensionDetails[dimension.key as keyof typeof latest.dimensionDetails].inputs.map((input) => (
+                          <div key={`${dimension.key}-${input.key}`} className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">{input.label}</span>
+                            <span className="tabular-nums">{input.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </details>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

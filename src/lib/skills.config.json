@@ -1,0 +1,81 @@
+{
+  "signals": [
+    {
+      "key": "provider",
+      "label": "Provider",
+      "description": "Export source detected from the file shape or filename."
+    },
+    {
+      "key": "conversationDate",
+      "label": "Conversation date",
+      "description": "Best available creation or update date for each conversation."
+    },
+    {
+      "key": "messageCount",
+      "label": "Message count",
+      "description": "Total messages found after normalizing the export."
+    },
+    {
+      "key": "userPromptCount",
+      "label": "User prompt count",
+      "description": "Messages attributed to the user or human role."
+    },
+    {
+      "key": "userPromptChars",
+      "label": "User prompt length",
+      "description": "Total characters in user prompts. Raw prompt text is not stored."
+    },
+    {
+      "key": "codeBlockCount",
+      "label": "Code block count",
+      "description": "Markdown code fences or inline code-like snippets found in normalized messages."
+    },
+    {
+      "key": "followUpDepth",
+      "label": "Follow-up depth",
+      "description": "Largest count of user prompts in a single conversation after the first user prompt."
+    },
+    {
+      "key": "correctionMarkerCount",
+      "label": "Correction markers",
+      "description": "User prompts containing correction language such as actually, instead, wrong, revert, or try again."
+    },
+    {
+      "key": "dimensionMarkerCounts",
+      "label": "Dimension markers",
+      "description": "Keyword hits for debugging, architecture, testing, reviewing, and shipping themes."
+    }
+  ],
+  "dimensions": [
+    {
+      "key": "Prompting",
+      "formula": "round(35 * avgPromptLengthScore + 20 * followUpScore + 20 * codeContextScore + 25 * correctionScore)",
+      "inputs": ["avgUserPromptChars", "followUpDepth", "codeBlockCount", "correctionMarkerCount", "userPromptCount"]
+    },
+    {
+      "key": "Debugging",
+      "formula": "round(50 * debugMarkerScore + 25 * correctionScore + 25 * codeContextScore)",
+      "inputs": ["debugMarkerCount", "correctionMarkerCount", "codeBlockCount", "userPromptCount"]
+    },
+    {
+      "key": "Architecture",
+      "formula": "round(60 * architectureMarkerScore + 25 * avgPromptLengthScore + 15 * followUpScore)",
+      "inputs": ["architectureMarkerCount", "avgUserPromptChars", "followUpDepth", "userPromptCount"]
+    },
+    {
+      "key": "Testing",
+      "formula": "round(70 * testingMarkerScore + 20 * codeContextScore + 10 * correctionScore)",
+      "inputs": ["testingMarkerCount", "codeBlockCount", "correctionMarkerCount", "userPromptCount"]
+    },
+    {
+      "key": "Reviewing",
+      "formula": "round(65 * reviewingMarkerScore + 20 * correctionScore + 15 * followUpScore)",
+      "inputs": ["reviewingMarkerCount", "correctionMarkerCount", "followUpDepth", "userPromptCount"]
+    },
+    {
+      "key": "Shipping",
+      "formula": "round(65 * shippingMarkerScore + 20 * testingMarkerScore + 15 * followUpScore)",
+      "inputs": ["shippingMarkerCount", "testingMarkerCount", "followUpDepth", "userPromptCount"]
+    }
+  ]
+}
