@@ -41,9 +41,10 @@ _Closed 2026-07-17:_ **#29** (ZIP size limits) and **#30** (close guard + contex
 ## Next safe sequence
 
 1. #32 integrated (ZIP + mutation-guard hardening); #29/#30 closed; residual tracked in #34.
-2. Owner decisions still pending on #20, #21, and One L1fe PR #283 — all owner-gated.
-3. After approval, integrate #21 role/PIN baseline, then #31 Builder Profile (needs #21 first).
-4. Only then deploy with `BDC_PAUSED=true`, test the PIN flow with the owner, and record a real result.
+2. Co-Dev Flow v2 spec owner-confirmed 2026-07-17: `docs/planning/codev-flow-v2-spec.md` (one screen PIN-gated, OTA vs Next-APK, brother chat-ship). Build runs as a draft PR on top of the #21 foundation; merging that PR stays owner-gated.
+3. Owner decisions still pending on #20, #21, and One L1fe PR #283 — all owner-gated.
+4. After approval, integrate the #21 foundation (via the Co-Dev Flow v2 draft PR), then #31 Builder Profile (needs #21 first).
+5. Only then deploy with `BDC_PAUSED=true`, test the PIN flow with the owner, and record a real result.
 
 ## Validation and cleanup rules
 
