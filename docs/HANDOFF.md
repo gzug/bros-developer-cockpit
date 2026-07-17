@@ -25,28 +25,9 @@ Operating mode:
 - Quality bar: hold or raise the current level while minimizing token/compute
   spend. If a task is small, do it yourself — delegation overhead must pay for itself.
 
-Current state: app is live and healthy (see Ops facts in AGENTS.md). The safety
-lane is active: Cockpit bridge PRs open on `bdc-hold/*`, stay out of OL1
-auto-ship, and require explicit owner status transitions (`sent` →
-`approved` → `live` or `blocked`). Open thread: run the next safe joint E2E —
-Don logs in with PIN, submits a harmless test idea; verify the chain idea →
-GitHub issue → held PR on `bdc-hold/*` → owner approval in Cockpit → separate
-OL1 ship/live confirmation. Do not describe merged PRs as live unless the owner
-explicitly marks them live.
+Current truth: fetch `origin`, read `CHECKPOINT.md`, and check the open PRs
+before planning. BDC is paused in the current readiness lane. Never call a
+preview or a green check a production or device confirmation.
 
-Cross-repo state: treat the mobile repo `CHECKPOINT.md` as the sibling truth surface for current One L1fe state.
-
-## ADD-ON — valid for THIS session only (delete this section afterwards)
-
-The batch gate is suspended: no go from Don required. In exchange, work
-exclusively through subagents and branches, orchestrated two-tier:
-
-- **Specialist agents** (highest-capability instances, one per domain, tightly
-  scoped prompts): rethink, enhance, or push their single domain to maximum
-  quality. Narrow scope is the lever — one domain, one agent, deep.
-- **Builder agents** (mid-capability coding/thinking instances): take the
-  specialists' output, tighten and extend it, review, test, and integrate it
-  smoothly into the rest of the app. Skeleton/batch work lives here.
-
-You define the domains, write the scoped prompts, keep all verification and
-merge decisions, and report to Don per completed batch as usual.
+Cross-repo state: treat the mobile repo `CHECKPOINT.md` and its current
+readiness PR as the sibling truth surfaces for One L1fe state.
