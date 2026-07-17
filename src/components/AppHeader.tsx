@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/lib/auth.server";
 import { useEffect, useState } from "react";
 
-export function AppHeader() {
+export function AppHeader({ owner = false }: { owner?: boolean }) {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -38,7 +38,7 @@ export function AppHeader() {
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-md items-center justify-between px-3 py-3 sm:max-w-2xl sm:px-4">
         <Link to="/dashboard" className="shrink-0 text-sm font-semibold">
-          One L1fe · DC
+          {owner ? "OL1 · Owner" : "One L1fe · Wishes"}
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
           <Link
@@ -70,28 +70,44 @@ export function AppHeader() {
           >
             Done
           </Link>
-          <Link
-            to="/runs"
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+          {owner ? (
+            <>
+              <Link
+                to="/runs"
+                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+              >
+                Runs
+              </Link>
+              <Link
+                to="/dc"
+                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+              >
+                DC
+              </Link>
+              <Link
+                to="/skills"
+                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+              >
+                Skills
+              </Link>
+              <Link
+                to="/owner-kpi"
+                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+              >
+                Stats
+              </Link>
+            </>
+          ) : null}
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            onClick={toggleTheme}
+            aria-label="Toggle dark mode"
           >
-            Runs
-          </Link>
-                    <Link
-            to="/dc"
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-          >
-            DC
-          </Link>
-          <Link
-            to="/skills"
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-          >
-            Skills
-          </Link>
-          <Button variant="ghost" className="h-8 w-8 p-0" onClick={toggleTheme} aria-label="Toggle dark mode">
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="sm" onClick={signOut}>

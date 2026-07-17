@@ -32,10 +32,34 @@ type EditablePreset = PresetConfig & { source: "shipped" | "local" };
 const LOCAL_PRESETS_KEY = "bdc.chat.presets.v1";
 
 const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; opener: string }> = [
-  { id: "wording", title: "Change wording", hint: "A word or sentence doesn't fit.", emoji: "✍️", opener: "What would you like rephrased?" },
-  { id: "look", title: "Change appearance", hint: "Color, size, or placement.", emoji: "🎨", opener: "What should look different?" },
-  { id: "wrong", title: "Something is broken", hint: "Something isn't working right.", emoji: "🐞", opener: "What's going wrong?" },
-  { id: "idea", title: "New idea", hint: "Something is completely missing.", emoji: "💡", opener: "What new idea do you have?" },
+  {
+    id: "wording",
+    title: "Change wording",
+    hint: "A word or sentence doesn't fit.",
+    emoji: "✍️",
+    opener: "What would you like rephrased?",
+  },
+  {
+    id: "look",
+    title: "Change appearance",
+    hint: "Color, size, or placement.",
+    emoji: "🎨",
+    opener: "What should look different?",
+  },
+  {
+    id: "wrong",
+    title: "Something is broken",
+    hint: "Something isn't working right.",
+    emoji: "🐞",
+    opener: "What's going wrong?",
+  },
+  {
+    id: "idea",
+    title: "New idea",
+    hint: "Something is completely missing.",
+    emoji: "💡",
+    opener: "What new idea do you have?",
+  },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -370,7 +394,9 @@ function ChatPage() {
         {!intent && (
           <div className="grid gap-2">
             <h1 className="text-xl font-semibold">What kind of wish?</h1>
-            <p className="text-sm text-muted-foreground">Pick a direction, then we'll chat about it.</p>
+            <p className="text-sm text-muted-foreground">
+              Pick a direction, then we'll chat about it.
+            </p>
             {INTENTS.map((entry) => (
               <button
                 key={entry.id}
@@ -421,7 +447,11 @@ function ChatPage() {
               ))}
 
               {refine.isPending && (
-                <div className="flex justify-start">
+                <div
+                  className="flex justify-start"
+                  role="status"
+                  aria-label="Preparing a suggestion"
+                >
                   <div className="rounded-2xl bg-muted px-4 py-3">
                     <div className="flex gap-1">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.2s]" />
@@ -437,16 +467,21 @@ function ChatPage() {
                   <div className="text-xs uppercase text-muted-foreground">Suggestion</div>
                   <p className="mt-2 whitespace-pre-wrap text-sm">{suggestion}</p>
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                    <Button onClick={() => submitFinal(suggestion)} disabled={createIdeaMutation.isPending}>
+                    <Button
+                      onClick={() => submitFinal(suggestion)}
+                      disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
+                    >
                       Accept suggestion
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => {
-                        const fallback = messages.filter((message) => message.role === "user").at(-1)?.content ?? suggestion;
+                        const fallback =
+                          messages.filter((message) => message.role === "user").at(-1)?.content ??
+                          suggestion;
                         submitFinal(fallback);
                       }}
-                      disabled={createIdeaMutation.isPending}
+                      disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
                     >
                       Keep my text
                     </Button>
@@ -457,7 +492,9 @@ function ChatPage() {
               {submittedIdeaId && createIdeaMutation.isSuccess && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
                   Your wish has been submitted!{" "}
-                  <Link to="/dashboard" className="underline">Go to dashboard</Link>
+                  <Link to="/dashboard" className="underline">
+                    Go to dashboard
+                  </Link>
                 </div>
               )}
             </div>
@@ -465,6 +502,7 @@ function ChatPage() {
             <div className="sticky bottom-0 border-t border-border bg-background py-3">
               <div className="flex gap-2">
                 <textarea
+                  aria-label="Describe your wish"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="Describe your wish in your own words..."

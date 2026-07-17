@@ -1,10 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listRunsData, type RunRow, type TaskRow } from "@/lib/runs.functions";
 
 export const Route = createFileRoute("/_authenticated/runs")({
+  beforeLoad: async () => {
+    const { checkAuth } = await import("@/lib/auth.server");
+    const auth = await checkAuth();
+    if (auth.role !== "owner") throw redirect({ to: "/dashboard" });
+  },
   component: RunsPage,
 });
 
@@ -29,7 +34,7 @@ function dot(cls: string) {
 }
 
 function usd(val: string | null) {
-  if (!val) return "-";
+  if (!val) return "n/a";
   const n = parseFloat(val);
   return n < 0.0001 ? "<$0.0001" : `$${n.toFixed(4)}`;
 }
@@ -68,8 +73,8 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           {taskRuns.map((run) => (
             <div key={run.id} className="flex items-center gap-2 text-xs text-muted-foreground">
               {dot(RUN_STATUS_CLASS[run.status] ?? "bg-zinc-400")}
-              <span className="font-mono">{run.tier ?? "-"}</span>
-              <span className="truncate">{run.model ?? "-"}</span>
+              <span className="font-mono">{run.tier ?? "n/a"}</span>
+              <span className="truncate">{run.model ?? "n/a"}</span>
               <span className="ml-auto shrink-0">{usd(run.costUsd)}</span>
             </div>
           ))}
@@ -98,12 +103,10 @@ function RunsPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader />
+      <AppHeader owner />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight">Engine runs</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Queue, run status, costs, and errors.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Queue, run status, costs, and errors.</p>
 
         <div className="mt-6 space-y-3">
           {data.isLoading && (

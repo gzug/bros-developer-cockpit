@@ -3,8 +3,10 @@ import {
   checkLoginThrottle,
   clearLoginThrottle,
   recordLoginFailure,
+  resolveLoginRole,
   resetLoginThrottleForTest,
   throttleKey,
+  validateLoginConfiguration,
 } from "./auth.server";
 
 test("login throttle locks after repeated failures and then expires", () => {
@@ -38,4 +40,21 @@ test("throttle key uses request IP when present", () => {
   expect(throttleKey(" 203.0.113.9 ")).toBe("ip:203.0.113.9");
   expect(throttleKey("")).toBe("global");
   expect(throttleKey()).toBe("global");
+});
+
+test("login codes resolve to separate brother and owner roles", () => {
+  const pins = { ownerPin: "correct horse battery staple", brotherPin: "1234" };
+  expect(resolveLoginRole("1234", pins)).toBe("brother");
+  expect(resolveLoginRole("correct horse battery staple", pins)).toBe("owner");
+  expect(resolveLoginRole("0000", pins)).toBeNull();
+});
+
+test("weak or malformed configured credentials fail closed", () => {
+  expect(validateLoginConfiguration({ ownerPin: "9876", brotherPin: "1234" })).toContain(
+    "12 characters",
+  );
+  expect(
+    validateLoginConfiguration({ ownerPin: "long-owner-passphrase", brotherPin: "12ab" }),
+  ).toContain("four digits");
+  expect(resolveLoginRole("9876", { ownerPin: "9876", brotherPin: "1234" })).toBeNull();
 });

@@ -12,7 +12,9 @@ import { submitIdeaFn } from "@/lib/ideas.functions";
 type SubmissionType = "idea" | "change";
 
 export const Route = createFileRoute("/_authenticated/submit")({
-  validateSearch: (search: Record<string, unknown>): { context?: string; type?: SubmissionType } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { context?: string; type?: SubmissionType } => {
     const context = typeof search.context === "string" ? search.context.slice(0, 80) : undefined;
     const type = search.type === "change" || search.type === "idea" ? search.type : undefined;
     return { context, type };
@@ -26,7 +28,9 @@ function SubmitPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [screen, setScreen] = useState(search.context ?? "");
-  const [submitted, setSubmitted] = useState<{ issueNumber: number; issueUrl: string } | null>(null);
+  const [submitted, setSubmitted] = useState<{ issueNumber: number; issueUrl: string } | null>(
+    null,
+  );
 
   const submit = useMutation({
     mutationFn: () =>
@@ -55,7 +59,7 @@ function SubmitPage() {
     submit.mutate();
   }
 
-  const submitLabel = type === "idea" ? "Submit Idea" : "Submit Change Proposal";
+  const submitLabel = "Send wish";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -70,21 +74,19 @@ function SubmitPage() {
 
         {submitted ? (
           <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-5">
-            <h2 className="text-lg font-semibold">Idea submitted. We'll take a look.</h2>
+            <h2 className="text-lg font-semibold">Your wish reached Don.</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Issue #{submitted.issueNumber} is now in the BDC queue.
+              You can follow its status with your other wishes.
             </p>
-            <a
-              href={submitted.issueUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-4 inline-flex text-sm font-medium text-emerald-700 underline dark:text-emerald-300"
-            >
-              Open GitHub issue
-            </a>
+            <Button asChild className="mt-4">
+              <a href="/dashboard">View my wishes</a>
+            </Button>
           </div>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-5 rounded-md border border-border bg-card p-5">
+          <form
+            onSubmit={onSubmit}
+            className="space-y-5 rounded-md border border-border bg-card p-5"
+          >
             <fieldset className="space-y-2">
               <legend className="text-sm font-medium">Type</legend>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -96,7 +98,7 @@ function SubmitPage() {
                     checked={type === "idea"}
                     onChange={() => setType("idea")}
                   />
-                  <span>Idea (new feature)</span>
+                  <span>Something new</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 rounded-md border border-border p-3 text-sm">
                   <input
@@ -106,7 +108,7 @@ function SubmitPage() {
                     checked={type === "change"}
                     onChange={() => setType("change")}
                   />
-                  <span>Change Proposal (existing UI)</span>
+                  <span>Change something</span>
                 </label>
               </div>
             </fieldset>
@@ -124,7 +126,7 @@ function SubmitPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">What should happen?</Label>
               <Textarea
                 id="description"
                 value={description}
@@ -134,6 +136,7 @@ function SubmitPage() {
                 rows={7}
               />
               <p className="text-xs text-muted-foreground">{description.length}/600</p>
+              <p className="text-xs text-muted-foreground">Please don't include health data.</p>
             </div>
 
             <div className="space-y-2">
