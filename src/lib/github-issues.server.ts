@@ -121,17 +121,28 @@ function cleanDescription(body: string): string {
   return body.replace(META_RE, "").trim();
 }
 
-function readTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number]): string | undefined {
-  const line = body
-    .split(/\r?\n/)
-    .find((entry) => entry.toLowerCase().startsWith(`${key}:`));
-  const value = line?.slice(key.length + 1).trim();
+function contextMetaLineIndex(lines: string[], key: (typeof TEXT_META_KEYS)[number]): number {
+  const heading = lines.findIndex((entry) => entry.trim().toLowerCase() === "## context");
+  if (heading < 0) return -1;
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (/^##\s+/.test(trimmed) || trimmed === "---" || trimmed.startsWith("<!--")) return -1;
+    if (trimmed.toLowerCase().startsWith(`${key}:`)) return index;
+  }
+  return -1;
+}
+
+export function readTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number]): string | undefined {
+  const lines = body.split(/\r?\n/);
+  const index = contextMetaLineIndex(lines, key);
+  if (index < 0) return undefined;
+  const value = lines[index].trim().slice(key.length + 1).trim();
   return value || undefined;
 }
 
-function replaceTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number], value?: string): string {
+export function replaceTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number], value?: string): string {
   const lines = body.split(/\r?\n/);
-  const index = lines.findIndex((entry) => entry.toLowerCase().startsWith(`${key}:`));
+  const index = contextMetaLineIndex(lines, key);
   const normalized = value?.trim();
   if (!normalized) {
     if (index >= 0) lines.splice(index, 1);
@@ -152,6 +163,18 @@ function replaceTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number], val
 
 function normalizeDateOnly(input: Date = new Date()): string {
   return input.toISOString().slice(0, 10);
+}
+
+export function isBdcPipelineIssue(issue: Pick<RepoIssue, "labels" | "pull_request">): boolean {
+  if (issue.pull_request) return false;
+  const labels = new Set(issue.labels.map((label) => label.name));
+  return labels.has(BDC_SUBMITTED_LABEL) && labels.has(FROM_BROTHER_LABEL);
+}
+
+async function requireBdcPipelineIssue(issueNumber: number): Promise<RepoIssue> {
+  const issue = await getIssue(issueNumber);
+  if (!isBdcPipelineIssue(issue)) throw new Error("BDC wish not found.");
+  return issue;
 }
 
 export function isParkedOlderThanDays(parkedAt: string | undefined, now: Date, days: number): boolean {
@@ -554,17 +577,18 @@ export async function setIdeaWeight(issueNumber: number, weight: IdeaWeight): Pr
 }
 
 export async function setIdeaContext(issueNumber: number, context?: string): Promise<void> {
-  const issue = await getIssue(issueNumber);
+  const issue = await requireBdcPipelineIssue(issueNumber);
   await updateIssueBody(issueNumber, replaceTextMeta(issue.body, "context", context));
 }
 
 export async function closeIdeaAsDeleted(issueNumber: number): Promise<void> {
+  await requireBdcPipelineIssue(issueNumber);
   await addIssueComment(issueNumber, "Deleted in BDC. The GitHub issue is closed as not planned so the record stays available.");
   await closeIssue(issueNumber, "not_planned");
 }
 
 export async function completeIdea(issueNumber: number, category: DoneCategorySlug): Promise<void> {
-  const issue = await getIssue(issueNumber);
+  const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   const next = setLabel(labels, `${DONE_CATEGORY_PREFIX}${category}`, (label) => label.startsWith(DONE_CATEGORY_PREFIX));
   if (!next.includes(BDC_LIVE_LABEL)) next.push(BDC_LIVE_LABEL);

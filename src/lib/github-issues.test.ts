@@ -8,6 +8,9 @@ import {
   groupEngineRunStats,
   groupDoneIdeasForRetro,
   isParkedOlderThanDays,
+  isBdcPipelineIssue,
+  readTextMeta,
+  replaceTextMeta,
   toIdeaActivity,
   type DCIdea,
 } from "./github-issues.server";
@@ -291,4 +294,29 @@ test("done retro groups ideas by category with counts and newest closed first", 
     { category: "general", count: 1 },
   ]);
   expect(groups[0].ideas.map((idea) => idea.title)).toEqual(["New Home", "Old Home"]);
+});
+
+test("destructive mutations only accept real BDC wish issues, never pull requests", () => {
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] })).toBe(true);
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(false);
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }], pull_request: {} })).toBe(false);
+});
+
+test("context metadata ignores hostile context lines in the description", () => {
+  const body = [
+    "## Description",
+    "The user's text contains a context: line that must stay untouched.",
+    "",
+    "## Context",
+    "context: Original context",
+    "Screen: Home",
+    "Type: idea",
+    "",
+    "---",
+  ].join("\n");
+  expect(readTextMeta(body, "context")).toBe("Original context");
+  const updated = replaceTextMeta(body, "context", "Updated context");
+  expect(updated).toContain("context: line that must stay untouched.");
+  expect(updated).toContain("context: Updated context");
+  expect(readTextMeta(updated, "context")).toBe("Updated context");
 });
