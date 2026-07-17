@@ -1,8 +1,6 @@
 # BDC CHECKPOINT
 
-_Last verified: 2026-07-17 CEST against `origin/main` `83fee83` and GitHub._
-
-**Active integrator:** session_01KN5eUVFZ8Tqdst9bBqnYTg (2026-07-17 UTC)
+_Last verified: 2026-07-17 CEST against `origin/main` `2e3b080` and GitHub._
 
 ## Operating truth
 
