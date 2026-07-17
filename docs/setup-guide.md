@@ -21,7 +21,7 @@ Diese Variablen setzen:
 
 | Variable             | Value                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------ |
-| `APP_PIN`            | eigene Owner-Passphrase mit mindestens 12 Zeichen; niemals mit dem Bruder teilen           |
+| `APP_PIN`            | eigener vierstelliger Owner-Code (Main-Dev); muss von `BROTHER_PIN` verschieden sein; niemals mit dem Bruder teilen |
 | `BROTHER_PIN`        | eigener vierstelliger Bruder-Code; muss von `APP_PIN` verschieden sein                     |
 | `APP_SECRET`         | zufälliger String, z. B. `openssl rand -hex 32`                                            |
 | `OPENROUTER_API_KEY` | OpenRouter-Key                                                                             |
@@ -30,18 +30,19 @@ Diese Variablen setzen:
 | `DATABASE_URL`       | Neon Postgres URL für Run-/Task-Log                                                        |
 | `BDC_PAUSED`         | bis zur Abnahme `true`; erst danach bewusst auf `false` setzen                             |
 
-`APP_PIN` und `BROTHER_PIN` in **Production und Preview** setzen. Keine vierstellige Owner-PIN
-verwenden: Owner-Zugriff kann Freigaben und GitHub-Mutationen auslösen. Vor der Übergabe beide Rollen im
-Browser prüfen: Der Bruder darf nur Wünsche senden/lesen; `/dc`, `/runs`, `/owner-kpi`, Verarbeitung,
-Freigabe und Live-Bestätigung müssen für ihn gesperrt sein. Den Bruder-Code getrennt vom Link schicken
-und nie in Git, Logs oder Dokumentation schreiben.
+`APP_PIN` und `BROTHER_PIN` in **Production und Preview** setzen; beide sind vierstellig und müssen
+verschieden sein. Der Owner-Code (`APP_PIN`) kann Freigaben und GitHub-Mutationen auslösen — getrennt
+vom Bruder-Code halten. Vor der Übergabe beide Rollen im Browser prüfen: Der Bruder darf nur Wünsche
+senden/lesen; `/dc`, `/runs`, `/owner-kpi`, Verarbeitung, Freigabe und Live-Bestätigung müssen für ihn
+gesperrt sein. Den Bruder-Code getrennt vom Link schicken und nie in Git, Logs oder Dokumentation schreiben.
 
-`DATABASE_URL` ist zusätzlich die dauerhafte Login-Bremse für den öffentlichen vierstelligen
-Bruder-Code. In Vercel verweigert der Login ohne Datenbank bewusst den Zugriff; eine lokale
+`DATABASE_URL` ist zusätzlich die dauerhafte Login-Bremse für den öffentlichen Login (beide
+vierstelligen Codes). In Vercel verweigert der Login ohne Datenbank bewusst den Zugriff; eine lokale
 prozessgebundene Sperre allein ist kein Sicherheitsrand.
 
-Der normale Login zeigt nur den vierstelligen Bruder-Code. Der Owner nutzt bewusst
-`/auth?owner=1`. Zum sofortigen Widerruf bestehender 30-Tage-Sitzungen `APP_SECRET` rotieren;
+Der Login hat ein einziges Feld: die App erkennt am eingegebenen vierstelligen Code, ob Main-Dev oder
+Co-Dev. Über den „Switch view"-Knopf im Header lässt sich per Code-Eingabe zwischen beiden Ansichten
+wechseln, ohne Logout. Zum sofortigen Widerruf bestehender 30-Tage-Sitzungen `APP_SECRET` rotieren;
 das Ändern von `APP_PIN` oder `BROTHER_PIN` allein beendet bereits ausgestellte Cookies nicht.
 
 Die GitHub-Zielrepo-Verbindung ist im Code fest auf `gzug/01-One-L1fe` begrenzt. `GITHUB_REPO_OWNER`

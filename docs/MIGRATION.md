@@ -10,7 +10,7 @@ plain English and never sees GitHub or release controls. The owner reviews every
 ## Trust boundary
 
 - `BROTHER_PIN`: four-digit brother session. May refine, submit, list, and read wishes.
-- `APP_PIN`: distinct owner passphrase of at least 12 characters. May run the engine, inspect runs, approve or reject held PRs,
+- `APP_PIN`: distinct four-digit owner code (must differ from `BROTHER_PIN`). May run the engine, inspect runs, approve or reject held PRs,
   and confirm an already-published update on the phone.
 - Owner routes and mutations use server-side `requireOwner()` checks. Hidden navigation is only a UX aid.
 - Sessions are HMAC-signed, expire after 30 days, and reject unknown roles or future timestamps.
