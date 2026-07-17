@@ -295,7 +295,7 @@ function DcOperationalDashboard() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-12 text-foreground">
-      <AppHeader owner />
+      <AppHeader />
       <main className="mx-auto min-w-0 max-w-7xl px-4 py-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

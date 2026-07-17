@@ -1,8 +1,8 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { Lock, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQueryClient } from "@tanstack/react-query";
-import { logout } from "@/lib/auth.server";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { checkAuth, logout } from "@/lib/auth.server";
 import { RoleSwitch } from "@/components/RoleSwitch";
 import { useEffect, useState } from "react";
 
@@ -17,7 +17,12 @@ const OWNER_LINKS = [
   { to: "/owner-kpi", label: "Stats" },
 ] as const;
 
-export function AppHeader({ owner = false }: { owner?: boolean }) {
+export function AppHeader() {
+  // The header resolves the role itself (signed cookie via checkAuth) so every page shows the
+  // right nav — pages used to pass an `owner` prop and most forgot it, hiding the owner's links.
+  const auth = useQuery({ queryKey: ["auth-role"], queryFn: () => checkAuth(), staleTime: 60_000 });
+  const role = auth.data?.role ?? null;
+  const owner = role === "owner";
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -82,28 +87,29 @@ export function AppHeader({ owner = false }: { owner?: boolean }) {
           >
             Done
           </Link>
-          {OWNER_LINKS.map((item) =>
-            owner ? (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-              >
-                {item.label}
-              </Link>
-            ) : (
-              <span
-                key={item.to}
-                className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
-                title="Owner area — unlocks with more experience"
-                aria-disabled="true"
-              >
-                <Lock className="h-3 w-3" />
-                {item.label}
-              </span>
-            ),
-          )}
+          {role !== null &&
+            OWNER_LINKS.map((item) =>
+              owner ? (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                  activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span
+                  key={item.to}
+                  className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
+                  title="Owner area — unlocks with more experience"
+                  aria-disabled="true"
+                >
+                  <Lock className="h-3 w-3" />
+                  {item.label}
+                </span>
+              ),
+            )}
           <RoleSwitch />
           <Button
             variant="ghost"

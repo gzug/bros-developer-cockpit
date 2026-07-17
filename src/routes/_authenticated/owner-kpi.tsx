@@ -30,7 +30,7 @@ function OwnerKpiPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <AppHeader owner />
+      <AppHeader />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
           ← Dashboard

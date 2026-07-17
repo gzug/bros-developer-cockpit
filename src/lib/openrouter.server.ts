@@ -157,6 +157,10 @@ export async function callModel(opts: {
     usage: { include: true },
   };
   if (opts.responseJson) body.response_format = { type: "json_object" };
+  // Chat/preset calls run with small token budgets (a few hundred). Reasoning models
+  // (e.g. GPT-5 Mini) otherwise spend the whole budget on hidden reasoning and return
+  // empty content. Engine tier calls keep the provider default.
+  if (opts.model) body.reasoning = { enabled: false };
 
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -192,7 +196,11 @@ export async function callModel(opts: {
         usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
       };
       const content = json.choices?.[0]?.message?.content ?? "";
-      if (!content) throw new Error("OpenRouter returned empty content");
+      if (!content) {
+        throw new Error(
+          "The model returned no text. It may have spent all tokens on internal reasoning — raise Max tokens or pick another model.",
+        );
+      }
 
       return {
         content,

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createIdeaEntry, requestShipEntry } from "@/lib/ideas.functions";
+import { checkAuth } from "@/lib/auth.server";
 import { refineIdea } from "@/lib/chat.server";
 import { getPromptEffectSummary } from "@/lib/prompt-effect.server";
 import {
@@ -144,6 +145,10 @@ function makeLocalPresetId(): string {
 function ChatPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  // Preset/model tuning and the prompt-effect stats are the owner's tools; the co-dev gets a
+  // plain chat. Server functions stay the enforcement layer — this only unclutters the screen.
+  const auth = useQuery({ queryKey: ["auth-role"], queryFn: () => checkAuth(), staleTime: 60_000 });
+  const ownerView = auth.data?.role === "owner";
   const [shipResult, setShipResult] = useState<{ ok: boolean; message: string } | null>(null);
   const shipMutation = useMutation({
     mutationFn: (id: number) => requestShipEntry({ data: { id } }),
@@ -378,6 +383,7 @@ function ChatPage() {
             )}
           </section>
         )}
+        {ownerView && (
         <section className="mb-4 rounded-md border border-border bg-card p-4">
           <details className="mb-3 rounded-md border border-border bg-background p-3 text-sm">
             <summary className="cursor-pointer font-medium">What the preset controls</summary>
@@ -482,6 +488,7 @@ function ChatPage() {
             />
           </div>
         </section>
+        )}
 
         {!intent && (
           <div className="grid gap-2">
@@ -646,6 +653,7 @@ function ChatPage() {
           </>
         )}
 
+        {ownerView && (
         <section className="mt-5 rounded-md border border-border bg-card p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -693,6 +701,7 @@ function ChatPage() {
             </p>
           )}
         </section>
+        )}
       </main>
     </div>
   );
