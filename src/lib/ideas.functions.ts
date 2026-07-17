@@ -19,6 +19,7 @@ import {
   listPipelineIdeas,
   recentIdeaCount,
   requestIdeaChanges,
+  requestBrotherShip,
   setIdeaContext,
   setIdeaDelivery,
   setIdeaPipelineState,
@@ -245,6 +246,14 @@ export const updateIdeaContextEntry = createServerFn({ method: "POST" })
     requireAuth();
     await setIdeaContext(data.id, data.context);
     return { ok: true as const };
+  });
+
+export const requestShipEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => IdInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    return requestBrotherShip(data.id);
   });
 
 export const deleteIdeaEntry = createServerFn({ method: "POST" })

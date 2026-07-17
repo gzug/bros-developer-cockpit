@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Save, Trash2 } from "lucide-react";
+import { Rocket, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createIdeaEntry } from "@/lib/ideas.functions";
+import { createIdeaEntry, requestShipEntry } from "@/lib/ideas.functions";
 import { refineIdea } from "@/lib/chat.server";
 import { getPromptEffectSummary } from "@/lib/prompt-effect.server";
 import {
@@ -63,10 +63,16 @@ const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; o
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
-  validateSearch: (search: Record<string, unknown>): { idea?: string; description?: string } => ({
-    idea: typeof search.idea === "string" ? search.idea : undefined,
-    description: typeof search.description === "string" ? search.description : undefined,
-  }),
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { idea?: string; description?: string; ship?: number } => {
+    const shipId = Number(search.ship);
+    return {
+      idea: typeof search.idea === "string" ? search.idea : undefined,
+      description: typeof search.description === "string" ? search.description : undefined,
+      ship: Number.isInteger(shipId) && shipId > 0 ? shipId : undefined,
+    };
+  },
   component: ChatPage,
 });
 
@@ -116,6 +122,20 @@ function makeLocalPresetId(): string {
 
 function ChatPage() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
+  const [shipResult, setShipResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const shipMutation = useMutation({
+    mutationFn: (id: number) => requestShipEntry({ data: { id } }),
+    onSuccess: (result) =>
+      setShipResult({
+        ok: result.ok,
+        message: result.ok
+          ? "Sent to ship. It runs the safety checks and publishes once shipping is armed."
+          : result.reason,
+      }),
+    onError: (error) =>
+      setShipResult({ ok: false, message: error instanceof Error ? error.message : "Could not ship." }),
+  });
   const [intent, setIntent] = useState<Intent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -298,6 +318,43 @@ function ChatPage() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
       <main className="mx-auto flex min-h-[calc(100vh-57px)] max-w-3xl flex-col px-4 py-4">
+        {search.ship != null && (
+          <section className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-4">
+            {shipResult ? (
+              <div className="space-y-3">
+                <p className={`text-sm ${shipResult.ok ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+                  {shipResult.message}
+                </p>
+                <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
+                  Back to pipeline
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Ship this task now?</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Ship {search.idea ? <span className="font-medium text-foreground">&ldquo;{search.idea}&rdquo;</span> : "this task"}?
+                  It goes through the safety checks first, and the owner&rsquo;s release gates still apply.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => shipMutation.mutate(search.ship!)}
+                    disabled={shipMutation.isPending}
+                  >
+                    <Rocket className="mr-1 h-3 w-3" /> Yes, ship it
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
+                    No, go back
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
         <section className="mb-4 rounded-md border border-border bg-card p-4">
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
             <div className="space-y-2">

@@ -108,6 +108,7 @@ const PARKED_LABEL = "parked";
 const ARCHIVED_LABEL = "archived";
 const WEIGHT_PREFIX = "weight:";
 const DELIVERY_PREFIX = "delivery:";
+const BROTHER_SHIP_REQUESTED_LABEL = "bdc-ship-requested";
 const DONE_CATEGORY_PREFIX = "done-category:";
 const DC_LABEL = "dc";
 const FROM_BROTHER_LABEL = "from-brother";
@@ -231,6 +232,28 @@ const NEXT_APK_PATTERNS: RegExp[] = [
 
 export function classifyDelivery(text: string): IdeaDelivery {
   return NEXT_APK_PATTERNS.some((pattern) => pattern.test(text)) ? "next-apk" : "ota";
+}
+
+export type BrotherShipCheck = { ok: boolean; reason: string };
+
+// Whether the co-dev may request a ship for this task. OTA-only (a next-apk change cannot go
+// over the air), and only while it is still open (not already shipping, live, or blocked). The
+// actual publish stays behind the scoped engine, guardrails, the bdc-ship workflow, and the
+// owner arming gates — this only records the brother's request.
+export function canBrotherShip(idea: Pick<DCIdea, "delivery" | "status">): BrotherShipCheck {
+  if (idea.delivery === "next-apk") {
+    return { ok: false, reason: "This change needs a new app version (APK) and cannot ship over the air." };
+  }
+  if (idea.status === "shipped" || idea.status === "live") {
+    return { ok: false, reason: "This task has already been shipped." };
+  }
+  if (idea.status === "blocked") {
+    return { ok: false, reason: "This task is blocked and needs a fix before it can ship." };
+  }
+  if (idea.status === "closed") {
+    return { ok: false, reason: "This task is closed." };
+  }
+  return { ok: true, reason: "" };
 }
 
 function parsePipelineState(labels: string[]): IdeaPipelineState {
@@ -700,6 +723,23 @@ export async function setIdeaDelivery(issueNumber: number, delivery: IdeaDeliver
 export async function setIdeaContext(issueNumber: number, context?: string): Promise<void> {
   const issue = await requireBdcPipelineIssue(issueNumber);
   await updateIssueBody(issueNumber, replaceTextMeta(issue.body, "context", context));
+}
+
+// Records a co-dev ship request on their own OTA pipeline task. Ownership is enforced by
+// requireBdcPipelineIssue; canBrotherShip gates category/state server-side. This adds a marker
+// label + comment only — it does not merge, publish, or arm anything. The bdc-ship workflow and
+// owner arming gates remain the sole path to an actual OTA.
+export async function requestBrotherShip(issueNumber: number): Promise<BrotherShipCheck> {
+  await requireBdcPipelineIssue(issueNumber);
+  const idea = await getIdea(issueNumber);
+  const check = canBrotherShip(idea);
+  if (!check.ok) return check;
+  await addLabelsToIssue(issueNumber, [BROTHER_SHIP_REQUESTED_LABEL]);
+  await addIssueComment(
+    issueNumber,
+    "Ship requested from the cockpit. It will run the safety checks and publish once shipping is armed.",
+  );
+  return { ok: true, reason: "" };
 }
 
 export async function closeIdeaAsDeleted(issueNumber: number): Promise<void> {

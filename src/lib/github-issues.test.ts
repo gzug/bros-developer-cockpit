@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  canBrotherShip,
   canConfirmIdeaLive,
   canTransitionIdeaStatus,
   classifyDelivery,
@@ -403,4 +404,15 @@ test("parseDelivery reads the delivery label, defaulting to ota", () => {
   expect(parseDelivery([])).toBe("ota");
   expect(parseDelivery(["from-brother", "delivery:ota"])).toBe("ota");
   expect(parseDelivery(["from-brother", "delivery:next-apk"])).toBe("next-apk");
+});
+
+test("canBrotherShip allows open OTA tasks and rejects next-apk, shipped, blocked, closed", () => {
+  expect(canBrotherShip({ delivery: "ota", status: "submitted" }).ok).toBe(true);
+  expect(canBrotherShip({ delivery: "ota", status: "sent" }).ok).toBe(true);
+  expect(canBrotherShip({ delivery: "next-apk", status: "submitted" }).ok).toBe(false);
+  expect(canBrotherShip({ delivery: "next-apk", status: "submitted" }).reason).toContain("APK");
+  expect(canBrotherShip({ delivery: "ota", status: "shipped" }).ok).toBe(false);
+  expect(canBrotherShip({ delivery: "ota", status: "live" }).ok).toBe(false);
+  expect(canBrotherShip({ delivery: "ota", status: "blocked" }).ok).toBe(false);
+  expect(canBrotherShip({ delivery: "ota", status: "closed" }).ok).toBe(false);
 });
