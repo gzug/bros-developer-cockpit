@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import {
   canConfirmIdeaLive,
   canTransitionIdeaStatus,
+  classifyDelivery,
   deriveIdeaStatus,
+  parseDelivery,
   describeIdeaStatus,
   getOwnerActionQueue,
   groupEngineRunStats,
@@ -219,6 +221,7 @@ test("owner action queue prioritizes shipped, sent, blocked, then approved", () 
     issueUrl: "https://example.com/issues/0",
     labels: [],
     weight: "light",
+    delivery: "ota",
     pipelineState: "active",
     ...overrides,
   });
@@ -340,6 +343,7 @@ test("done retro groups ideas by category with counts and newest closed first", 
     issueUrl: "https://example.com/issues/1",
     labels: [],
     weight: "light",
+    delivery: "ota",
     pipelineState: "active",
   };
 
@@ -385,4 +389,18 @@ test("context metadata ignores a description line that literally starts with con
   expect(updated).toContain(hostileLine);
   expect(updated).toContain("context: Updated context");
   expect(readTextMeta(updated, "context")).toBe("Updated context");
+});
+
+test("classifyDelivery flags native/APK-needing wishes as next-apk, surface changes as ota", () => {
+  expect(classifyDelivery("Change the Home header color to blue")).toBe("ota");
+  expect(classifyDelivery("Rename the Sleep tab to Rest")).toBe("ota");
+  expect(classifyDelivery("Add a new Bluetooth sensor to Health Connect")).toBe("next-apk");
+  expect(classifyDelivery("Request a new notification permission")).toBe("next-apk");
+  expect(classifyDelivery("Install a new native dependency for Garmin")).toBe("next-apk");
+});
+
+test("parseDelivery reads the delivery label, defaulting to ota", () => {
+  expect(parseDelivery([])).toBe("ota");
+  expect(parseDelivery(["from-brother", "delivery:ota"])).toBe("ota");
+  expect(parseDelivery(["from-brother", "delivery:next-apk"])).toBe("next-apk");
 });

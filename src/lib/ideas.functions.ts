@@ -20,6 +20,7 @@ import {
   recentIdeaCount,
   requestIdeaChanges,
   setIdeaContext,
+  setIdeaDelivery,
   setIdeaPipelineState,
   setIdeaStatus,
   setIdeaWeight,
@@ -27,6 +28,7 @@ import {
   type BdcSubmissionType,
   type DoneCategorySlug,
   type DCIdeaStatus,
+  type IdeaDelivery,
   type DCIdeaIntent,
   type IdeaPipelineState,
   type IdeaWeight,
@@ -50,7 +52,7 @@ const SubmitIdeaInput = z.object({
 const ParkedIdeaInput = z.object({
   title: z.string().trim().min(1).max(80),
   description: z.string().trim().min(1).max(600),
-  weight: z.enum(["light", "heavy"]),
+  weight: z.enum(["light", "heavy"]).optional(),
   context: z.string().trim().max(280).optional(),
 });
 
@@ -64,6 +66,10 @@ const PipelineStateInput = IdInput.extend({
 
 const WeightInput = IdInput.extend({
   weight: z.enum(["light", "heavy"]),
+});
+
+const DeliveryInput = IdInput.extend({
+  delivery: z.enum(["ota", "next-apk"]),
 });
 
 const ContextInput = IdInput.extend({
@@ -198,7 +204,7 @@ export const createParkedIdeaEntry = createServerFn({ method: "POST" })
       title: data.title,
       description: data.description,
       parked: true,
-      weight: data.weight as IdeaWeight,
+      weight: (data.weight as IdeaWeight | undefined) ?? "light",
       context: data.context,
     });
   });
@@ -218,6 +224,15 @@ export const updateIdeaWeightEntry = createServerFn({ method: "POST" })
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
     await setIdeaWeight(data.id, data.weight as IdeaWeight);
+    return { ok: true as const };
+  });
+
+export const updateIdeaDeliveryEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => DeliveryInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await setIdeaDelivery(data.id, data.delivery as IdeaDelivery);
     return { ok: true as const };
   });
 

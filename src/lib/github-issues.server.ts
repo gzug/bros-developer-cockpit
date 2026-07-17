@@ -22,6 +22,7 @@ export type DCIdeaStatus =
   "submitted" | "processing" | "sent" | "approved" | "shipped" | "live" | "blocked" | "closed";
 export type BdcSubmissionType = "idea" | "change";
 export type IdeaWeight = "light" | "heavy";
+export type IdeaDelivery = "ota" | "next-apk";
 export type IdeaPipelineState = "active" | "parked" | "archived";
 export type DoneCategorySlug = "home" | "sleep" | "nutrition" | "activity" | "statistics" | "general";
 
@@ -49,6 +50,7 @@ export interface DCIdea {
   blockReason?: string;
   labels: string[];
   weight: IdeaWeight;
+  delivery: IdeaDelivery;
   pipelineState: IdeaPipelineState;
   context?: string;
   parkedAt?: string;
@@ -105,6 +107,7 @@ type ParsedMeta = {
 const PARKED_LABEL = "parked";
 const ARCHIVED_LABEL = "archived";
 const WEIGHT_PREFIX = "weight:";
+const DELIVERY_PREFIX = "delivery:";
 const DONE_CATEGORY_PREFIX = "done-category:";
 const DC_LABEL = "dc";
 const FROM_BROTHER_LABEL = "from-brother";
@@ -199,6 +202,35 @@ export function isParkedOlderThanDays(parkedAt: string | undefined, now: Date, d
 
 function parseWeight(labels: string[]): IdeaWeight {
   return labels.includes("weight:heavy") ? "heavy" : "light";
+}
+
+export function parseDelivery(labels: string[]): IdeaDelivery {
+  return labels.includes(`${DELIVERY_PREFIX}next-apk`) ? "next-apk" : "ota";
+}
+
+// Deterministic fallback that flags a wish as needing a native APK build rather than an OTA
+// update. The chat AI refines this in dialog; this heuristic is the safe default and the
+// classifier used when no AI signal exists. Anything the cockpit cannot ship as a surface
+// change (native modules, permissions, sensors, dependencies, store metadata) is next-apk.
+const NEXT_APK_PATTERNS: RegExp[] = [
+  /\bnative\b/i,
+  /\bpermission(s)?\b/i,
+  /\bsensor(s)?\b/i,
+  /\bhealth connect\b/i,
+  /\bgarmin\b/i,
+  /\bbluetooth\b/i,
+  /\bnotification(s)?\b/i,
+  /\bbackground\b/i,
+  /\bwidget\b/i,
+  /\bapp icon\b/i,
+  /\bsplash\b/i,
+  /\bdependency|dependencies|library|sdk|package\b/i,
+  /\bandroid\b/i,
+  /\bplay store|app store|store listing\b/i,
+];
+
+export function classifyDelivery(text: string): IdeaDelivery {
+  return NEXT_APK_PATTERNS.some((pattern) => pattern.test(text)) ? "next-apk" : "ota";
 }
 
 function parsePipelineState(labels: string[]): IdeaPipelineState {
@@ -438,6 +470,7 @@ async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea>
     blockReason,
     labels,
     weight: parseWeight(labels),
+    delivery: parseDelivery(labels),
     pipelineState: parsePipelineState(labels),
     context: readTextMeta(issue.body, "context"),
     parkedAt: readTextMeta(issue.body, "parked-at"),
@@ -504,10 +537,13 @@ export async function createSubmittedIdea(input: {
   screen?: string;
   parked?: boolean;
   weight?: IdeaWeight;
+  delivery?: IdeaDelivery;
   context?: string;
 }): Promise<DCIdea> {
   const weight = input.weight ?? "light";
+  const delivery = input.delivery ?? classifyDelivery(`${input.title} ${input.description}`);
   const labels = baseSubmissionLabels(input.type, weight);
+  labels.push(`${DELIVERY_PREFIX}${delivery}`);
   const parkedAt = input.parked ? normalizeDateOnly() : undefined;
   if (input.parked) labels.push(PARKED_LABEL);
   const issue = await createIssue({
@@ -526,6 +562,7 @@ export async function createSubmittedIdea(input: {
     issueUrl: issue.html_url,
     labels,
     weight,
+    delivery,
     pipelineState: input.parked ? "parked" : "active",
     context: input.context?.trim() || undefined,
     parkedAt,
@@ -649,6 +686,15 @@ export async function setIdeaWeight(issueNumber: number, weight: IdeaWeight): Pr
   const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   await updateIssueLabels(issueNumber, setLabel(labels, `${WEIGHT_PREFIX}${weight}`, (label) => label.startsWith(WEIGHT_PREFIX)));
+}
+
+export async function setIdeaDelivery(issueNumber: number, delivery: IdeaDelivery): Promise<void> {
+  const issue = await requireBdcPipelineIssue(issueNumber);
+  const labels = issue.labels.map((label) => label.name);
+  await updateIssueLabels(
+    issueNumber,
+    setLabel(labels, `${DELIVERY_PREFIX}${delivery}`, (label) => label.startsWith(DELIVERY_PREFIX)),
+  );
 }
 
 export async function setIdeaContext(issueNumber: number, context?: string): Promise<void> {

@@ -1,9 +1,19 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Moon, Sun } from "lucide-react";
+import { Lock, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/lib/auth.server";
 import { useEffect, useState } from "react";
+
+// Owner-only nav entries render for BOTH roles: active links for the owner, and greyed-out
+// locked labels for the co-dev — so the brother can see what more experience will unlock.
+// Access is enforced server-side (requireOwner); this is UI affordance only.
+const OWNER_LINKS = [
+  { to: "/runs", label: "Runs" },
+  { to: "/dc", label: "DC" },
+  { to: "/skills", label: "Skills" },
+  { to: "/owner-kpi", label: "Stats" },
+] as const;
 
 export function AppHeader({ owner = false }: { owner?: boolean }) {
   const navigate = useNavigate();
@@ -70,38 +80,28 @@ export function AppHeader({ owner = false }: { owner?: boolean }) {
           >
             Done
           </Link>
-          {owner ? (
-            <>
+          {OWNER_LINKS.map((item) =>
+            owner ? (
               <Link
-                to="/runs"
+                key={item.to}
+                to={item.to}
                 className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
                 activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
               >
-                Runs
+                {item.label}
               </Link>
-              <Link
-                to="/dc"
-                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+            ) : (
+              <span
+                key={item.to}
+                className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
+                title="Owner area — unlocks with more experience"
+                aria-disabled="true"
               >
-                DC
-              </Link>
-              <Link
-                to="/skills"
-                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-              >
-                Skills
-              </Link>
-              <Link
-                to="/owner-kpi"
-                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-              >
-                Stats
-              </Link>
-            </>
-          ) : null}
+                <Lock className="h-3 w-3" />
+                {item.label}
+              </span>
+            ),
+          )}
           <Button
             variant="ghost"
             className="h-8 w-8 p-0"
