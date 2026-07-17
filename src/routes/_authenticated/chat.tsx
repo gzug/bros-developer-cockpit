@@ -233,7 +233,9 @@ function ChatPage() {
   );
 
   useEffect(() => {
-    if (preloaded || !search.idea) return;
+    // When arriving to confirm a ship (?ship=...), do NOT seed a new-idea draft — the ship card
+    // is the whole purpose; seeding would let the co-dev accidentally create a duplicate idea.
+    if (preloaded || search.ship != null || !search.idea) return;
     const description = search.description?.trim() || search.idea;
     setIntent("idea");
     setMessages([
