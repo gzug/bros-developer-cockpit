@@ -55,6 +55,10 @@ function Dashboard() {
             {usage.isError && (
               <p className="mt-1 text-xs text-rose-600">Recent activity is unavailable.</p>
             )}
+            <p className="mt-1 text-xs text-muted-foreground">
+              Every wish travels: received → prepared → Don reviews → shipped to the phone. Tap one
+              to see where it is.
+            </p>
             {usage.data && (
               <p className="mt-1 text-xs text-muted-foreground">
                 {usage.data.count} wishes in the last {usage.data.windowHours} hours.

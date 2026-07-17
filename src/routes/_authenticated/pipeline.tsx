@@ -219,6 +219,10 @@ function PipelinePage() {
 
         <section className="mt-6">
           <h2 className="text-sm font-semibold">Suggestions</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ideas Don prepared for this app. Tap one to talk it through in the chat — nothing happens
+            until you approve it there.
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {chips.map((chip) => (
               <a

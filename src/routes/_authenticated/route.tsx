@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { checkAuth } from "@/lib/auth.server";
+import { HelpBubble } from "@/components/HelpBubble";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -9,5 +10,10 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: "/auth", search: { next: location.href } });
     }
   },
-  component: () => <Outlet />,
+  component: () => (
+    <>
+      <Outlet />
+      <HelpBubble />
+    </>
+  ),
 });

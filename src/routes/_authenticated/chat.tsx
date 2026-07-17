@@ -86,6 +86,26 @@ function splitSuggestion(text: string): { reply: string; suggestion: string | nu
   };
 }
 
+// Task descriptions arrive with issue-body scaffolding (## headings, meta lines, the
+// "Submitted via BDC" stamp). Strip it so the chat opener reads like a sentence, not raw data.
+function cleanPreloadText(text: string): string {
+  return text
+    .replace(/_Submitted via BDC[^_]*_/g, "")
+    .split(/\r?\n/)
+    .filter((line) => {
+      const trimmed = line.trim();
+      return (
+        trimmed.length > 0 &&
+        trimmed !== "---" &&
+        !/^##\s/.test(trimmed) &&
+        !/^(Screen|Type)\s*:/i.test(trimmed)
+      );
+    })
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function buildTitle(intent: Intent, text: string): string {
   const prefix = INTENTS.find((entry) => entry.id === intent)?.title ?? "Idea";
   return `${prefix}: ${text.replace(/\s+/g, " ").trim()}`.slice(0, 80);
@@ -236,12 +256,12 @@ function ChatPage() {
     // When arriving to confirm a ship (?ship=...), do NOT seed a new-idea draft — the ship card
     // is the whole purpose; seeding would let the co-dev accidentally create a duplicate idea.
     if (preloaded || search.ship != null || !search.idea) return;
-    const description = search.description?.trim() || search.idea;
+    const description = cleanPreloadText(search.description?.trim() || search.idea);
     setIntent("idea");
     setMessages([
       {
         role: "assistant",
-        content: `This idea means: ${description} It would change the app by turning that wish into a clear feature proposal first. Tell me what should stay exactly as you want it before we prepare anything.`,
+        content: `Let's talk about this idea: "${description}" — tell me what you'd like, or what should change about it, and I'll turn it into a clear proposal with you.`,
       },
     ]);
     setInput(description);
