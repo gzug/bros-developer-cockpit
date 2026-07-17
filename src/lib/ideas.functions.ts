@@ -188,7 +188,7 @@ export const getUndoLastChangeEntry = createServerFn({ method: "GET" }).handler(
   return getUndoLastChangeStatus();
 });
 
-export const createParkedIdeaEntry = createServerFn({ method: "POST" })
+export const createPipelineIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => ParkedIdeaInput.parse(input))
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
@@ -199,11 +199,13 @@ export const createParkedIdeaEntry = createServerFn({ method: "POST" })
       body: `${data.description}\n${data.context ?? ""}`,
     });
     if (!guardrail.ok) throw new Error(guardrail.message);
+    // Active (not parked): pipeline tasks live in the OTA/Next-APK queue and must not be
+    // swept out by the 14-day parked auto-archive, which would silently drop them from every list.
     return createSubmittedIdea({
       type: "idea",
       title: data.title,
       description: data.description,
-      parked: true,
+      parked: false,
       weight: (data.weight as IdeaWeight | undefined) ?? "light",
       context: data.context,
     });

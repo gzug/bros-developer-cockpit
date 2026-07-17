@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from "recharts";
 import { UploadCloud } from "lucide-react";
@@ -26,6 +26,11 @@ import {
 import { getSkillDashboardData, uploadSkillExports } from "@/lib/skills.functions";
 
 export const Route = createFileRoute("/_authenticated/skills")({
+  beforeLoad: async () => {
+    const { checkAuth } = await import("@/lib/auth.server");
+    const auth = await checkAuth();
+    if (auth.role !== "owner") throw redirect({ to: "/dashboard" });
+  },
   component: Skills,
 });
 

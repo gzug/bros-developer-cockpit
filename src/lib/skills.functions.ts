@@ -8,8 +8,8 @@ import {
 } from "./skill-snapshots.server";
 
 export const getSkillDashboardData = createServerFn({ method: "GET" }).handler(async () => {
-  const { requireAuth } = await import("./auth-session.server");
-  requireAuth();
+  const { requireOwner } = await import("./auth-session.server");
+  requireOwner();
 
   try {
     const snapshots = await listSkillSnapshots();
@@ -37,8 +37,8 @@ export const getSkillDashboardData = createServerFn({ method: "GET" }).handler(a
 export const uploadSkillExports = createServerFn({ method: "POST" })
   .validator((input: FormData) => input)
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
 
     const note = typeof data.get("note") === "string" ? String(data.get("note")) : undefined;
     const files = data

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import chips from "@/config/suggestion-chips.json";
 import {
-  createParkedIdeaEntry,
+  createPipelineIdeaEntry,
   deleteIdeaEntry,
   listPipelineEntries,
   updateIdeaDeliveryEntry,
@@ -160,7 +160,7 @@ function PipelinePage() {
     queryFn: () => listPipelineEntries(),
   });
   const createParked = useMutation({
-    mutationFn: () => createParkedIdeaEntry({ data: { title, description } }),
+    mutationFn: () => createPipelineIdeaEntry({ data: { title, description } }),
     onSuccess: async () => {
       setTitle("");
       setDescription("");
