@@ -61,6 +61,13 @@ export function AppHeader({ owner = false }: { owner?: boolean }) {
               >
                 Stats
               </Link>
+              <Link
+                to="/skills"
+                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+              >
+                Builder Profile
+              </Link>
             </>
           ) : (
             <>
@@ -77,6 +84,13 @@ export function AppHeader({ owner = false }: { owner?: boolean }) {
                 activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
               >
                 New
+              </Link>
+              <Link
+                to="/skills"
+                className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
+                activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+              >
+                Builder Profile
               </Link>
             </>
           )}
