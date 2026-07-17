@@ -13,6 +13,10 @@ const LABEL_META: Record<string, { color: string; description: string }> = {
   "bdc-live": { color: "006B75", description: "Owner confirmed the BDC change is live on device" },
   "bdc-auto": { color: "5319E7", description: "Automated BDC pull request" },
   "bdc-failed": { color: "D93F0B", description: "BDC ship check failed" },
+  parked: { color: "FBCA04", description: "Parked idea in BDC" },
+  archived: { color: "BFD4F2", description: "Archived parked idea in BDC" },
+  "weight:light": { color: "C2E0C6", description: "Lightweight BDC idea" },
+  "weight:heavy": { color: "D93F0B", description: "Heavyweight BDC idea" },
   "ui-only": { color: "BFDADC", description: "Presentation-layer-only change" },
   "one-l1fe-design": { color: "BFD4F2", description: "Preserve One L1fe design preset" },
   "awaiting-owner-review": { color: "FBCA04", description: "Held for owner review" },
@@ -40,6 +44,7 @@ export type RepoIssue = {
   state: "open" | "closed";
   created_at: string;
   updated_at: string;
+  closed_at?: string | null;
   labels: Array<{ name: string }>;
   pull_request?: unknown;
 };
@@ -79,6 +84,9 @@ function labelMeta(label: string): { color: string; description: string } {
   if (LABEL_META[label]) return LABEL_META[label];
   if (label.startsWith("dc:status:")) {
     return { color: "C2E0C6", description: "BDC lifecycle status" };
+  }
+  if (label.startsWith("done-category:")) {
+    return { color: "C5DEF5", description: "BDC done retro category" };
   }
   if (label.startsWith("dc:")) {
     return { color: "D4C5F9", description: "BDC metadata" };
@@ -193,6 +201,22 @@ export async function updateIssueLabels(number: number, labels: string[]): Promi
   await gh(`/repos/${r.path}/issues/${number}`, {
     method: "PATCH",
     body: JSON.stringify({ labels }),
+  });
+}
+
+export async function updateIssueBody(number: number, body: string): Promise<void> {
+  const r = repo();
+  await gh(`/repos/${r.path}/issues/${number}`, {
+    method: "PATCH",
+    body: JSON.stringify({ body }),
+  });
+}
+
+export async function closeIssue(number: number, stateReason: "completed" | "not_planned"): Promise<void> {
+  const r = repo();
+  await gh(`/repos/${r.path}/issues/${number}`, {
+    method: "PATCH",
+    body: JSON.stringify({ state: "closed", state_reason: stateReason }),
   });
 }
 

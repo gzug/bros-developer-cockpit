@@ -6,7 +6,10 @@ import {
   describeIdeaStatus,
   getOwnerActionQueue,
   groupEngineRunStats,
+  groupDoneIdeasForRetro,
+  isParkedOlderThanDays,
   toIdeaActivity,
+  type DCIdea,
 } from "./github-issues.server";
 
 test("open pull request derives sent status", () => {
@@ -158,56 +161,59 @@ test("idea activity removes blank comments and returns newest first", () => {
 });
 
 test("owner action queue prioritizes approved then sent then blocked", () => {
+  const idea = (overrides: Partial<DCIdea>): DCIdea => ({
+    id: 0,
+    title: "",
+    description: "",
+    intent: "idea",
+    status: "submitted",
+    statusSummary: "",
+    createdAt: "2026-07-13T09:00:00Z",
+    issueUrl: "https://example.com/issues/0",
+    labels: [],
+    weight: "light",
+    pipelineState: "active",
+    ...overrides,
+  });
+
   expect(
     getOwnerActionQueue([
-      {
+      idea({
         id: 1,
         title: "Blocked",
-        description: "",
-        intent: "idea",
         status: "blocked",
         statusSummary: "Stopped for manual review.",
         createdAt: "2026-07-13T09:00:00Z",
         issueUrl: "https://example.com/issues/1",
-        labels: [],
-      },
-      {
+      }),
+      idea({
         id: 2,
         title: "Approved",
-        description: "",
-        intent: "idea",
         status: "approved",
         statusSummary: "Approved in Cockpit. Ship it in OL1, then confirm it live here.",
         createdAt: "2026-07-13T08:00:00Z",
         issueUrl: "https://example.com/issues/2",
         prNumber: 20,
         prUrl: "https://example.com/pulls/20",
-        labels: [],
-      },
-      {
+      }),
+      idea({
         id: 3,
         title: "Waiting",
-        description: "",
-        intent: "idea",
         status: "sent",
         statusSummary: "A held PR exists. Review it and either approve shipping or return it to manual review.",
         createdAt: "2026-07-13T10:00:00Z",
         issueUrl: "https://example.com/issues/3",
         prNumber: 30,
         prUrl: "https://example.com/pulls/30",
-        labels: [],
-      },
-      {
+      }),
+      idea({
         id: 4,
         title: "Submitted",
-        description: "",
-        intent: "idea",
         status: "submitted",
         statusSummary: "Ready to start the bridge pipeline.",
         createdAt: "2026-07-13T11:00:00Z",
         issueUrl: "https://example.com/issues/4",
-        labels: [],
-      },
+      }),
     ]).map((idea) => ({ id: idea.id, status: idea.status })),
   ).toEqual([
     { id: 2, status: "approved" },
@@ -246,4 +252,43 @@ test("groupEngineRunStats groups engine comments by issue number", () => {
   ]);
   expect(stats.get(3)).toEqual([]);
   expect(stats.has(99)).toBe(false);
+});
+
+test("parked ideas older than 14 days are archive eligible", () => {
+  const now = new Date("2026-07-16T12:00:00Z");
+
+  expect(isParkedOlderThanDays("2026-07-01", now, 14)).toBe(true);
+  expect(isParkedOlderThanDays("2026-07-02", now, 14)).toBe(false);
+  expect(isParkedOlderThanDays("not a date", now, 14)).toBe(false);
+  expect(isParkedOlderThanDays(undefined, now, 14)).toBe(false);
+});
+
+test("done retro groups ideas by category with counts and newest closed first", () => {
+  const base: DCIdea = {
+    id: 1,
+    title: "Base",
+    description: "",
+    intent: "idea",
+    status: "live",
+    statusSummary: "Confirmed live in OL1.",
+    createdAt: "2026-07-01T00:00:00Z",
+    issueUrl: "https://example.com/issues/1",
+    labels: [],
+    weight: "light",
+    pipelineState: "active",
+  };
+
+  const groups = groupDoneIdeasForRetro([
+    { ...base, id: 1, title: "Old Home", doneCategory: "home", closedAt: "2026-07-10T09:00:00Z" },
+    { ...base, id: 2, title: "Sleep", doneCategory: "sleep", closedAt: "2026-07-11T09:00:00Z" },
+    { ...base, id: 3, title: "New Home", doneCategory: "home", closedAt: "2026-07-12T09:00:00Z" },
+    { ...base, id: 4, title: "Fallback", closedAt: "2026-07-13T09:00:00Z" },
+  ]);
+
+  expect(groups.map((group) => ({ category: group.category, count: group.count }))).toEqual([
+    { category: "home", count: 2 },
+    { category: "sleep", count: 1 },
+    { category: "general", count: 1 },
+  ]);
+  expect(groups[0].ideas.map((idea) => idea.title)).toEqual(["New Home", "Old Home"]);
 });

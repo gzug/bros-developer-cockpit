@@ -33,7 +33,7 @@ test("exact allow WINS over a broad forbidden glob", () => {
 });
 
 test("glob allow does NOT override a forbidden glob", () => {
-  // src/** allows, but src/data/** forbids — forbidden wins for non-exact paths.
+  // src/** allows, but src/data/** forbids, forbidden wins for non-exact paths.
   expect(isPathAllowed("apps/mobile/src/data/secrets.ts", rules)).toBe(false);
 });
 

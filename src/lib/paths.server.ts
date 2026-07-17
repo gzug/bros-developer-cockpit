@@ -1,4 +1,4 @@
-// Path validator — the security boundary for what the engine may edit in the
+// Path validator, the security boundary for what the engine may edit in the
 // One L1fe repo. Rules (carried verbatim from the buildkit spec):
 //
 //   1. An EXACT-literal allow entry is a deliberate carve-out and WINS over a
@@ -14,7 +14,7 @@ export function isGlob(pattern: string): boolean {
 }
 
 // Minimal, dependency-free glob: supports ** (any depth incl. /) and * (any run
-// of non-slash chars). Anchored to the full path. CASE-INSENSITIVE — the forbid
+// of non-slash chars). Anchored to the full path. CASE-INSENSITIVE, the forbid
 // rules must not be evadable by changing the case of a path segment.
 export function globMatch(path: string, pattern: string): boolean {
   const p = normalize(path);
@@ -27,7 +27,7 @@ function normalize(path: string): string {
 }
 
 // A path with any "." / ".." / empty segment is a traversal attempt and is
-// never valid — reject outright rather than trusting the glob rules to catch it.
+// never valid, reject outright rather than trusting the glob rules to catch it.
 function hasUnsafeSegment(p: string): boolean {
   return p.split("/").some((s) => s === "" || s === "." || s === "..");
 }

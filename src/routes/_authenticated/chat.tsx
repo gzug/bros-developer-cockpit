@@ -39,6 +39,10 @@ const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; o
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
+  validateSearch: (search: Record<string, unknown>): { idea?: string; description?: string } => ({
+    idea: typeof search.idea === "string" ? search.idea : undefined,
+    description: typeof search.description === "string" ? search.description : undefined,
+  }),
   component: ChatPage,
 });
 
@@ -87,6 +91,7 @@ function makeLocalPresetId(): string {
 }
 
 function ChatPage() {
+  const search = Route.useSearch();
   const [intent, setIntent] = useState<Intent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -135,6 +140,8 @@ function ChatPage() {
     setParams(selectedPreset.params);
   }, [selectedPreset]);
 
+  const [preloaded, setPreloaded] = useState(false);
+
   const refine = useMutation({
     mutationFn: (nextMessages: ChatMessage[]) =>
       refineIdea({
@@ -180,6 +187,22 @@ function ChatPage() {
     () => INTENTS.find((entry) => entry.id === intent) ?? null,
     [intent],
   );
+
+  useEffect(() => {
+    if (preloaded || !search.idea) return;
+    const description = search.description?.trim() || search.idea;
+    setIntent("idea");
+    setMessages([
+      {
+        role: "assistant",
+        content: `This idea means: ${description} It would change the app by turning that wish into a clear feature proposal first. Tell me what should stay exactly as you want it before we prepare anything.`,
+      },
+    ]);
+    setInput(description);
+    setSuggestion(null);
+    setSubmittedIdeaId(null);
+    setPreloaded(true);
+  }, [preloaded, search.description, search.idea]);
 
   function pickIntent(nextIntent: Intent) {
     const opener = INTENTS.find((entry) => entry.id === nextIntent)?.opener ?? "";

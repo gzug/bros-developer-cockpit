@@ -52,7 +52,7 @@ function Dashboard() {
             </p>
           </div>
           <Button asChild size="sm">
-            <Link to="/chat">New</Link>
+            <Link to="/chat" search={{}}>New</Link>
           </Button>
         </div>
 
@@ -66,7 +66,7 @@ function Dashboard() {
           )}
           {list.isSuccess && list.data.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nothing here yet. <Link to="/chat" className="underline">Write your first wish</Link>!
+              Nothing here yet. <Link to="/chat" search={{}} className="underline">Write your first wish</Link>!
             </div>
           )}
           {list.data?.map((idea) => (

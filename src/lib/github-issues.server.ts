@@ -1,6 +1,7 @@
 import {
   addIssueComment,
   addLabelsToIssue,
+  closeIssue,
   createIssue,
   getIssue,
   getPullRequest,
@@ -8,6 +9,7 @@ import {
   listIssueComments,
   listIssues,
   listPullRequests,
+  updateIssueBody,
   updateIssueLabels,
   type PullState,
   type RepoComment,
@@ -18,6 +20,18 @@ import {
 export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea" | "change";
 export type DCIdeaStatus = "submitted" | "processing" | "sent" | "approved" | "live" | "blocked" | "closed";
 export type BdcSubmissionType = "idea" | "change";
+export type IdeaWeight = "light" | "heavy";
+export type IdeaPipelineState = "active" | "parked" | "archived";
+export type DoneCategorySlug = "home" | "sleep" | "nutrition" | "activity" | "statistics" | "general";
+
+export const DONE_CATEGORIES: Array<{ slug: DoneCategorySlug; label: string }> = [
+  { slug: "home", label: "Home" },
+  { slug: "sleep", label: "Sleep" },
+  { slug: "nutrition", label: "Nutrition" },
+  { slug: "activity", label: "Activity" },
+  { slug: "statistics", label: "Statistics" },
+  { slug: "general", label: "General" },
+];
 
 export interface DCIdea {
   id: number;
@@ -32,6 +46,12 @@ export interface DCIdea {
   prUrl?: string;
   blockReason?: string;
   labels: string[];
+  weight: IdeaWeight;
+  pipelineState: IdeaPipelineState;
+  context?: string;
+  parkedAt?: string;
+  doneCategory?: DoneCategorySlug;
+  closedAt?: string;
 }
 
 export interface DCIdeaActivity {
@@ -42,6 +62,23 @@ export interface DCIdeaActivity {
 }
 
 export type OwnerActionIdea = Pick<DCIdea, "id" | "title" | "status" | "statusSummary" | "prNumber" | "prUrl" | "issueUrl">;
+
+export type PipelineIdeas = {
+  active: DCIdea[];
+  parked: DCIdea[];
+  archived: DCIdea[];
+};
+
+export type DoneIdeaGroup = {
+  category: DoneCategorySlug;
+  label: string;
+  count: number;
+  ideas: DCIdea[];
+};
+
+export type UndoLastChangeStatus =
+  | { enabled: true; explanation: string }
+  | { enabled: false; explanation: string };
 
 export type EngineRunStats = {
   model: string;
@@ -55,6 +92,10 @@ type ParsedMeta = {
   intent: DCIdeaIntent;
 };
 
+const PARKED_LABEL = "parked";
+const ARCHIVED_LABEL = "archived";
+const WEIGHT_PREFIX = "weight:";
+const DONE_CATEGORY_PREFIX = "done-category:";
 const DC_LABEL = "dc";
 const FROM_BROTHER_LABEL = "from-brother";
 const BDC_SUBMITTED_LABEL = "bdc-submitted";
@@ -68,6 +109,7 @@ const DESIGN_LABEL = "one-l1fe-design";
 const STATUS_PREFIX = "dc:status:";
 const INTENT_PREFIX = "dc:";
 const META_RE = /<!--\s*dc:(\{[\s\S]*?\})\s*-->/;
+const TEXT_META_KEYS = ["parked-at", "context"] as const;
 const ENGINE_RE =
   /🤖\s*Model:\s*(.+?)\s*\|\s*Tokens:\s*(\d+)\+(\d+)\s*\|\s*\$([0-9.]+)(?:\s*\|\s*PR\s+#(\d+))?/;
 
@@ -77,6 +119,87 @@ function statusLabel(status: DCIdeaStatus): string {
 
 function cleanDescription(body: string): string {
   return body.replace(META_RE, "").trim();
+}
+
+function readTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number]): string | undefined {
+  const line = body
+    .split(/\r?\n/)
+    .find((entry) => entry.toLowerCase().startsWith(`${key}:`));
+  const value = line?.slice(key.length + 1).trim();
+  return value || undefined;
+}
+
+function replaceTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number], value?: string): string {
+  const lines = body.split(/\r?\n/);
+  const index = lines.findIndex((entry) => entry.toLowerCase().startsWith(`${key}:`));
+  const normalized = value?.trim();
+  if (!normalized) {
+    if (index >= 0) lines.splice(index, 1);
+    return lines.join("\n");
+  }
+  const nextLine = `${key}: ${normalized}`;
+  if (index >= 0) {
+    lines[index] = nextLine;
+    return lines.join("\n");
+  }
+  const contextIndex = lines.findIndex((entry) => entry.trim() === "## Context");
+  if (contextIndex >= 0) {
+    lines.splice(contextIndex + 1, 0, nextLine);
+    return lines.join("\n");
+  }
+  return [body.trimEnd(), "", "## Context", nextLine].join("\n");
+}
+
+function normalizeDateOnly(input: Date = new Date()): string {
+  return input.toISOString().slice(0, 10);
+}
+
+export function isParkedOlderThanDays(parkedAt: string | undefined, now: Date, days: number): boolean {
+  if (!parkedAt) return false;
+  const parkedDate = new Date(`${parkedAt}T00:00:00Z`);
+  if (Number.isNaN(parkedDate.getTime())) return false;
+  const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days));
+  return parkedDate < cutoff;
+}
+
+function parseWeight(labels: string[]): IdeaWeight {
+  return labels.includes("weight:heavy") ? "heavy" : "light";
+}
+
+function parsePipelineState(labels: string[]): IdeaPipelineState {
+  if (labels.includes(ARCHIVED_LABEL)) return "archived";
+  if (labels.includes(PARKED_LABEL)) return "parked";
+  return "active";
+}
+
+function parseDoneCategory(labels: string[]): DoneCategorySlug | undefined {
+  const label = labels.find((entry) => entry.startsWith(DONE_CATEGORY_PREFIX));
+  const slug = label?.slice(DONE_CATEGORY_PREFIX.length);
+  return DONE_CATEGORIES.some((entry) => entry.slug === slug) ? (slug as DoneCategorySlug) : undefined;
+}
+
+function doneCategoryLabel(slug: DoneCategorySlug): string {
+  return DONE_CATEGORIES.find((entry) => entry.slug === slug)?.label ?? "General";
+}
+
+function setLabel(labels: string[], nextLabel: string, remove: (label: string) => boolean): string[] {
+  const next = labels.filter((label) => !remove(label));
+  next.push(nextLabel);
+  return Array.from(new Set(next));
+}
+
+export function groupDoneIdeasForRetro(ideas: DCIdea[]): DoneIdeaGroup[] {
+  return DONE_CATEGORIES.map((category) => {
+    const categoryIdeas = ideas
+      .filter((idea) => (idea.doneCategory ?? "general") === category.slug)
+      .sort((a, b) => ((a.closedAt ?? "") < (b.closedAt ?? "") ? 1 : -1));
+    return {
+      category: category.slug,
+      label: category.label,
+      count: categoryIdeas.length,
+      ideas: categoryIdeas,
+    };
+  }).filter((group) => group.count > 0);
 }
 
 function parseMeta(issue: RepoIssue): ParsedMeta {
@@ -247,6 +370,12 @@ async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea>
     prUrl: pr?.html_url,
     blockReason,
     labels,
+    weight: parseWeight(labels),
+    pipelineState: parsePipelineState(labels),
+    context: readTextMeta(issue.body, "context"),
+    parkedAt: readTextMeta(issue.body, "parked-at"),
+    doneCategory: parseDoneCategory(labels),
+    closedAt: issue.closed_at ?? undefined,
   };
 }
 
@@ -267,6 +396,8 @@ function issueBody(input: {
   title: string;
   description: string;
   screen?: string;
+  parkedAt?: string;
+  context?: string;
 }): string {
   const screen = input.screen?.trim() || "not specified";
   return [
@@ -274,6 +405,8 @@ function issueBody(input: {
     input.description.trim(),
     "",
     "## Context",
+    input.parkedAt ? `parked-at: ${input.parkedAt}` : null,
+    input.context?.trim() ? `context: ${input.context.trim()}` : null,
     `Screen: ${screen}`,
     `Type: ${input.type}`,
     "",
@@ -281,11 +414,11 @@ function issueBody(input: {
     `_Submitted via BDC on ${new Date().toISOString()}_`,
     "",
     `<!-- dc:${JSON.stringify({ intent: input.type })} -->`,
-  ].join("\n");
+  ].filter((line): line is string => line != null).join("\n");
 }
 
-function baseSubmissionLabels(type: BdcSubmissionType): string[] {
-  return [FROM_BROTHER_LABEL, BDC_SUBMITTED_LABEL, type, UI_ONLY_LABEL, DESIGN_LABEL];
+function baseSubmissionLabels(type: BdcSubmissionType, weight: IdeaWeight = "light"): string[] {
+  return [FROM_BROTHER_LABEL, BDC_SUBMITTED_LABEL, type, UI_ONLY_LABEL, DESIGN_LABEL, `${WEIGHT_PREFIX}${weight}`];
 }
 
 export async function createIdea(
@@ -302,11 +435,18 @@ export async function createSubmittedIdea(input: {
   title: string;
   description: string;
   screen?: string;
+  parked?: boolean;
+  weight?: IdeaWeight;
+  context?: string;
 }): Promise<DCIdea> {
+  const weight = input.weight ?? "light";
+  const labels = baseSubmissionLabels(input.type, weight);
+  const parkedAt = input.parked ? normalizeDateOnly() : undefined;
+  if (input.parked) labels.push(PARKED_LABEL);
   const issue = await createIssue({
     title: issueTitle(input.type, input.title),
-    body: issueBody(input),
-    labels: baseSubmissionLabels(input.type),
+    body: issueBody({ ...input, parkedAt }),
+    labels,
   });
   return {
     id: issue.number,
@@ -317,7 +457,11 @@ export async function createSubmittedIdea(input: {
     statusSummary: describeIdeaStatus("submitted"),
     createdAt: issue.created_at,
     issueUrl: issue.html_url,
-    labels: baseSubmissionLabels(input.type),
+    labels,
+    weight,
+    pipelineState: input.parked ? "parked" : "active",
+    context: input.context?.trim() || undefined,
+    parkedAt,
   };
 }
 
@@ -328,6 +472,16 @@ export async function listIdeas(): Promise<DCIdea[]> {
   ]);
   const realIssues = issues.filter((issue) => !issue.pull_request);
   return Promise.all(realIssues.map((issue) => deriveIdea(issue, pulls)));
+}
+
+export async function listPipelineIdeas(): Promise<PipelineIdeas> {
+  await autoArchiveParkedIdeas();
+  const ideas = await listIdeas();
+  return {
+    active: ideas.filter((idea) => idea.status !== "closed" && idea.pipelineState === "active"),
+    parked: ideas.filter((idea) => idea.status !== "closed" && idea.pipelineState === "parked"),
+    archived: ideas.filter((idea) => idea.status !== "closed" && idea.pipelineState === "archived"),
+  };
 }
 
 export async function getIdea(issueNumber: number): Promise<DCIdea> {
@@ -372,6 +526,86 @@ export async function setIdeaStatus(issueNumber: number, status: DCIdeaStatus, i
   if (status === "live") next.push(BDC_LIVE_LABEL);
   if (status === "blocked") next.push(BDC_CHANGES_REQUESTED_LABEL);
   await updateIssueLabels(issueNumber, Array.from(new Set(next)));
+}
+
+export async function setIdeaPipelineState(issueNumber: number, state: IdeaPipelineState): Promise<void> {
+  const issue = await getIssue(issueNumber);
+  const labels = issue.labels.map((label) => label.name);
+  const next = labels.filter((label) => label !== PARKED_LABEL && label !== ARCHIVED_LABEL);
+  let body = issue.body;
+  if (state === "parked") {
+    next.push(PARKED_LABEL);
+    body = replaceTextMeta(body, "parked-at", normalizeDateOnly());
+  } else if (state === "archived") {
+    next.push(ARCHIVED_LABEL);
+  } else {
+    body = replaceTextMeta(body, "parked-at", undefined);
+  }
+  await Promise.all([
+    updateIssueLabels(issueNumber, Array.from(new Set(next))),
+    updateIssueBody(issueNumber, body),
+  ]);
+}
+
+export async function setIdeaWeight(issueNumber: number, weight: IdeaWeight): Promise<void> {
+  const issue = await getIssue(issueNumber);
+  const labels = issue.labels.map((label) => label.name);
+  await updateIssueLabels(issueNumber, setLabel(labels, `${WEIGHT_PREFIX}${weight}`, (label) => label.startsWith(WEIGHT_PREFIX)));
+}
+
+export async function setIdeaContext(issueNumber: number, context?: string): Promise<void> {
+  const issue = await getIssue(issueNumber);
+  await updateIssueBody(issueNumber, replaceTextMeta(issue.body, "context", context));
+}
+
+export async function closeIdeaAsDeleted(issueNumber: number): Promise<void> {
+  await addIssueComment(issueNumber, "Deleted in BDC. The GitHub issue is closed as not planned so the record stays available.");
+  await closeIssue(issueNumber, "not_planned");
+}
+
+export async function completeIdea(issueNumber: number, category: DoneCategorySlug): Promise<void> {
+  const issue = await getIssue(issueNumber);
+  const labels = issue.labels.map((label) => label.name);
+  const next = setLabel(labels, `${DONE_CATEGORY_PREFIX}${category}`, (label) => label.startsWith(DONE_CATEGORY_PREFIX));
+  if (!next.includes(BDC_LIVE_LABEL)) next.push(BDC_LIVE_LABEL);
+  await updateIssueLabels(issueNumber, next);
+  await addIssueComment(issueNumber, `Completed in BDC. Retro category: ${doneCategoryLabel(category)}.`);
+  await closeIssue(issueNumber, "completed");
+}
+
+export async function autoArchiveParkedIdeas(now: Date = new Date()): Promise<number> {
+  const issues = await listIssues({ labels: PARKED_LABEL, state: "open", sort: "created", direction: "desc", perPage: 100 });
+  const realIssues = issues.filter((issue) => !issue.pull_request);
+  let archived = 0;
+  for (const issue of realIssues) {
+    const parkedAt = readTextMeta(issue.body, "parked-at");
+    if (!isParkedOlderThanDays(parkedAt, now, 14)) continue;
+    const labels = issue.labels.map((label) => label.name);
+    await updateIssueLabels(issue.number, Array.from(new Set(labels.filter((label) => label !== PARKED_LABEL).concat(ARCHIVED_LABEL))));
+    archived += 1;
+  }
+  return archived;
+}
+
+export async function listDoneIdeas(): Promise<DoneIdeaGroup[]> {
+  const [issues, pulls] = await Promise.all([
+    listIssues({ labels: BDC_SUBMITTED_LABEL, state: "closed", sort: "updated", direction: "desc", perPage: 100 }),
+    listPullRequests("all"),
+  ]);
+  const realIssues = issues.filter((issue) => {
+    if (issue.pull_request) return false;
+    const labels = issue.labels.map((label) => label.name);
+    return labels.some((label) => label.startsWith(DONE_CATEGORY_PREFIX));
+  });
+  const ideas = await Promise.all(realIssues.map((issue) => deriveIdea(issue, pulls)));
+  return groupDoneIdeasForRetro(ideas);
+}
+
+export function getUndoLastChangeStatus(): UndoLastChangeStatus {
+  return {
+    enabled: false,
+    explanation: "Undo is disabled because the BDC ship lane is paused. No revert PR will be created until shipping is enabled again.",
+  };
 }
 
 export async function claimIdeaForEngine(issueNumber: number): Promise<void> {
