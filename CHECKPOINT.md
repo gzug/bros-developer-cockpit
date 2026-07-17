@@ -1,78 +1,54 @@
 # BDC CHECKPOINT
 
-_Last updated: 2026-07-15 07:55 CEST — BDC approval routed through One L1fe ship lane + production redeploy_
+_Last verified: 2026-07-17 CEST against `origin/main` `83fee83` and GitHub._
 
 **Active integrator:** session_01KN5eUVFZ8Tqdst9bBqnYTg (2026-07-17 UTC)
 
-## Architecture
+## Operating truth
 
-- **Stack:** TanStack Start + Drizzle ORM + Neon (GitHub-native auth)
-- **DB:** Neon (owner must provision `DATABASE_URL` secret in repo settings)
-- **Auth:** PIN via `APP_PIN` env var, timing-safe SHA-256 comparison
-- **No Postgres/Drizzle migrations run by PL** — owner-only action
-- **Target repo:** GitHub writes are hard-limited in code to `gzug/01-One-L1fe`
-- **Release lane:** BDC approval labels the held PR `bdc-approved`; the trusted One L1fe `bdc-ship` GitHub Action validates, merges, and publishes production OTA to the Android app
+- BDC is paused for readiness. Do not deploy, merge, or represent a preview as production readiness.
+- `origin/main` is the integration baseline. The primary checkout may contain local `.claude/` state; preserve it unless its owner and purpose are explicit.
+- The app uses PIN access, GitHub-backed work intake, optional Neon run storage, and the One L1fe ship lane. Missing secrets or a green web build do not prove the owner flow, production, or a physical device.
 
-## Merged into main
+## Merged into `origin/main`
 
 | PR | Title | SHA | Date |
-|----|-------|-----|------|
-| #9 | feat: dc-ui — engine runs page | 368bbf6 | 2026-07-10 |
-| direct | fix(auth): PIN SHA-256 + timingSafeEqual | ea08a78 | 2026-07-10 |
-| direct | fix(ErrorBoundary): capture and display error | 894dad5 | 2026-07-10 |
-| direct | chore: add CHECKPOINT.md | — | 2026-07-10 |
-| #10 | fix: PIN auth, ErrorBoundary, dark mode/PWA/responsive, DC dashboard | 71b71d0 | 2026-07-13 |
-| #18 | feat: wire BDC end-to-end connection | e3a70da | 2026-07-15 |
-| #19 | fix: route bdc approval through ship lane | 6db0540 | 2026-07-15 |
+|---|---|---|---|
+| #18 | BDC end-to-end connection | `e3a70da` | 2026-07-15 |
+| #19 | approval routed through ship lane | `6db0540` | 2026-07-15 |
+| #23 | skill-tracking radar chart | `43cfba1` | 2026-07-16 |
+| #24 | idea pipeline v2 | `998c8c8` | 2026-07-16 |
+| #25 | skill-export radar data | `b2b1a11` | 2026-07-17 |
+| #26 | AI engine presets | `9677693` | 2026-07-16 |
+| #27 | current PL prompt pointer | `488d4c0` | 2026-07-16 |
+| #32 | ZIP limits + pipeline mutation guards (closed #29/#30) | `83fee83` | 2026-07-17 |
 
-## Deployment
+## Open pull requests
 
-- Production deploy completed 2026-07-15 via `npx vercel --prod --yes`
-- Production alias: https://bros-developer-cockpit.vercel.app
-- HTTP smoke: `/auth` 200, `/submit?context=Home&type=change` 200, unauthenticated `POST /api/poll-issues` returns `Not logged in`
+| PR | Scope | Status | Rule |
+|---|---|---|---|
+| #20 | readiness pipeline hardening | Draft, conflict | owner-gated; do not merge or repair by assumption |
+| #21 | role and security readiness | Draft, conflict | owner-gated; do not merge or repair by assumption |
+| #28 | product-generalization handoff | Draft, clean | documentation draft; keep separate from readiness integration |
+| #31 | Paxel Builder Profile self-reflection | Draft, based on the readiness branch (#21) | separate BDC draft, not mobile main; do not merge before #21 |
 
-## Owner Queue (blocked — requires owner action)
+## Open issues
 
-1. **Run one owner PIN smoke:** submit a harmless test wish, verify the issue appears in `gzug/01-One-L1fe`, then decide whether to close it or let BDC process it
-2. **Approve one held PR from `/dc`:** verify the One L1fe `bdc-ship` workflow validates, merges, publishes EAS production OTA, and comments the update group
+- **#34** extend ownership guard to PR-lifecycle label paths + robust `## Context` anchoring: the two lower-severity residuals left after #32; low exposure, gated, resolve before brother handoff.
+- **#13** typed `dc.tsx` cleanup: real technical backlog; retain until a scoped fix is reviewed.
+- **#8** original engine goal: probably stale as an owner topic because its old task list describes superseded work. Do not close automatically; owner must close it or rewrite it into current scope.
 
-## Issue #8 Status
+_Closed 2026-07-17:_ **#29** (ZIP size limits) and **#30** (close guard + context shadowing) — both fixed and verified in #32 (`83fee83`).
 
-- [x] Task 1: Merge PR #7 prerequisites — DONE (already merged)
-- [x] Task 2a: `timingSafeEqual` for PIN auth — DONE (SHA-256 hash)
-- [x] Task 2b: Localize UI to English — DONE (100% confirmed)
-- [ ] Task 2c: Fix N+1 API calls on KPI page — PENDING CHECK
-- [x] Task 3: Polish branch — DONE (dark mode, PWA, skeletons, ErrorBoundary, responsive)
-- [x] Task 4: Minimal DC operational UI (`dc.tsx`) — DONE (Queue, Run Log, Costs, Approvals)
+## Next safe sequence
 
-## Autonomous Backlog (PL-executable)
+1. #32 integrated (ZIP + mutation-guard hardening); #29/#30 closed; residual tracked in #34.
+2. Owner decisions still pending on #20, #21, and One L1fe PR #283 — all owner-gated.
+3. After approval, integrate #21 role/PIN baseline, then #31 Builder Profile (needs #21 first).
+4. Only then deploy with `BDC_PAUSED=true`, test the PIN flow with the owner, and record a real result.
 
-- [ ] owner-kpi.tsx: verify N+1 fix (Issue #8 Task 2c)
-- [ ] gzug/01-One-L1fe track: sync issue status
-- [ ] With owner PIN: verify /runs and /dc live DB-backed data
-- [ ] With owner PIN: approve one held PR and verify the One L1fe `bdc-ship` workflow publishes the OTA
+## Validation and cleanup rules
 
-## Live flow
-
-PIN unlock opens the BDC web app. `/submit?context=<screen>&type=idea|change` creates one structured issue in `gzug/01-One-L1fe` with `from-brother`, `bdc-submitted`, `idea|change`, `ui-only`, and `one-l1fe-design`. `/dc` polls for unclaimed submissions, labels them `bdc-engine-started`, runs the scoped OpenRouter engine, blocks out-of-scope diffs before any GitHub write, and opens a held PR from `bdc-hold/dc-issue-<nr>`. Owner approval in `/dc` labels the held PR and issue `bdc-approved`; the One L1fe `bdc-ship` workflow then validates, squash-merges, publishes the production EAS OTA, and comments the update group. Final `bdc-live` confirmation remains manual after the owner/device check.
-
-## State Snapshot
-
-```
-git log origin/main --oneline -5
-6db0540 fix: route bdc approval through ship lane (#19)
-0273b37 fix: expose bdc readiness state
-5bb8a09 docs: sync bdc owner env queue
-b90c47c docs: record bdc e2e deployment
-e3a70da feat: wire BDC end-to-end connection
-
-Open PRs: #17, #16
-Open Issues: #13, #8
-```
-
-## Rules Reference
-
-- Ladder of Authority: git log > CHECKPOINT.md > AGENTS.md > briefs
-- Git wins over docs — if doc contradicts live state, flag doc as STALE
-- Never idle on owner-blockers; continue code track
-- Merge only after gate green + diff re-read
+- Fresh BDC worktree: `bun install --frozen-lockfile` → `bun run build:dev` → `bun run typecheck` → `bun test` → `NITRO_PRESET=node-server bun run build`.
+- Delete a local worktree or branch only after clean status and PR/ancestor proof. Never delete remote branches in a hygiene run.
+- Old task briefs live in `docs/archive/tasks-2026-07/`; they are historical context, not active instructions.

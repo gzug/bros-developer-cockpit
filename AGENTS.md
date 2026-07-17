@@ -44,14 +44,20 @@
   `VALIDATE:` (exact commands + expected result) / `REPORT:`.
 - Verification of results always stays with the Projektleiter.
 
-## Ops facts (verified 2026-07-13)
-- Live: https://01-one-l1fe.vercel.app — Vercel project `01-one-l1fe`,
+## Hosting facts (verified 2026-07-13, not a readiness claim)
+- Deployment target: https://01-one-l1fe.vercel.app — Vercel project `01-one-l1fe`,
   team `gzugang-8969s-projects`, id `prj_7vvLn43fRC6nwbH3hDNtpC8soKfF`. Repo is `vercel link`ed.
-- Git auto-deploy is FLAKY. After every merge to `main`: `npx vercel --prod --yes`,
-  then verify prod loads with zero console errors.
+- BDC is paused. Do not deploy after a merge unless the owner explicitly re-opens the lane. If authorized,
+  use `npx vercel --prod --yes`, then verify production in a browser with zero console errors.
 - `vercel.json` bakes `NITRO_PRESET=vercel` (required — default preset emits the wrong
   output dir → 404). Reproduce the Vercel runtime locally with `NITRO_PRESET=node-server bun run build`.
 - Cookie/request helpers: import from `@tanstack/react-start/server`, NEVER `vinxi/http`
   (crashes under the Vercel/Nitro runtime → 500 on server fns → client error boundary).
 - `curl` against `/_serverFn/*` GET endpoints is not representative; verify server fns in a real browser.
 - All 6 env vars (see `docs/setup-guide.md`) are set in Production + Preview. Secrets are Don's job only.
+
+## Fresh-truth and worker rule
+
+- Always run `git fetch origin` before orienting. `origin/main`, not a local `main`, is the BDC baseline.
+- Workers work only in isolated Git worktrees. Keep the primary checkout free for integration and its local `.claude/` files untouched unless their ownership is explicit.
+- In a fresh BDC worktree validate in this order: `bun install --frozen-lockfile` → `bun run build:dev` → `bun run typecheck` → `bun test` → `NITRO_PRESET=node-server bun run build`.
