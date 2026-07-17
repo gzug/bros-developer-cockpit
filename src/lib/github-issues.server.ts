@@ -552,7 +552,7 @@ export async function setIdeaStatus(issueNumber: number, status: DCIdeaStatus, i
 }
 
 export async function setIdeaPipelineState(issueNumber: number, state: IdeaPipelineState): Promise<void> {
-  const issue = await getIssue(issueNumber);
+  const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   const next = labels.filter((label) => label !== PARKED_LABEL && label !== ARCHIVED_LABEL);
   let body = issue.body;
@@ -571,7 +571,7 @@ export async function setIdeaPipelineState(issueNumber: number, state: IdeaPipel
 }
 
 export async function setIdeaWeight(issueNumber: number, weight: IdeaWeight): Promise<void> {
-  const issue = await getIssue(issueNumber);
+  const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   await updateIssueLabels(issueNumber, setLabel(labels, `${WEIGHT_PREFIX}${weight}`, (label) => label.startsWith(WEIGHT_PREFIX)));
 }

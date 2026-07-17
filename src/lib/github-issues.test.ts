@@ -302,10 +302,14 @@ test("destructive mutations only accept real BDC wish issues, never pull request
   expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }], pull_request: {} })).toBe(false);
 });
 
-test("context metadata ignores hostile context lines in the description", () => {
+test("context metadata ignores a description line that literally starts with context:", () => {
+  // The hostile line starts with `context:` inside the free-text Description, which the
+  // pre-fix whole-body matcher would misread AND rewrite. Both reads and writes must stay
+  // scoped to the structured `## Context` block, leaving the user's text untouched.
+  const hostileLine = "context: this is the user's own wish text and must stay untouched.";
   const body = [
     "## Description",
-    "The user's text contains a context: line that must stay untouched.",
+    hostileLine,
     "",
     "## Context",
     "context: Original context",
@@ -316,7 +320,7 @@ test("context metadata ignores hostile context lines in the description", () => 
   ].join("\n");
   expect(readTextMeta(body, "context")).toBe("Original context");
   const updated = replaceTextMeta(body, "context", "Updated context");
-  expect(updated).toContain("context: line that must stay untouched.");
+  expect(updated).toContain(hostileLine);
   expect(updated).toContain("context: Updated context");
   expect(readTextMeta(updated, "context")).toBe("Updated context");
 });
