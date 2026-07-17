@@ -2,6 +2,8 @@
 
 _Last updated: 2026-07-15 07:55 CEST — BDC approval routed through One L1fe ship lane + production redeploy_
 
+**Active integrator:** session_01KN5eUVFZ8Tqdst9bBqnYTg (2026-07-17 UTC)
+
 ## Architecture
 
 - **Stack:** TanStack Start + Drizzle ORM + Neon (GitHub-native auth)
