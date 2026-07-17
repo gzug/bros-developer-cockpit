@@ -43,18 +43,24 @@ test("throttle key uses request IP when present", () => {
 });
 
 test("login codes resolve to separate brother and owner roles", () => {
-  const pins = { ownerPin: "correct horse battery staple", brotherPin: "1234" };
+  const pins = { ownerPin: "4321", brotherPin: "1234" };
   expect(resolveLoginRole("1234", pins)).toBe("brother");
-  expect(resolveLoginRole("correct horse battery staple", pins)).toBe("owner");
+  expect(resolveLoginRole("4321", pins)).toBe("owner");
   expect(resolveLoginRole("0000", pins)).toBeNull();
 });
 
-test("weak or malformed configured credentials fail closed", () => {
-  expect(validateLoginConfiguration({ ownerPin: "9876", brotherPin: "1234" })).toContain(
-    "12 characters",
+test("malformed or colliding four-digit credentials fail closed", () => {
+  // owner pin must be exactly four digits
+  expect(validateLoginConfiguration({ ownerPin: "98", brotherPin: "1234" })).toContain(
+    "four digits",
   );
+  // brother pin must be exactly four digits
   expect(
-    validateLoginConfiguration({ ownerPin: "long-owner-passphrase", brotherPin: "12ab" }),
+    validateLoginConfiguration({ ownerPin: "4321", brotherPin: "12ab" }),
   ).toContain("four digits");
-  expect(resolveLoginRole("9876", { ownerPin: "9876", brotherPin: "1234" })).toBeNull();
+  // the two codes must differ
+  expect(
+    validateLoginConfiguration({ ownerPin: "1234", brotherPin: "1234" }),
+  ).toContain("different");
+  expect(resolveLoginRole("98", { ownerPin: "98", brotherPin: "1234" })).toBeNull();
 });

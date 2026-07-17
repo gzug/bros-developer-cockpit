@@ -9,27 +9,24 @@ import { safeNext } from "@/lib/safe-next";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>): { next?: string; owner?: boolean } => {
+  validateSearch: (s: Record<string, unknown>): { next?: string } => {
     const next = typeof s.next === "string" ? s.next : undefined;
-    const owner = s.owner === true || s.owner === "1";
-    return { ...(next ? { next } : {}), ...(owner ? { owner: true } : {}) };
+    return next ? { next } : {};
   },
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { next, owner = false } = Route.useSearch();
+  const { next } = Route.useSearch();
   const nextSafe = safeNext(next ?? "");
   const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (owner ? secret.trim().length < 12 : !/^\d{4}$/.test(secret.trim())) {
-      toast.error(
-        owner ? "Please enter your owner passphrase." : "Please enter exactly four digits.",
-      );
+    if (!/^\d{4}$/.test(secret.trim())) {
+      toast.error("Please enter exactly four digits.");
       return;
     }
     setBusy(true);
@@ -49,30 +46,22 @@ function AuthPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Log in</CardTitle>
-          <CardDescription>
-            {owner ? "Enter your owner passphrase." : "Enter your four-digit code."}
-          </CardDescription>
+          <CardDescription>Enter your four-digit code.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               type="password"
-              aria-label={owner ? "Owner passphrase" : "Four-digit code"}
-              inputMode={owner ? "text" : "numeric"}
+              aria-label="Four-digit code"
+              inputMode="numeric"
               autoComplete="current-password"
-              placeholder={owner ? "Owner passphrase" : "••••"}
-              maxLength={owner ? 128 : 4}
+              placeholder="••••"
+              maxLength={4}
               value={secret}
-              onChange={(e) =>
-                setSecret(
-                  owner
-                    ? e.target.value.slice(0, 128)
-                    : e.target.value.replace(/\D/g, "").slice(0, 4),
-                )
-              }
+              onChange={(e) => setSecret(e.target.value.replace(/\D/g, "").slice(0, 4))}
               required
               autoFocus
-              className={owner ? "text-center text-lg" : "text-center text-2xl tracking-[0.45em]"}
+              className="text-center text-2xl tracking-[0.45em]"
             />
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Checking…" : "Log in"}

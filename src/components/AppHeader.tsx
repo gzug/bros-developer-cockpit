@@ -3,6 +3,7 @@ import { Lock, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "@/lib/auth.server";
+import { RoleSwitch } from "@/components/RoleSwitch";
 import { useEffect, useState } from "react";
 
 // Owner-only nav entries render for BOTH roles: active links for the owner, and greyed-out
@@ -102,6 +103,7 @@ export function AppHeader({ owner = false }: { owner?: boolean }) {
               </span>
             ),
           )}
+          <RoleSwitch />
           <Button
             variant="ghost"
             className="h-8 w-8 p-0"

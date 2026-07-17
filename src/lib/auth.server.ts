@@ -61,7 +61,7 @@ function secretMatches(input: string, expected?: string): boolean {
 }
 
 function validOwnerSecret(value?: string): value is string {
-  return Boolean(value && value.length >= 12 && value.length <= 128);
+  return Boolean(value && /^\d{4}$/.test(value));
 }
 
 function validBrotherPin(value?: string): value is string {
@@ -73,7 +73,7 @@ export function validateLoginConfiguration(pins: {
   brotherPin?: string;
 }): string | null {
   if (pins.ownerPin && !validOwnerSecret(pins.ownerPin)) {
-    return "APP_PIN must be an owner passphrase of at least 12 characters.";
+    return "APP_PIN must contain exactly four digits.";
   }
   if (pins.brotherPin && !validBrotherPin(pins.brotherPin)) {
     return "BROTHER_PIN must contain exactly four digits.";
