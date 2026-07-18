@@ -3,13 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import {
-  AlertCircle,
-  Copy,
-  ExternalLink,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
+import { AlertCircle, Copy, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { DcStatusBadge } from "@/components/DcStatusBadge";
 import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
@@ -179,7 +173,8 @@ function DcOperationalDashboard() {
   const processMutation = useMutation({
     mutationFn: (id: number) => processContribution({ data: { id } }),
     onSuccess: (result) => {
-      if (result.ok) toast.success(`Held PR #${result.prNumber} is ready for review.`);
+      if (result.ok)
+        toast.success(`Prepared review #${result.prNumber} is ready for owner review.`);
       else toast.error(result.reason);
       invalidate();
     },
@@ -234,8 +229,8 @@ function DcOperationalDashboard() {
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Don checks collected ideas, prepared pull requests, and the final owner-controlled
-              step here.
+              Don checks collected ideas, prepared review links, and the final owner-controlled step
+              here.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -322,8 +317,8 @@ function DcOperationalDashboard() {
                   <div>
                     <CardTitle className="text-base font-semibold">Ideas and tasks</CardTitle>
                     <CardDescription className="text-xs">
-                      Live from GitHub. Collected, ready, and waiting on owner are working states,
-                      not publication.
+                      Collected, checking, ready, and waiting on owner are working states, not
+                      publication.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
@@ -344,7 +339,7 @@ function DcOperationalDashboard() {
                         <TableHead className="text-xs">Title</TableHead>
                         <TableHead className="w-24 text-xs">Type</TableHead>
                         <TableHead className="w-28 text-xs">Status</TableHead>
-                        <TableHead className="w-20 text-xs">PR</TableHead>
+                        <TableHead className="w-20 text-xs">Review</TableHead>
                         <TableHead className="w-64 text-xs text-right">Next step</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -440,7 +435,7 @@ function DcOperationalDashboard() {
                                 )}
                               {idea.status === "blocked" && idea.prMerged && (
                                 <span className="self-center text-xs text-muted-foreground">
-                                  Check publication in GitHub
+                                  Check publication manually
                                 </span>
                               )}
                               {idea.status === "blocked" && !idea.prNumber && (
@@ -472,7 +467,7 @@ function DcOperationalDashboard() {
               <CardHeader className="border-b border-border py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base font-semibold">Check runs</CardTitle>
+                    <CardTitle className="text-base font-semibold">Preparation log</CardTitle>
                     <CardDescription className="text-xs">
                       What the cockpit prepared and whether errors happened.
                     </CardDescription>
@@ -485,7 +480,7 @@ function DcOperationalDashboard() {
               <CardContent className="flex-1 overflow-y-auto p-0">
                 {runsList.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    No check runs recorded yet.
+                    No preparation log recorded yet.
                   </div>
                 ) : (
                   <Table>
@@ -497,7 +492,7 @@ function DcOperationalDashboard() {
                         <TableHead className="w-24 text-xs">Tokens</TableHead>
                         <TableHead className="w-24 text-xs">Cost</TableHead>
                         <TableHead className="w-24 text-xs">Status</TableHead>
-                        <TableHead className="w-24 text-xs">PR</TableHead>
+                        <TableHead className="w-24 text-xs">Review</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

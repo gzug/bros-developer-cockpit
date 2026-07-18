@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 // locked labels for the co-dev — so the brother can see what more experience will unlock.
 // Access is enforced server-side (requireOwner); this is UI affordance only.
 const OWNER_LINKS = [
-  { to: "/runs", label: "Check runs" },
+  { to: "/runs", label: "Prep log" },
   { to: "/dc", label: "Control" },
   { to: "/skills", label: "Skills" },
   { to: "/prompts", label: "Instructions" },

@@ -7,12 +7,12 @@ export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Done = finished ideas grouped into broad categories like Home, Sleep, Nutrition, and Activity.
 - Skills = Don's skill radar. It compares Start and Now scores from session metadata. Process upload creates a new measurement when enough data exists.
 - Instructions = Don's prompt history. It shows what changed, when, why, and expected effect. Reading or scrolling does not activate anything.
-- Check runs, Control, Skills, Instructions, and Status are Don's owner tools, not hidden broken pages.
+- Prep log, Control, Skills, Instructions, and Status are Don's owner tools, not hidden broken pages.
 
 Status meanings:
 - Collected = the idea arrived. Nothing has been built or published.
 - Waiting on owner = the user asked Don to start the next step, but nothing was published.
-- Being checked = the cockpit is preparing or checking the change.
+- Checking = the cockpit is preparing or checking the change.
 - Ready = a change exists and waits for Don.
 - Checked = Don approved or checks passed, but the owner-controlled path still decides what happens next.
 - Published = the update was published. To see it on the phone, fully close One L1fe and open it twice.
@@ -21,7 +21,7 @@ Status meanings:
 
 Important behavior:
 - An idea is pitched, becomes a task, and only moves forward when the owner-controlled path allows it.
-- Publishing is paused in the cockpit: collected, checked, ready, paused, and waiting on owner are working states, not publication.
+- Publishing is paused in the cockpit: collected, checking, checked, ready, paused, and waiting on owner are working states, not publication.
 - Newest ideas usually appear first. Near the top does not automatically mean urgent.
 - OTA means the phone app can update without a new install.
 - Next APK means the change waits for the next full app version, so it will not appear on the phone right away.

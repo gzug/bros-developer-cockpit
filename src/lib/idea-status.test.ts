@@ -3,7 +3,12 @@ import { getIdeaNextStep, getIdeaStatusLabel, getIdeaTimeline } from "./idea-sta
 
 test("idea status labels stay human-readable", () => {
   expect(getIdeaStatusLabel("requested")).toBe("Waiting on owner");
+  expect(getIdeaStatusLabel("processing")).toBe("Checking");
+  expect(getIdeaStatusLabel("sent")).toBe("Ready");
+  expect(getIdeaStatusLabel("approved")).toBe("Checked");
+  expect(getIdeaStatusLabel("shipped")).toBe("Published");
   expect(getIdeaStatusLabel("live")).toBe("Live confirmed");
+  expect(getIdeaStatusLabel("blocked")).toBe("Paused");
 });
 
 test("idea next steps explain the current operator responsibility", () => {
