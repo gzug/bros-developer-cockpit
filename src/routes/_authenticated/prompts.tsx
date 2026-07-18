@@ -22,6 +22,7 @@ function PromptsPage() {
     queryFn: () => getPromptVersionDashboard(),
   });
   const data = promptVersions.data;
+  const latestPromptFilename = data?.files.at(-1)?.filename;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -29,12 +30,16 @@ function PromptsPage() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Anweisungen</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Instructions</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Hier steht, welche Anweisungen das Cockpit benutzt und warum sie geändert wurden.
+              This shows which instructions the cockpit uses and why they changed.
+            </p>
+            <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+              This page is read-only. It shows what changed in the AI instruction, when it happened,
+              and what effect is expected.
             </p>
           </div>
-          {data && <Badge variant="outline">{data.files.length} Dateien</Badge>}
+          {data && <Badge variant="outline">{data.files.length} files</Badge>}
         </div>
 
         {promptVersions.isLoading && (
@@ -46,7 +51,7 @@ function PromptsPage() {
 
         {promptVersions.isError && (
           <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-            Die Anweisungen konnten nicht geladen werden.
+            The instructions could not be loaded.
           </div>
         )}
 
@@ -54,65 +59,99 @@ function PromptsPage() {
           <>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Änderungsverlauf</CardTitle>
+                <CardTitle className="text-base">Changelog</CardTitle>
                 <CardDescription>
-                  Was geändert wurde, warum es geändert wurde und welche Wirkung erwartet wird.
+                  What changed, why it changed, and what effect is expected. Each row is a traceable
+                  state, not a switch.
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="py-2 pr-3 font-medium">Version</th>
-                      <th className="py-2 pr-3 font-medium">Wann</th>
-                      <th className="py-2 pr-3 font-medium">Was änderte sich?</th>
-                      <th className="py-2 pr-3 font-medium">Warum?</th>
-                      <th className="py-2 font-medium">Erwartete Wirkung</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.changelog.map((row) => (
-                      <tr
-                        key={`${row.version}-${row.date}`}
-                        className="border-b border-border/60 align-top"
-                      >
-                        <td className="py-3 pr-3 font-medium">{row.version}</td>
-                        <td className="py-3 pr-3 text-muted-foreground">{row.date}</td>
-                        <td className="py-3 pr-3">{row.whatChanged}</td>
-                        <td className="py-3 pr-3 text-muted-foreground">{row.why}</td>
-                        <td className="py-3 text-muted-foreground">{row.expectedEffect}</td>
+                {data.changelog.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
+                    No changelog found yet. Once a version is documented, the date, change, reason,
+                    and expected effect appear here.
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead className="border-b border-border text-xs text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-3 font-medium">Version</th>
+                        <th className="py-2 pr-3 font-medium">When</th>
+                        <th className="py-2 pr-3 font-medium">What changed?</th>
+                        <th className="py-2 pr-3 font-medium">Why changed?</th>
+                        <th className="py-2 font-medium">Expected effect</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {data.changelog.map((row) => (
+                        <tr
+                          key={`${row.version}-${row.date}`}
+                          className="border-b border-border/60 align-top"
+                        >
+                          <td className="py-3 pr-3 font-medium">{row.version}</td>
+                          <td className="py-3 pr-3 text-muted-foreground">{row.date}</td>
+                          <td className="py-3 pr-3">{row.whatChanged}</td>
+                          <td className="py-3 pr-3 text-muted-foreground">{row.why}</td>
+                          <td className="py-3 text-muted-foreground">{row.expectedEffect}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </CardContent>
             </Card>
 
             <div className="mt-6 grid gap-4">
-              {data.files.map((file) => (
-                <Card key={file.filename}>
-                  <CardHeader>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          {file.title}
-                        </CardTitle>
-                        <CardDescription>{file.filename}</CardDescription>
+              {data.files.map((file) => {
+                const isCurrentPrompt = file.filename === latestPromptFilename;
+                const displayTitle = file.stale
+                  ? `${file.version} replaced instruction`
+                  : file.title;
+
+                return (
+                  <Card key={file.filename}>
+                    <CardHeader>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            {displayTitle}
+                          </CardTitle>
+                          <CardDescription>
+                            {file.filename}.{" "}
+                            {isCurrentPrompt
+                              ? "The block below shows the current text for reading and checking."
+                              : "This older version is kept for history only."}
+                          </CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Badge variant="secondary">{file.version}</Badge>
+                          {file.stale && <Badge variant="outline">replaced</Badge>}
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Badge variant="secondary">{file.version}</Badge>
-                        {file.stale && <Badge variant="outline">ersetzt</Badge>}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="max-h-[34rem] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
-                      {file.content}
-                    </pre>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardHeader>
+                    <CardContent>
+                      {isCurrentPrompt ? (
+                        <>
+                          <p className="mb-2 text-xs text-muted-foreground">
+                            Scrolling only shows the content of this version. No instruction is
+                            activated, saved, or published here.
+                          </p>
+                          <pre className="max-h-[34rem] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
+                            {file.content}
+                          </pre>
+                        </>
+                      ) : (
+                        <div className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                          This version has been replaced. It stays listed so the change history
+                          remains traceable, but the current instruction is the newest version
+                          above.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </>
         )}

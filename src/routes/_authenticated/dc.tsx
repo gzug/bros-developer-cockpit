@@ -137,63 +137,63 @@ function statusBadge(status: string) {
   if (normalized === "submitted") {
     return (
       <Badge variant="outline" className="border-amber-500/30 text-amber-600">
-        Gesammelt
+        Collected
       </Badge>
     );
   }
   if (normalized === "requested") {
     return (
       <Badge variant="outline" className="border-indigo-500/30 text-indigo-600">
-        Wartet auf Owner
+        Waiting on owner
       </Badge>
     );
   }
   if (normalized === "processing") {
     return (
       <Badge variant="outline" className="border-blue-500/30 text-blue-600">
-        Wird geprüft
+        Being checked
       </Badge>
     );
   }
   if (normalized === "sent") {
     return (
       <Badge variant="outline" className="border-sky-500/30 text-sky-600">
-        Bereit
+        Ready
       </Badge>
     );
   }
   if (normalized === "approved") {
     return (
       <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-        Geprüft
+        Checked
       </Badge>
     );
   }
   if (normalized === "shipped") {
     return (
       <Badge variant="outline" className="border-violet-500/30 text-violet-600">
-        Ausgespielt
+        Published
       </Badge>
     );
   }
   if (normalized === "live") {
     return (
       <Badge variant="outline" className="border-emerald-700/30 text-emerald-700">
-        Live bestätigt
+        Live confirmed
       </Badge>
     );
   }
   if (normalized === "blocked" || normalized === "failed") {
     return (
       <Badge variant="outline" className="gap-1 border-rose-500/30 text-rose-600">
-        <ShieldAlert className="h-3 w-3" /> Pausiert
+        <ShieldAlert className="h-3 w-3" /> Paused
       </Badge>
     );
   }
   if (normalized === "completed") {
     return (
       <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-600">
-        <CheckCircle className="h-3 w-3" /> Erledigt
+        <CheckCircle className="h-3 w-3" /> Done
       </Badge>
     );
   }
@@ -300,19 +300,18 @@ function DcOperationalDashboard() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">Owner-Kontrolle</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Owner control</h1>
               <Badge variant="outline" className="text-xs">
-                pausiert sicher
+                safely paused
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Hier prüft Don gesammelte Ideen, vorbereitete Pull Requests und den letzten
-              Freigabeschritt.
+              Don checks collected ideas, prepared pull requests, and the final approval step here.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={generateSubmissionLink}>
-              <Copy className="mr-2 h-4 w-4" /> Link für Idee kopieren
+              <Copy className="mr-2 h-4 w-4" /> Copy idea link
             </Button>
             <Button
               size="sm"
@@ -324,7 +323,7 @@ function DcOperationalDashboard() {
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
               )}
-              Aktualisieren
+              Refresh
             </Button>
           </div>
         </div>
@@ -339,12 +338,10 @@ function DcOperationalDashboard() {
                 <div className="flex gap-3">
                   <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                   <div>
-                    <h2 className="text-sm font-semibold text-amber-600">
-                      Ausspielen ist pausiert
-                    </h2>
+                    <h2 className="text-sm font-semibold text-amber-600">Publishing is paused</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Das Cockpit darf sammeln und vorbereiten. Nichts wird ausgespielt, solange Don
-                      die sichere Owner-Freigabe nicht bewusst öffnet.
+                      The cockpit may collect and prepare. Nothing is published unless Don
+                      deliberately opens the safe owner approval path.
                     </p>
                   </div>
                 </div>
@@ -356,11 +353,11 @@ function DcOperationalDashboard() {
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
                   <div>
                     <h2 className="text-sm font-semibold text-rose-600">
-                      KI-Hilfe nicht verbunden
+                      AI help is not connected
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Der OpenRouter-Schlüssel fehlt. Das Cockpit kann Ideen sammeln, aber keine
-                      Vorschläge verfeinern oder vorbereiten.
+                      The OpenRouter key is missing. The cockpit can collect ideas, but cannot
+                      refine or prepare suggestions.
                     </p>
                   </div>
                 </div>
@@ -371,7 +368,7 @@ function DcOperationalDashboard() {
                 <div className="flex gap-3">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
                   <div>
-                    <h2 className="text-sm font-semibold text-rose-600">GitHub nicht verbunden</h2>
+                    <h2 className="text-sm font-semibold text-rose-600">GitHub is not connected</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {data?.githubError ?? "Set GITHUB_TOKEN."}
                     </p>
@@ -385,10 +382,10 @@ function DcOperationalDashboard() {
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                   <div>
                     <h2 className="text-sm font-semibold text-amber-600">
-                      Datenbank nicht verbunden
+                      Database is not connected
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Die Laufdaten bleiben nur im Speicher dieses Server-Prozesses sichtbar.
+                      Run data stays visible only in this server process memory.
                     </p>
                   </div>
                 </div>
@@ -399,7 +396,7 @@ function DcOperationalDashboard() {
 
         {dashboard.isLoading ? (
           <div className="flex h-64 items-center justify-center text-muted-foreground">
-            <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cockpit-Daten werden geladen...
+            <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading cockpit data...
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -407,32 +404,32 @@ function DcOperationalDashboard() {
               <CardHeader className="border-b border-border py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base font-semibold">Ideen und Aufgaben</CardTitle>
+                    <CardTitle className="text-base font-semibold">Ideas and tasks</CardTitle>
                     <CardDescription className="text-xs">
-                      Live aus GitHub. "Wartet auf Owner" heißt: Wunsch gesammelt, aber nicht
-                      ausgespielt.
+                      Live from GitHub. "Waiting on owner" means the request was collected, but not
+                      published.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
-                    {queue.length} Einträge
+                    {queue.length} entries
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto p-0">
                 {queue.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    Noch keine Ideen gesammelt. Sobald jemand etwas einreicht, erscheint es hier.
+                    No ideas collected yet. Once someone submits one, it appears here.
                   </div>
                 ) : (
                   <Table>
                     <TableHeader className="sticky top-0 z-10 bg-muted/30">
                       <TableRow>
                         <TableHead className="w-20 text-xs">Issue</TableHead>
-                        <TableHead className="text-xs">Titel</TableHead>
-                        <TableHead className="w-24 text-xs">Art</TableHead>
+                        <TableHead className="text-xs">Title</TableHead>
+                        <TableHead className="w-24 text-xs">Type</TableHead>
                         <TableHead className="w-28 text-xs">Status</TableHead>
                         <TableHead className="w-20 text-xs">PR</TableHead>
-                        <TableHead className="w-64 text-xs text-right">Nächster Schritt</TableHead>
+                        <TableHead className="w-64 text-xs text-right">Next step</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -485,7 +482,7 @@ function DcOperationalDashboard() {
                                     envStatus?.bdcPaused !== false || processMutation.isPending
                                   }
                                 >
-                                  {idea.status === "processing" ? "Erneut prüfen" : "Prüfen"}
+                                  {idea.status === "processing" ? "Check again" : "Check"}
                                 </Button>
                               )}
                               {(idea.status === "sent" ||
@@ -505,8 +502,8 @@ function DcOperationalDashboard() {
                                       }
                                     >
                                       {idea.status === "blocked"
-                                        ? "Freigabe erneut prüfen"
-                                        : "Freigeben"}
+                                        ? "Check approval again"
+                                        : "Approve"}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -519,18 +516,18 @@ function DcOperationalDashboard() {
                                       }
                                       disabled={requestChangesMutation.isPending}
                                     >
-                                      Änderungen anfordern
+                                      Request changes
                                     </Button>
                                   </>
                                 )}
                               {idea.status === "blocked" && idea.prMerged && (
                                 <span className="self-center text-xs text-muted-foreground">
-                                  Veröffentlichung in GitHub prüfen
+                                  Check publication in GitHub
                                 </span>
                               )}
                               {idea.status === "blocked" && !idea.prNumber && (
                                 <span className="self-center text-xs text-muted-foreground">
-                                  Manuelle Prüfung nötig
+                                  Manual check needed
                                 </span>
                               )}
                               {idea.status === "shipped" && (
@@ -540,7 +537,7 @@ function DcOperationalDashboard() {
                                   onClick={() => markLiveMutation.mutate(idea.id)}
                                   disabled={markLiveMutation.isPending}
                                 >
-                                  Auf Handy bestätigen
+                                  Confirm on phone
                                 </Button>
                               )}
                             </div>
@@ -557,20 +554,20 @@ function DcOperationalDashboard() {
               <CardHeader className="border-b border-border py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base font-semibold">Prüfläufe</CardTitle>
+                    <CardTitle className="text-base font-semibold">Check runs</CardTitle>
                     <CardDescription className="text-xs">
-                      Was das Cockpit vorbereitet hat und ob dabei Fehler entstanden sind.
+                      What the cockpit prepared and whether errors happened.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
-                    {runsList.length} Läufe
+                    {runsList.length} runs
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto p-0">
                 {runsList.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    Noch keine Prüfläufe aufgezeichnet.
+                    No check runs recorded yet.
                   </div>
                 ) : (
                   <Table>
@@ -631,13 +628,11 @@ function DcOperationalDashboard() {
 
             <Card className="lg:col-span-2">
               <CardHeader className="border-b border-border py-4">
-                <CardTitle className="text-base font-semibold">Kosten</CardTitle>
-                <CardDescription className="text-xs">
-                  Summe der aufgezeichneten KI-Läufe
-                </CardDescription>
+                <CardTitle className="text-base font-semibold">Costs</CardTitle>
+                <CardDescription className="text-xs">Total from recorded AI runs</CardDescription>
               </CardHeader>
               <CardContent className="p-4 text-sm">
-                Aufgezeichnete Gesamtkosten:{" "}
+                Total recorded cost:{" "}
                 <span className="font-mono font-semibold">{formatCost(totalCost)}</span>
               </CardContent>
             </Card>

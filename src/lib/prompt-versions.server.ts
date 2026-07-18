@@ -26,10 +26,14 @@ export async function readPromptVersionDashboard(): Promise<PromptVersionDashboa
       };
     })
     .sort((a, b) => a.filename.localeCompare(b.filename, undefined, { numeric: true }));
+  const currentFilename = files.at(-1)?.filename;
 
   return {
     changelog: parsePromptChangelog(changelogText),
-    files,
+    files: files.map((file) => ({
+      ...file,
+      stale: file.filename !== currentFilename && file.stale,
+    })),
     changelogSource: "docs/prompts/CHANGELOG.md",
   };
 }

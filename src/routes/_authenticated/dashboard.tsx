@@ -27,68 +27,74 @@ function Dashboard() {
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Deine Ideen</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Your ideas</h1>
             {usage.isLoading && (
-              <p className="mt-1 text-xs text-muted-foreground">Aktivität wird geprüft...</p>
+              <p className="mt-1 text-xs text-muted-foreground">Checking activity...</p>
             )}
             {usage.isError && (
-              <p className="mt-1 text-xs text-rose-600">Aktivität ist gerade nicht verfügbar.</p>
+              <p className="mt-1 text-xs text-rose-600">Activity is unavailable right now.</p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              Tippe eine Idee an, um ihren Stand und den nächsten Schritt zu sehen.
+              Tap an idea to see its status and next step.
               {usage.data
-                ? ` ${usage.data.count} in den letzten ${usage.data.windowHours} Stunden.`
+                ? ` ${usage.data.count} in the last ${usage.data.windowHours} hours.`
                 : ""}
             </p>
           </div>
           <Button asChild size="sm">
             <Link to="/chat" search={{}}>
-              Neue Idee
+              New idea
             </Link>
           </Button>
         </div>
 
         <section className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-md border border-border bg-card p-3">
-            <h2 className="text-sm font-semibold">Was ist das?</h2>
+            <h2 className="text-sm font-semibold">What is this?</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Das Cockpit sammelt deine Ideen zur One L1fe App und macht daraus klare Aufgaben.
+              The cockpit collects your ideas for the One L1fe app and turns them into clear tasks.
             </p>
           </div>
           <div className="rounded-md border border-border bg-card p-3">
-            <h2 className="text-sm font-semibold">Was passiert gerade?</h2>
+            <h2 className="text-sm font-semibold">What is happening?</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Jeder Eintrag zeigt seinen Stand: gesammelt, wird geprüft, bereit oder live bestätigt.
+              Each entry shows its status: collected, being checked, ready, or live confirmed.
             </p>
           </div>
           <div className="rounded-md border border-border bg-card p-3">
-            <h2 className="text-sm font-semibold">Was ist pausiert?</h2>
+            <h2 className="text-sm font-semibold">What is paused?</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Nichts wird automatisch ausgespielt. Don bleibt die letzte Kontrolle.
+              Nothing is published automatically. Don keeps final control.
             </p>
           </div>
         </section>
 
         <details className="mt-4 rounded-md border border-border bg-card px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold">Status kurz erklärt</summary>
+          <summary className="cursor-pointer text-sm font-semibold">
+            Status, briefly explained
+          </summary>
           <div className="mt-3 space-y-3 text-xs text-muted-foreground">
-            <p>Deine Ideen erscheinen hier zuerst. Neue Einträge stehen oben.</p>
+            <p>Your ideas appear here first. New entries stay at the top.</p>
             <p>
-              Die Begriffe sind absichtlich einfach: gesammelt, geprüft, bereit, pausiert, wartet
-              auf Owner.
+              Tapping an idea opens the detail view with description, current status, and the next
+              safe step. It does not approve or publish anything.
+            </p>
+            <p>
+              The terms are intentionally simple: collected, checked, ready, paused, waiting on
+              owner.
             </p>
             <ul className="space-y-1.5">
               <li>
-                <span className="font-medium text-foreground">Gesammelt</span> heißt: Die Idee ist
-                da, aber es wurde nichts gebaut oder ausgespielt.
+                <span className="font-medium text-foreground">Collected</span> means the idea is
+                here, but nothing has been built or published.
               </li>
               <li>
-                <span className="font-medium text-foreground">Wartet auf Owner</span> heißt: Don
-                muss bewusst prüfen, starten oder freigeben.
+                <span className="font-medium text-foreground">Waiting on owner</span> means Don must
+                deliberately check, start, or approve it.
               </li>
               <li>
-                <span className="font-medium text-foreground">Live bestätigt</span> heißt: Die
-                Änderung wurde auf dem Handy gesehen und geprüft.
+                <span className="font-medium text-foreground">Live confirmed</span> means the change
+                was seen and checked on the phone.
               </li>
             </ul>
           </div>
@@ -96,26 +102,27 @@ function Dashboard() {
 
         <div className="mt-6 space-y-2">
           {list.isLoading && (
-            <>
+            <div role="status" aria-label="Ideas are loading">
               <Skeleton className="h-20 w-full rounded-md" />
               <Skeleton className="h-20 w-full rounded-md" />
               <Skeleton className="h-20 w-full rounded-md" />
-            </>
+            </div>
           )}
           {list.isSuccess && list.data.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Noch keine Ideen gesammelt.{" "}
+              No ideas collected yet. This area stays empty until you confirm an idea in chat or add
+              one in the plan.{" "}
               <Link to="/chat" search={{}} className="underline">
-                Starte mit einer ersten Idee
+                Start with a first idea
               </Link>
               .
             </div>
           )}
           {list.isError && (
             <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-              Deine Ideen konnten nicht geladen werden.{" "}
+              Your ideas could not be loaded.{" "}
               <button type="button" className="underline" onClick={() => list.refetch()}>
-                Erneut versuchen
+                Try again
               </button>
               .
             </div>

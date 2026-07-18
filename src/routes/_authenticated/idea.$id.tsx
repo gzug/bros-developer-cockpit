@@ -23,10 +23,10 @@ function IdeaPage() {
       <AppHeader />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
-          ← back
+          ← Back to your ideas
         </Link>
 
-        {idea.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
+        {idea.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading idea...</p>}
         {idea.isError && (
           <div className="mt-4 rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
             This idea could not be loaded. Please try again.
@@ -40,6 +40,10 @@ function IdeaPage() {
                 Current status: {getIdeaStatusLabel(idea.data.status)}
               </p>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              This page only explains the idea status. Actions such as checking, approving, or
+              publishing stay in the owner control area.
+            </p>
             <p className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
               {idea.data.statusSummary}
             </p>
@@ -50,12 +54,12 @@ function IdeaPage() {
                 <p className="mt-1 whitespace-pre-wrap text-sm">{idea.data.description}</p>
               </div>
               <div className="text-sm">
-                <div className="text-xs uppercase text-muted-foreground">Category</div>
+                <div className="text-xs uppercase text-muted-foreground">Type</div>
                 <p className="mt-1">{idea.data.intent}</p>
               </div>
               {idea.data.needsHelp && (
                 <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-sm">
-                  This needs Don's help before it can continue.
+                  Paused: Don has to check this idea before it can move forward.
                 </div>
               )}
             </section>
