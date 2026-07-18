@@ -27,7 +27,7 @@ function Dashboard() {
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Your wishes</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Your ideas</h1>
             {usage.isLoading && (
               <p className="mt-1 text-xs text-muted-foreground">Checking recent activity…</p>
             )}
@@ -35,7 +35,7 @@ function Dashboard() {
               <p className="mt-1 text-xs text-rose-600">Recent activity is unavailable.</p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              Tap a wish to see where it is.
+              Tap an idea to see where it is.
               {usage.data ? ` ${usage.data.count} in the last ${usage.data.windowHours} hours.` : ""}
             </p>
           </div>
@@ -47,10 +47,11 @@ function Dashboard() {
         <details className="mt-4 rounded-xl border border-border bg-card px-4 py-3">
           <summary className="cursor-pointer text-sm font-semibold">How this works</summary>
           <div className="mt-3 space-y-3 text-xs text-muted-foreground">
-            <p>Your wishes appear here, newest first.</p>
+            <p>You pitch an idea here. It becomes a task, gets built, and is deployed to the phone.</p>
+            <p>Your ideas appear newest first.</p>
             <p>
-              A wish moves through these steps: received, shipping requested, being prepared, Don
-              review, published, then checked on the phone.
+              Steps: received, shipping requested, being prepared, Don review, published, then
+              checked on the phone.
             </p>
             <ul className="space-y-1.5">
               <li>
@@ -79,12 +80,12 @@ function Dashboard() {
           )}
           {list.isSuccess && list.data.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nothing here yet. <Link to="/chat" search={{}} className="underline">Write your first wish</Link>!
+              Nothing here yet. <Link to="/chat" search={{}} className="underline">Pitch your first idea</Link>!
             </div>
           )}
           {list.isError && (
             <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-              Your wishes could not be loaded.{" "}
+              Your ideas could not be loaded.{" "}
               <button type="button" className="underline" onClick={() => list.refetch()}>
                 Try again
               </button>

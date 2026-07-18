@@ -46,7 +46,7 @@ const IDEA_TIMELINE_TEMPLATE: Array<Omit<IdeaTimelineStep, "state">> = [
   {
     key: "submitted",
     title: "Received",
-    detail: "Your wish exists in the cockpit.",
+    detail: "Your idea exists in the cockpit.",
   },
   {
     key: "requested",
@@ -110,7 +110,7 @@ export function getIdeaNextStep(status: IdeaStatus): string {
     case "shipped":
       return "Close One L1fe fully, open it twice, then check the change on the phone.";
     case "live":
-      return "No action is needed here unless a follow-up wish appears.";
+      return "No action is needed here unless a follow-up idea appears.";
     case "blocked":
       return "Don has to inspect the blocker and decide the next fix.";
     case "closed":

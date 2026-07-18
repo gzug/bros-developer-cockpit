@@ -118,7 +118,7 @@ function RunsPage() {
 
           {data.isSuccess && data.data.tasks.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              No runs yet. Submit a wish to get started.
+              No runs yet. Pitch an idea to get started.
             </p>
           )}
 

@@ -55,7 +55,7 @@ export function AppHeader() {
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-3 py-3 sm:max-w-5xl sm:px-4">
         <Link to="/dashboard" className="shrink-0 text-sm font-semibold">
-          {owner ? "OL1 · Owner" : "One L1fe · Wishes"}
+          {owner ? "OL1 · Owner" : "One L1fe · Ideas"}
         </Link>
         <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm">
           <Link

@@ -30,7 +30,7 @@ function DonePage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Completed</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Finished wishes, grouped by category. {total} done so far.
+              Finished ideas, grouped by category. {total} done so far.
             </p>
           </div>
           <Button asChild variant="outline" size="sm">

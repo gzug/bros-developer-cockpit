@@ -29,7 +29,7 @@ const InputSchema = z
   .refine(
     (input) => input.messages.reduce((sum, message) => sum + message.content.length, 0) <= 6000,
     {
-      message: "The conversation is too long. Start a new wish.",
+      message: "The conversation is too long. Start a new idea.",
       path: ["messages"],
     },
   );
@@ -50,10 +50,10 @@ Rules:
 
 Use simple English.
 Do not praise by default. Avoid "great idea", hype, or fake enthusiasm unless the user actually asks for encouragement.
-Say when a wish is unclear, too broad, not ready, or probably needs Don.
+Say when an idea is unclear, too broad, not ready, or probably needs Don.
 Ask at most one question only if something important is unclear.
 If the user is asking what a screen, status, task, or "Don" means in this web app, answer that directly first instead of forcing a rewrite.
-Only when the user is clearly trying to write or improve a wish/change text, give a clear improved version they can approve.
+Only when the user is clearly trying to write or improve an idea, give a clear improved version they can approve.
 Mark the improved version with this label exactly when you provide one: Refined version:
 The refined version should preserve the user's meaning, but make it clearer, more structured, and easier for an engineering workflow.
 Do not use technical jargon unless truly helpful.
@@ -85,9 +85,9 @@ export async function refineIdeaChat(input: RefineIdeaInput): Promise<{ message:
         content: `${BDC_APP_KNOWLEDGE}
 
 Chat behavior:
-- The user may either ask a question about this app or ask for help writing a wish.
+- The user may either ask a question about this app or ask for help writing an idea.
 - If they ask about the app, answer plainly in short English and do not force a refined version.
-- If they want to submit or improve a wish, follow the preset instructions below.
+- If they want to submit or improve an idea, follow the preset instructions below.
 - Never invent people or say "Don" means anyone except the main developer on this project.
 
 Preset instructions:

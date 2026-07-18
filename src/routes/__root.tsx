@@ -81,13 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Submit wishes and bug reports for the One L1fe app. No health data, no jargon.",
+          "Submit ideas and bug reports for the One L1fe app. No health data, no jargon.",
       },
       { property: "og:title", content: "One L1fe Developer Cockpit" },
       {
         property: "og:description",
         content:
-          "Private channel for wishes and bugs for the One L1fe app.",
+          "Private channel for ideas and bugs for the One L1fe app.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
