@@ -51,7 +51,7 @@ export function HelpBubble() {
         title="Questions about this app? Ask here."
         className="fixed bottom-4 right-4 z-50 h-12 w-12 rounded-full border border-primary/30 p-0 shadow-lg"
       >
-        <MessageCircle className="h-5 w-5" />
+        <MessageCircle className="h-5 w-5" aria-hidden="true" />
       </Button>
     );
   }
@@ -61,7 +61,9 @@ export function HelpBubble() {
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <div>
           <span className="text-sm font-semibold">App help</span>
-          <p className="text-[11px] text-muted-foreground">Ask what a screen, status, or task means.</p>
+          <p className="text-[11px] text-muted-foreground">
+            Ask what a screen, status, or task means.
+          </p>
         </div>
         <Button
           variant="ghost"
@@ -70,7 +72,7 @@ export function HelpBubble() {
           onClick={() => setOpen(false)}
           aria-label="Close help"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -81,7 +83,7 @@ export function HelpBubble() {
                 key={question}
                 type="button"
                 onClick={() => sendQuestion(question)}
-                className="rounded-full border border-border px-3 py-1.5 text-left text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                className="rounded-full border border-border px-3 py-1.5 text-left text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
                 {question}
               </button>
@@ -122,7 +124,7 @@ export function HelpBubble() {
           value={input}
           onChange={(event) => setInput(event.target.value)}
           placeholder="Ask about the app…"
-          className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none"
+          className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
           maxLength={1000}
         />
         <Button type="submit" size="sm" disabled={ask.isPending || !input.trim()}>

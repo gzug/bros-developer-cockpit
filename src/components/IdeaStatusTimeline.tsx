@@ -28,12 +28,16 @@ export function IdeaStatusTimeline({ status }: IdeaStatusTimelineProps) {
         {nextStep}
       </p>
 
-      <ol className="mt-4 space-y-3">
+      <ol className="mt-4 space-y-3" aria-label="Idea status path">
         {steps.map((step, index) => {
           const Icon =
             step.state === "complete" ? CheckCircle2 : step.state === "current" ? Dot : Circle;
           return (
-            <li key={step.key} className="flex gap-3">
+            <li
+              key={step.key}
+              className="flex gap-3"
+              aria-current={step.state === "current" ? "step" : undefined}
+            >
               <div className="flex w-5 flex-col items-center">
                 <Icon
                   className={cn(
@@ -55,6 +59,15 @@ export function IdeaStatusTimeline({ status }: IdeaStatusTimelineProps) {
                 )}
               </div>
               <div className="min-w-0 pb-2">
+                <span className="sr-only">
+                  Step {index + 1} of {steps.length}: {step.title},{" "}
+                  {step.state === "current"
+                    ? "current step"
+                    : step.state === "complete"
+                      ? "completed"
+                      : "upcoming"}
+                  .
+                </span>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">{step.title}</p>
                   {step.state === "current" && (

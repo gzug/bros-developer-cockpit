@@ -73,6 +73,9 @@ function PromptsPage() {
                   </div>
                 ) : (
                   <table className="w-full min-w-[760px] text-left text-sm">
+                    <caption className="sr-only">
+                      Instruction changelog with version, date, change, reason, and expected effect.
+                    </caption>
                     <thead className="border-b border-border text-xs text-muted-foreground">
                       <tr>
                         <th className="py-2 pr-3 font-medium">Version</th>
@@ -114,7 +117,10 @@ function PromptsPage() {
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <FileText
+                              className="h-4 w-4 text-muted-foreground"
+                              aria-hidden="true"
+                            />
                             {displayTitle}
                           </CardTitle>
                           <CardDescription>
@@ -137,7 +143,11 @@ function PromptsPage() {
                             Scrolling only shows the content of this version. No instruction is
                             activated, saved, or published here.
                           </p>
-                          <pre className="max-h-[34rem] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
+                          <pre
+                            tabIndex={0}
+                            aria-label={`Instruction text for ${file.filename}`}
+                            className="max-h-[34rem] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                          >
                             {file.content}
                           </pre>
                         </>
