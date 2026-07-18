@@ -1,7 +1,13 @@
 
-# Companion-App für 01-One-L1fe — finalisierter Plan
+# Companion-App für 01-One-L1fe — historischer Plan
 
-## Entscheidungen (deine Antworten eingebaut)
+Status: superseded. This file is kept as historical Lovable planning context only.
+Current BDC truth lives in `CHECKPOINT.md`, `AGENTS.md`, `docs/setup-guide.md`, and
+`docs/planning/codev-flow-v2-spec.md`. As of 2026-07-18, #35 (`058a94e`) and #36
+(`cfb2de7`) are merged into `origin/main`; BDC remains paused and all shipping paths
+stay fail-closed until explicit owner approval and real device evidence.
+
+## Historische Entscheidungen (nicht als aktuelle Bauanweisung verwenden)
 
 | # | Entscheidung |
 |---|---|
