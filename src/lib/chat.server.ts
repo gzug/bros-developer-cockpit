@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { BDC_APP_KNOWLEDGE } from "./app-knowledge";
+import { stripRefinedVersionLabel } from "./eval/bdc-honesty";
 import { sanitizeForFence } from "./guardrails.server";
 import { validateChatModelOptions } from "./model-presets";
 import { callModel } from "./openrouter.server";
@@ -63,6 +64,17 @@ Never invent people, roles, or hidden app behavior.
 If the user wants to keep their original text, respect that.`;
 }
 
+function allowsRefinedVersionLabel(input: RefineIdeaInput): boolean {
+  const latestUser = [...input.messages].reverse().find((message) => message.role === "user");
+  const text = latestUser?.content ?? "";
+  const asksQuestion =
+    /[?？]/.test(text) ||
+    /^(what|where|when|who|why|how|does|is|are|can|should)\b/i.test(text.trim());
+  const asksForRewrite =
+    /\b(rewrite|improve|wording|phrase|refine|clearer|version|write this|make this)\b/i.test(text);
+  return !asksQuestion || asksForRewrite;
+}
+
 export async function refineIdeaChat(input: RefineIdeaInput): Promise<{ message: string }> {
   const options = validateChatModelOptions({
     model: input.model,
@@ -104,7 +116,9 @@ ${options.systemPrompt}`,
 
   const content = result.content.trim();
   if (!content) throw new Error("No response received.");
-  return { message: content };
+  return {
+    message: allowsRefinedVersionLabel(input) ? content : stripRefinedVersionLabel(content),
+  };
 }
 
 export const refineIdea = createServerFn({ method: "POST" })
