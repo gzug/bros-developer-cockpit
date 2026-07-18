@@ -105,9 +105,9 @@ function RunsPage() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight">Prüfläufe</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Check runs</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Sichtbar für Don: welche Idee vorbereitet wurde, mit welchem Ergebnis und welchen Kosten.
+          Visible for Don: which idea was prepared, with what result, and at what cost.
         </p>
 
         <div className="mt-6 space-y-3">
@@ -120,7 +120,7 @@ function RunsPage() {
 
           {data.isSuccess && data.data.tasks.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              Noch keine Prüfläufe. Sie erscheinen erst, wenn Don eine gesammelte Idee vorbereitet.
+              No check runs yet. They appear once Don prepares a collected idea.
             </p>
           )}
 

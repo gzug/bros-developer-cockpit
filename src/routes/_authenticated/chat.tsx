@@ -36,31 +36,31 @@ const LOCAL_PRESETS_KEY = "bdc.chat.presets.v1";
 const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; opener: string }> = [
   {
     id: "wording",
-    title: "Text ändern",
-    hint: "Ein Wort oder Satz passt nicht.",
+    title: "Change wording",
+    hint: "A word or sentence does not fit.",
     emoji: "✍️",
-    opener: "Was soll anders formuliert werden?",
+    opener: "What should be worded differently?",
   },
   {
     id: "look",
-    title: "Aussehen ändern",
-    hint: "Farbe, Größe oder Platzierung.",
+    title: "Change appearance",
+    hint: "Color, size, or placement.",
     emoji: "🎨",
-    opener: "Was soll anders aussehen?",
+    opener: "What should look different?",
   },
   {
     id: "wrong",
-    title: "Etwas ist kaputt",
-    hint: "Etwas funktioniert nicht richtig.",
+    title: "Something is broken",
+    hint: "Something is not working right.",
     emoji: "🐞",
-    opener: "Was funktioniert gerade nicht?",
+    opener: "What is not working right now?",
   },
   {
     id: "idea",
-    title: "Neue Idee",
-    hint: "Etwas fehlt komplett.",
+    title: "New idea",
+    hint: "Something is missing completely.",
     emoji: "💡",
-    opener: "Welche neue Idee hast du?",
+    opener: "What new idea do you have?",
   },
 ];
 
@@ -157,7 +157,7 @@ function ChatPage() {
       setShipResult({
         ok: result.ok,
         message: result.ok
-          ? "Wunsch gesammelt. Don muss die Checks bewusst starten, bevor etwas ausgespielt wird."
+          ? "Request collected. Don has to deliberately start the checks before anything is published."
           : result.reason,
       }),
     onError: (error) =>
@@ -371,7 +371,7 @@ function ChatPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Rocket className="h-4 w-4 text-primary" />
-                  <h2 className="text-sm font-semibold">Owner um Freigabe bitten?</h2>
+                  <h2 className="text-sm font-semibold">Ask owner for approval?</h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   {search.idea ? (
@@ -379,8 +379,8 @@ function ChatPage() {
                   ) : (
                     "Diese Aufgabe"
                   )}{" "}
-                  wird nur als Wunsch markiert. Die Owner-Kontrolle und alle sicheren Gates bleiben
-                  davor.
+                  is only marked as a request. Owner control and all safe gates still stand before
+                  it.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -388,10 +388,10 @@ function ChatPage() {
                     onClick={() => shipMutation.mutate(search.ship!)}
                     disabled={shipMutation.isPending}
                   >
-                    <Rocket className="mr-1 h-3 w-3" /> Owner bitten
+                    <Rocket className="mr-1 h-3 w-3" /> Ask owner
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
-                    Zurück zum Plan
+                    Back to plan
                   </Button>
                 </div>
               </div>
@@ -521,10 +521,10 @@ function ChatPage() {
 
         {!intent && (
           <div className="grid gap-2">
-            <h1 className="text-xl font-semibold">Was möchtest du festhalten?</h1>
+            <h1 className="text-xl font-semibold">What do you want to capture?</h1>
             <p className="text-sm text-muted-foreground">
-              Wähle eine Richtung. Danach hilft dir der Chat, aus einem groben Gedanken eine klare
-              Idee zu machen. Gesammelt wird erst, wenn du es bestätigst.
+              Choose a direction. Then the chat helps turn a rough thought into a clear idea. It is
+              only collected when you confirm it.
             </p>
             {INTENTS.map((entry) => (
               <button
@@ -553,30 +553,28 @@ function ChatPage() {
                 <p className="text-sm text-muted-foreground">{selectedIntent?.hint}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setIntent(null)}>
-                Wechseln
+                Switch
               </Button>
             </div>
 
             <section className="mb-4 rounded-xl border border-border bg-card p-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <h2 className="text-sm font-semibold">Was passiert hier?</h2>
+                  <h2 className="text-sm font-semibold">What happens here?</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Der Chat erklärt dir die App oder macht aus deiner Notiz eine klare Idee.
+                    The chat explains the app or turns your note into a clear idea.
                   </p>
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold">Noch nichts gesammelt</h2>
+                  <h2 className="text-sm font-semibold">Nothing collected yet</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Der Plan bekommt erst einen Eintrag, wenn du eine Version annimmst oder deinen
-                    eigenen Text speicherst.
+                    The plan only gets an entry when you accept a version or save your own text.
                   </p>
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold">Handy-Zeitpunkt</h2>
+                  <h2 className="text-sm font-semibold">Phone timing</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Kleine Änderungen können vorbereitet werden. Größere warten auf die nächste
-                    App-Version.
+                    Small changes can be prepared. Larger ones wait for the next app version.
                   </p>
                 </div>
               </div>
@@ -613,11 +611,7 @@ function ChatPage() {
               ))}
 
               {refine.isPending && (
-                <div
-                  className="flex justify-start"
-                  role="status"
-                  aria-label="Vorschlag wird vorbereitet"
-                >
+                <div className="flex justify-start" role="status" aria-label="Preparing suggestion">
                   <div className="rounded-2xl bg-muted px-4 py-3">
                     <div className="flex gap-1">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.2s]" />
@@ -630,14 +624,14 @@ function ChatPage() {
 
               {suggestion && (
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Vorschlag</div>
+                  <div className="text-xs uppercase text-muted-foreground">Suggestion</div>
                   <p className="mt-2 whitespace-pre-wrap text-sm">{suggestion}</p>
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Button
                       onClick={() => submitFinal(suggestion)}
                       disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
                     >
-                      Vorschlag übernehmen
+                      Accept suggestion
                     </Button>
                     <Button
                       variant="outline"
@@ -649,7 +643,7 @@ function ChatPage() {
                       }}
                       disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
                     >
-                      Meinen Text speichern
+                      Save my text
                     </Button>
                   </div>
                 </div>
@@ -657,9 +651,9 @@ function ChatPage() {
 
               {submittedIdeaId && createIdeaMutation.isSuccess && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
-                  Deine Idee wurde gesammelt.{" "}
+                  Your idea was collected.{" "}
                   <Link to="/dashboard" className="underline">
-                    Zu deinen Ideen
+                    Go to your ideas
                   </Link>
                 </div>
               )}
@@ -668,15 +662,15 @@ function ChatPage() {
             <div className="sticky bottom-0 border-t border-border bg-background py-3">
               <div className="flex gap-2">
                 <textarea
-                  aria-label="Idee beschreiben"
+                  aria-label="Describe idea"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Beschreibe deine Idee oder frag, was etwas im Cockpit bedeutet..."
+                  placeholder="Describe your idea or ask what something in the cockpit means..."
                   className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
                   rows={2}
                 />
                 <Button onClick={sendMessage} disabled={refine.isPending || !input.trim()}>
-                  Senden
+                  Send
                 </Button>
               </div>
             </div>
@@ -687,9 +681,9 @@ function ChatPage() {
           <section className="mt-5 rounded-md border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold">Wirkung der Anweisungen</h2>
+                <h2 className="text-sm font-semibold">Instruction effect</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Experimentell, kleine Datenbasis
+                  Experimental, small data sample
                 </p>
               </div>
               <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
@@ -709,17 +703,17 @@ function ChatPage() {
                       <span className="text-xs text-muted-foreground">{version.date}</span>
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
-                      <span>Ideen: {version.issuesCreated}</span>
+                      <span>Ideas: {version.issuesCreated}</span>
                       <span>PRs: {version.prsCreated}</span>
-                      <span>Akzeptiert: {version.accepted}</span>
-                      <span>Überarbeitet: {version.reworked}</span>
+                      <span>Accepted: {version.accepted}</span>
+                      <span>Reworked: {version.reworked}</span>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">{version.promptFile}</p>
                   </div>
                 ))}
                 {promptEffect.data.skillSnapshots.length > 0 ? (
                   <div className="text-xs text-muted-foreground">
-                    Fähigkeits-Messungen:{" "}
+                    Skill measurements:{" "}
                     {promptEffect.data.skillSnapshots.map((snapshot) => (
                       <a
                         key={snapshot.id}
@@ -733,15 +727,13 @@ function ChatPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Noch keine Fähigkeits-Messungen gefunden.
-                  </p>
+                  <p className="text-xs text-muted-foreground">No skill measurements found yet.</p>
                 )}
               </div>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
-                Noch keine Wirkungsdaten vorhanden. Dieser Bereich bleibt leer, bis GitHub-Ideen
-                oder PRs eine Datenbasis liefern.
+                No effect data yet. This area stays empty until GitHub ideas or PRs provide a data
+                sample.
               </p>
             )}
           </section>

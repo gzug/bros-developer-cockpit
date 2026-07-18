@@ -35,7 +35,7 @@ function DeliveryBadge({ delivery }: { delivery: IdeaDelivery }) {
       variant="outline"
       className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
     >
-      <Smartphone className="mr-1 h-3 w-3" /> Nächste App-Version
+      <Smartphone className="mr-1 h-3 w-3" /> Next app version
     </Badge>
   ) : (
     <Badge
@@ -80,12 +80,12 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           </div>
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
           <p className="mt-2 text-xs text-muted-foreground">
-            {idea.statusSummary || "Gesammelt, aber noch nicht ausgespielt."}
+            {idea.statusSummary || "Collected, but not published yet."}
           </p>
           {nextApk && (
             <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
-              Diese Änderung braucht eine neue App-Version und kann nicht direkt aufs Handy. Sie
-              bleibt gesammelt, bis Don eine neue Version freigibt.
+              This change needs a new app version and cannot go straight to the phone. It stays
+              collected until Don approves a new version.
             </p>
           )}
         </div>
@@ -98,7 +98,7 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           onClick={() => remove.mutate()}
           disabled={remove.isPending}
         >
-          <Trash2 className="mr-1 h-3 w-3" /> Löschen
+          <Trash2 className="mr-1 h-3 w-3" /> Delete
         </Button>
         {!nextApk && (
           <Button size="sm" asChild>
@@ -109,30 +109,30 @@ function QueueRow({ idea }: { idea: DCIdea }) {
                 description: idea.description,
               })}
             >
-              <Rocket className="mr-1 h-3 w-3" /> Owner bitten
+              <Rocket className="mr-1 h-3 w-3" /> Ask owner
             </a>
           </Button>
         )}
         <Button size="sm" variant="outline" asChild>
           <a href={chatUrl({ idea: idea.title, description: idea.description })}>
-            <MessageCircle className="mr-1 h-3 w-3" /> Besprechen
+            <MessageCircle className="mr-1 h-3 w-3" /> Discuss
           </a>
         </Button>
         <label className="ml-auto text-xs text-muted-foreground">
-          Weg
+          Reroute
           <select
             value={idea.delivery}
             onChange={(event) => setDelivery.mutate(event.target.value as IdeaDelivery)}
             className="ml-2 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
           >
             <option value="ota">OTA</option>
-            <option value="next-apk">Nächste App-Version</option>
+            <option value="next-apk">Next app version</option>
           </select>
         </label>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Klicks hier ändern nur den Cockpit-Stand: Besprechen öffnet den Chat, Owner bitten markiert
-        den Wunsch als wartet auf Owner, Weg ändert die Einordnung, Löschen schließt den Eintrag.
+        Clicks here only change the cockpit status: Discuss opens chat, Ask owner marks the task as
+        waiting on owner, Reroute changes the category, and Delete closes the entry.
       </p>
     </div>
   );
@@ -143,9 +143,7 @@ function ShippedRow({ idea }: { idea: DCIdea }) {
     <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold">{idea.title}</h3>
-        <Badge variant="secondary">
-          {idea.status === "live" ? "Live bestätigt" : "Ausgespielt"}
-        </Badge>
+        <Badge variant="secondary">{idea.status === "live" ? "Live confirmed" : "Published"}</Badge>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{idea.statusSummary}</p>
     </div>
@@ -216,55 +214,54 @@ function PipelinePage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Plan</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Hier siehst du, welche Ideen nur gesammelt sind, welche Don prüfen muss und was schon
-            ausgespielt wurde.
+            Here you see which ideas are only collected, which ones Don needs to check, and what has
+            already been published.
           </p>
         </div>
 
         <details className="mt-5 rounded-md border border-border bg-card px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold">So liest du den Plan</summary>
+          <summary className="cursor-pointer text-sm font-semibold">How to read the plan</summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
             <p>
-              Der Plan ist die Live-Liste der gesammelten Aufgaben. Er zeigt, ob eine Idee direkt
-              vorbereitet werden kann, auf die nächste App-Version wartet oder schon ausgespielt
-              wurde.
+              The plan is the live list of collected tasks. It shows whether an idea can be prepared
+              directly, waits for the next app version, or has already been published.
             </p>
             <p>
-              <span className="font-medium text-foreground">Direkt aufs Handy:</span> kann ohne neue
-              Installation vorbereitet werden, bleibt aber bis zur Owner-Freigabe gestoppt.
+              <span className="font-medium text-foreground">Direct to phone:</span> can be prepared
+              without a new install, but stays stopped until owner approval.
             </p>
             <p>
-              <span className="font-medium text-foreground">Nächste App-Version:</span> wartet auf
-              die nächste komplette App-Version und erscheint vorher nicht auf dem Handy.
+              <span className="font-medium text-foreground">Next app version:</span> waits for the
+              next full app version and will not appear on the phone before that.
             </p>
             <p>
-              <span className="font-medium text-foreground">Owner bitten:</span> sammelt den Wunsch.
-              Es spielt nichts aus. Don bleibt die letzte Kontrolle.
+              <span className="font-medium text-foreground">Ask owner:</span> records the request.
+              It does not publish anything. Don keeps final control.
             </p>
             <p>
-              Status wie gesammelt, geprüft, bereit, pausiert und wartet auf Owner sagen immer, wo
-              der nächste bewusste Schritt liegt.
+              Statuses like collected, checked, ready, paused, and waiting on owner always show
+              where the next deliberate step sits.
             </p>
           </div>
         </details>
 
         <section className="mt-5 rounded-md border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Idee sammeln</h2>
+          <h2 className="text-sm font-semibold">Collect an idea</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Neue Ideen werden gesammelt und einsortiert. Ein Klick auf Idee sammeln legt einen
-            Eintrag im Plan an, aber spielt nichts aus.
+            New ideas are collected and sorted. Clicking Collect idea creates an entry in the plan,
+            but does not publish anything.
           </p>
           <div className="mt-3 grid gap-3">
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Kurzer Titel"
+              placeholder="Short title"
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             />
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="Ein Satz, was anders sein soll"
+              placeholder="One sentence about what should change"
               className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
@@ -274,15 +271,15 @@ function PipelinePage() {
             onClick={() => createParked.mutate()}
             disabled={createParked.isPending || !title || !description}
           >
-            <ParkingCircle className="mr-2 h-4 w-4" /> Idee sammeln
+            <ParkingCircle className="mr-2 h-4 w-4" /> Collect idea
           </Button>
         </section>
 
         <section className="mt-6">
-          <h2 className="text-sm font-semibold">Vorschläge</h2>
+          <h2 className="text-sm font-semibold">Suggestions</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Vorbereitete Ideen für die App. Tippe eine an, um sie im Chat verständlich
-            auszuformulieren. Erst danach wird sie gesammelt.
+            Prepared ideas for the app. Tap one to turn it into clear wording in chat. It is only
+            collected after that.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {chips.map((chip) => (
@@ -298,36 +295,36 @@ function PipelinePage() {
         </section>
 
         {pipeline.isLoading && (
-          <p className="mt-6 text-sm text-muted-foreground">Plan wird geladen...</p>
+          <p className="mt-6 text-sm text-muted-foreground">Loading plan...</p>
         )}
 
         <List
-          title="Direkt aufs Handy"
-          hint="Kleine Änderungen, die vorbereitet werden können. Ein Klick auf Owner bitten setzt sie auf wartet auf Owner."
+          title="Direct to phone"
+          hint="Small changes that can be prepared. Clicking Ask owner moves them to waiting on owner."
           ideas={otaQueue}
-          empty="Keine direkt vorbereitbaren Ideen gesammelt."
+          empty="No directly preparable ideas collected."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}
         />
 
         <List
-          title="Nächste App-Version"
-          hint="Größere Änderungen, die eine neue Installation brauchen. Sie bleiben gesammelt und werden nicht direkt ausgespielt."
+          title="Next app version"
+          hint="Larger changes that need a new install. They stay collected and are not published directly."
           ideas={nextApk}
-          empty="Nichts wartet auf die nächste App-Version."
+          empty="Nothing is waiting for the next app version."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}
         />
 
         <List
-          title="Ausgespielt"
-          hint="Einträge, die veröffentlicht oder auf dem Handy live bestätigt wurden. Diese Liste ist Verlauf, kein Startknopf."
+          title="Published"
+          hint="Entries that were published or confirmed live on the phone. This list is history, not a start button."
           ideas={shipped}
-          empty="Noch nichts ausgespielt."
+          empty="Nothing published yet."
           render={(idea) => <ShippedRow key={idea.id} idea={idea} />}
         />
 
         <div className="mt-8 text-right">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/done">Erledigt</Link>
+            <Link to="/done">Done</Link>
           </Button>
         </div>
       </main>

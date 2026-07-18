@@ -10,15 +10,15 @@ export type IdeaStatus =
   | "closed";
 
 export const IDEA_STATUS_LABELS: Record<IdeaStatus, string> = {
-  submitted: "Gesammelt",
-  requested: "Wartet auf Owner",
-  processing: "Wird geprüft",
-  sent: "Bereit zur Owner-Prüfung",
-  approved: "Geprüft, wartet auf letzte Kontrolle",
-  shipped: "Ausgespielt, wartet auf Handy-Check",
-  live: "Live bestätigt",
-  blocked: "Pausiert: braucht Owner",
-  closed: "Erledigt",
+  submitted: "Collected",
+  requested: "Waiting on owner",
+  processing: "Being checked",
+  sent: "Ready for owner review",
+  approved: "Checked, waiting for final control",
+  shipped: "Published, waiting for phone check",
+  live: "Live confirmed",
+  blocked: "Paused: needs owner",
+  closed: "Done",
 };
 
 export const IDEA_STATUS_DOT_CLASS: Record<IdeaStatus, string> = {
@@ -45,33 +45,33 @@ export type IdeaTimelineStep = {
 const IDEA_TIMELINE_TEMPLATE: Array<Omit<IdeaTimelineStep, "state">> = [
   {
     key: "submitted",
-    title: "Gesammelt",
-    detail: "Deine Idee ist angekommen und bleibt sichtbar.",
+    title: "Collected",
+    detail: "Your idea arrived and stays visible.",
   },
   {
     key: "requested",
-    title: "Wartet auf Owner",
-    detail: "Du hast den nächsten Schritt angefragt. Don muss bewusst starten.",
+    title: "Waiting on owner",
+    detail: "You asked for the next step. Don has to start it deliberately.",
   },
   {
     key: "processing",
-    title: "Wird geprüft",
-    detail: "Der Vorschlag wird vorbereitet und kontrolliert.",
+    title: "Being checked",
+    detail: "The proposal is being prepared and checked.",
   },
   {
     key: "review",
-    title: "Bereit zur Owner-Prüfung",
-    detail: "Ein vorbereiteter Stand wartet auf Don oder auf Checks.",
+    title: "Ready for owner review",
+    detail: "A prepared state is waiting for Don or for checks.",
   },
   {
     key: "shipped",
-    title: "Ausgespielt",
-    detail: "Der Stand wurde veröffentlicht und braucht danach den Handy-Check.",
+    title: "Published",
+    detail: "The state was published and then needs the phone check.",
   },
   {
     key: "live",
-    title: "Live bestätigt",
-    detail: "Jemand hat die Änderung auf dem Handy geprüft.",
+    title: "Live confirmed",
+    detail: "Someone checked the change on the phone.",
   },
 ];
 
@@ -98,23 +98,23 @@ export function getIdeaStatusDotClass(status: IdeaStatus): string {
 export function getIdeaNextStep(status: IdeaStatus): string {
   switch (status) {
     case "submitted":
-      return "Gesammelt. Noch nichts wurde ausgespielt. Don kann den nächsten Schritt starten.";
+      return "Collected. Nothing has been published yet. Don can start the next step.";
     case "requested":
-      return "Wartet auf Owner. Don muss die Prüfung und Vorbereitung bewusst starten.";
+      return "Waiting on owner. Don has to deliberately start the check and preparation.";
     case "processing":
-      return "Wird geprüft. Warte, bis ein vorbereiteter Stand zur Owner-Prüfung bereitsteht.";
+      return "Being checked. Wait until a prepared state is ready for owner review.";
     case "sent":
-      return "Bereit. Don muss den vorbereiteten Stand prüfen und freigeben oder Änderungen anfordern.";
+      return "Ready. Don has to check the prepared state and approve it or request changes.";
     case "approved":
-      return "Geprüft. Die letzte Kontrolle bleibt bei Don, bevor etwas ausgespielt wird.";
+      return "Checked. Final control stays with Don before anything is published.";
     case "shipped":
-      return "Ausgespielt. One L1fe komplett schließen, zweimal öffnen und die Änderung auf dem Handy prüfen.";
+      return "Published. Fully close One L1fe, open it twice, and check the change on the phone.";
     case "live":
-      return "Live bestätigt. Hier ist nichts mehr zu tun, außer es entsteht eine neue Idee.";
+      return "Live confirmed. Nothing else is needed here unless a new idea appears.";
     case "blocked":
-      return "Pausiert. Don muss den Blocker ansehen und den nächsten sicheren Schritt entscheiden.";
+      return "Paused. Don has to inspect the blocker and decide the next safe step.";
     case "closed":
-      return "Erledigt. Der Eintrag bleibt als Verlauf sichtbar.";
+      return "Done. The entry stays visible as history.";
   }
 }
 

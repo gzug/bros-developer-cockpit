@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/done")({
 });
 
 function dateOnly(value?: string) {
-  if (!value) return "Datum unbekannt";
+  if (!value) return "Unknown date";
   return value.slice(0, 10);
 }
 
@@ -28,9 +28,9 @@ function DonePage() {
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Erledigt</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Done</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Abgeschlossene Ideen, nach Bereich sortiert. {total} bisher erledigt.
+              Completed ideas, grouped by area. {total} done so far.
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
@@ -39,13 +39,10 @@ function DonePage() {
         </div>
 
         <div className="mt-6 space-y-3">
-          {done.isLoading && (
-            <p className="text-sm text-muted-foreground">Erledigte Ideen werden geladen...</p>
-          )}
+          {done.isLoading && <p className="text-sm text-muted-foreground">Loading done ideas...</p>}
           {!done.isLoading && groups.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Noch keine erledigten Ideen. Sobald etwas abgeschlossen ist, bleibt es hier als
-              Verlauf sichtbar.
+              No done ideas yet. Once something is completed, it stays visible here as history.
             </div>
           )}
           {groups.map((group) => (

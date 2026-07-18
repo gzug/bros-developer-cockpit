@@ -2,14 +2,14 @@ import { expect, test } from "bun:test";
 import { getIdeaNextStep, getIdeaStatusLabel, getIdeaTimeline } from "./idea-status";
 
 test("idea status labels stay human-readable", () => {
-  expect(getIdeaStatusLabel("requested")).toBe("Wartet auf Owner");
-  expect(getIdeaStatusLabel("live")).toBe("Live bestätigt");
+  expect(getIdeaStatusLabel("requested")).toBe("Waiting on owner");
+  expect(getIdeaStatusLabel("live")).toBe("Live confirmed");
 });
 
 test("idea next steps explain the current operator responsibility", () => {
   expect(getIdeaNextStep("requested")).toContain("Don");
-  expect(getIdeaNextStep("shipped")).toContain("zweimal öffnen");
-  expect(getIdeaNextStep("blocked")).toContain("Blocker ansehen");
+  expect(getIdeaNextStep("shipped")).toContain("open it twice");
+  expect(getIdeaNextStep("blocked")).toContain("inspect the blocker");
 });
 
 test("idea timeline marks current progress without inventing extra progress", () => {

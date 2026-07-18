@@ -3,7 +3,7 @@ import { parsePromptChangelog } from "./prompt-versions";
 
 test("parsePromptChangelog reads version rows from the markdown table", () => {
   const rows = parsePromptChangelog(`
-# Projektleiter Prompt Versions
+# Project Lead Prompt Versions
 
 | Version | Date | What changed | Why | Expected effect |
 |---|---|---|---|---|
