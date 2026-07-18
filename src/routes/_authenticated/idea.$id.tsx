@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { IdeaStatusTimeline } from "@/components/IdeaStatusTimeline";
+import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { getIdeaStatusLabel } from "@/lib/idea-status";
 import { getIdeaEntry } from "@/lib/ideas.functions";
 
@@ -47,6 +48,8 @@ function IdeaPage() {
             <p className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
               {idea.data.statusSummary}
             </p>
+
+            <PublishingTrustNotice compact className="mt-4" />
 
             <section className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
               <div>

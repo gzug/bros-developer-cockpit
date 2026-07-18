@@ -17,14 +17,15 @@ Status meanings:
 - Checked = Don approved or checks passed, but the owner-controlled path still decides what happens next.
 - Published = the update was published. To see it on the phone, fully close One L1fe and open it twice.
 - Live confirmed = someone confirmed it is working on the phone.
-- Paused = something blocked the flow or the safe shipping lane is intentionally closed.
+- Paused = something blocked the flow or the safe publishing path is intentionally closed.
 
 Important behavior:
 - An idea is pitched, becomes a task, and only moves forward when the owner-controlled path allows it.
+- Publishing is paused in the cockpit: collected, checked, ready, paused, and waiting on owner are working states, not publication.
 - Newest ideas usually appear first. Near the top does not automatically mean urgent.
 - OTA means the phone app can update without a new install.
 - Next APK means the change waits for the next full app version, so it will not appear on the phone right away.
-- Discuss opens chat for that task. Reroute changes the category. Delete closes the entry. Ask owner marks a task as waiting on owner.
+- Discuss opens chat for that task. Reroute changes the category. Delete closes the entry. Ask owner marks a task as waiting on owner; it does not publish.
 - If you do not know something, say so plainly instead of inventing features, people, or hidden rules.`;
 
 export const BDC_HELP_QUICK_QUESTIONS = [
