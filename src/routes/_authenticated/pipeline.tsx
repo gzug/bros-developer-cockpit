@@ -36,7 +36,7 @@ function DeliveryBadge({ delivery }: { delivery: IdeaDelivery }) {
       variant="outline"
       className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
     >
-      <Smartphone className="mr-1 h-3 w-3" /> Next app version
+      <Smartphone className="mr-1 h-3 w-3" aria-hidden="true" /> Next app version
     </Badge>
   ) : (
     <Badge
@@ -104,25 +104,30 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           variant="outline"
           onClick={() => remove.mutate()}
           disabled={remove.isPending}
+          aria-label={`Delete ${idea.title}`}
         >
-          <Trash2 className="mr-1 h-3 w-3" /> Delete
+          <Trash2 className="mr-1 h-3 w-3" aria-hidden="true" /> Delete
         </Button>
         {!nextApk && (
           <Button size="sm" asChild>
             <a
+              aria-label={`Ask owner about ${idea.title}`}
               href={chatUrl({
                 ship: String(idea.id),
                 idea: idea.title,
                 description: idea.description,
               })}
             >
-              <Rocket className="mr-1 h-3 w-3" /> Ask owner
+              <Rocket className="mr-1 h-3 w-3" aria-hidden="true" /> Ask owner
             </a>
           </Button>
         )}
         <Button size="sm" variant="outline" asChild>
-          <a href={chatUrl({ idea: idea.title, description: idea.description })}>
-            <MessageCircle className="mr-1 h-3 w-3" /> Discuss
+          <a
+            href={chatUrl({ idea: idea.title, description: idea.description })}
+            aria-label={`Discuss ${idea.title}`}
+          >
+            <MessageCircle className="mr-1 h-3 w-3" aria-hidden="true" /> Discuss
           </a>
         </Button>
         <label className="ml-auto text-xs text-muted-foreground">
@@ -130,7 +135,8 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           <select
             value={idea.delivery}
             onChange={(event) => setDelivery.mutate(event.target.value as IdeaDelivery)}
-            className="ml-2 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
+            aria-label={`Reroute ${idea.title}`}
+            className="ml-2 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <option value="ota">OTA</option>
             <option value="next-apk">Next app version</option>
@@ -228,7 +234,9 @@ function PipelinePage() {
         </div>
 
         <details className="mt-5 rounded-md border border-border bg-card px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold">How to read the plan</summary>
+          <summary className="cursor-pointer rounded text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
+            How to read the plan
+          </summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
             <p>
               The plan is the live list of collected tasks. It shows whether an idea can be prepared
@@ -262,18 +270,24 @@ function PipelinePage() {
             but does not check, approve, or publish anything.
           </p>
           <div className="mt-3 grid gap-3">
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Short title"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-            />
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="One sentence about what should change"
-              className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
+            <label className="grid gap-1 text-sm font-medium">
+              Short title
+              <input
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Short title"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              What should change
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="One sentence about what should change"
+                className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              />
+            </label>
           </div>
           <Button
             className="mt-3"
@@ -281,7 +295,7 @@ function PipelinePage() {
             onClick={() => createParked.mutate()}
             disabled={createParked.isPending || !title || !description}
           >
-            <ParkingCircle className="mr-2 h-4 w-4" /> Collect idea
+            <ParkingCircle className="mr-2 h-4 w-4" aria-hidden="true" /> Collect idea
           </Button>
         </section>
 
@@ -296,7 +310,8 @@ function PipelinePage() {
               <a
                 key={chip.id}
                 href={chatUrl({ idea: chip.title, description: chip.sentence })}
-                className="rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                aria-label={`Discuss suggestion ${chip.title}`}
+                className="rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {chip.title}
               </a>

@@ -100,29 +100,34 @@ function Skills() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pb-2">
-            <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[340px]">
-              <RadarChart data={skillData}>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                <PolarGrid className="stroke-border" />
-                <PolarAngleAxis dataKey="skill" className="text-xs" />
-                <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar
-                  dataKey="start"
-                  fill="var(--color-start)"
-                  fillOpacity={0.08}
-                  stroke="var(--color-start)"
-                  strokeWidth={2}
-                />
-                <Radar
-                  dataKey="now"
-                  fill="var(--color-now)"
-                  fillOpacity={0.5}
-                  stroke="var(--color-now)"
-                  strokeWidth={2}
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-              </RadarChart>
-            </ChartContainer>
+            <div
+              role="img"
+              aria-label="Skills radar comparing Start and Now scores. Exact values are listed as text below."
+            >
+              <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[340px]">
+                <RadarChart data={skillData}>
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                  <PolarGrid className="stroke-border" />
+                  <PolarAngleAxis dataKey="skill" className="text-xs" />
+                  <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar
+                    dataKey="start"
+                    fill="var(--color-start)"
+                    fillOpacity={0.08}
+                    stroke="var(--color-start)"
+                    strokeWidth={2}
+                  />
+                  <Radar
+                    dataKey="now"
+                    fill="var(--color-now)"
+                    fillOpacity={0.5}
+                    stroke="var(--color-now)"
+                    strokeWidth={2}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                </RadarChart>
+              </ChartContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -137,12 +142,22 @@ function Skills() {
             return (
               <div
                 key={row.skill}
+                role="group"
                 className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
+                aria-label={`${row.skill}: Start ${row.start}, Now ${row.now}, change ${
+                  delta >= 0 ? "plus" : ""
+                }${delta}.`}
               >
                 <span className="font-medium">{row.skill}</span>
                 <span className="text-muted-foreground tabular-nums">
                   {row.start} to {row.now}
-                  <span className={delta >= 0 ? "ml-2 text-emerald-600" : "ml-2 text-rose-600"}>
+                  <span
+                    className={
+                      delta >= 0
+                        ? "ml-2 text-emerald-700 dark:text-emerald-300"
+                        : "ml-2 text-rose-700 dark:text-rose-300"
+                    }
+                  >
                     {delta >= 0 ? "+" : ""}
                     {delta}
                   </span>
@@ -160,13 +175,13 @@ function Skills() {
         )}
 
         {data?.githubError && (
-          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
             GitHub measurements are unavailable right now: {data.githubError}
           </div>
         )}
 
         {latest?.smallData && (
-          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
             Small data sample. The latest measurement contains {latest.provenance.conversationCount}{" "}
             conversations and {latest.provenance.userPromptCount} user messages. The values are
             directional only.
@@ -195,7 +210,7 @@ function Skills() {
                   multiple
                   accept=".zip,.json,.html,.htm,.png,application/zip,application/json,text/html,image/png"
                   onChange={(event) => setSelectedFileCount(event.currentTarget.files?.length ?? 0)}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                 />
                 <span className="text-xs text-muted-foreground">
                   {selectedFileCount > 0
@@ -216,7 +231,7 @@ function Skills() {
                   type="submit"
                   disabled={uploadMutation.isPending || selectedFileCount === 0}
                 >
-                  <UploadCloud className="h-4 w-4" />
+                  <UploadCloud className="h-4 w-4" aria-hidden="true" />
                   {uploadMutation.isPending ? "Processing" : "Process upload"}
                 </Button>
                 <span className="text-xs text-muted-foreground">
@@ -224,7 +239,7 @@ function Skills() {
                 </span>
               </div>
               {uploadMutation.data?.warnings.length ? (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
                   {uploadMutation.data.warnings.map((warning) => (
                     <div key={warning}>{warning}</div>
                   ))}
@@ -262,7 +277,9 @@ function Skills() {
               <div className="grid gap-2">
                 {measurement?.dimensions.map((dimension) => (
                   <details key={dimension.key} className="rounded-md border border-border p-3">
-                    <summary className="cursor-pointer font-medium">{dimension.key}</summary>
+                    <summary className="cursor-pointer rounded font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
+                      {dimension.key}
+                    </summary>
                     <code className="mt-2 block whitespace-pre-wrap text-xs text-muted-foreground">
                       {dimension.formula}
                     </code>

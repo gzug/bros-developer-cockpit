@@ -33,7 +33,9 @@ function Dashboard() {
               <p className="mt-1 text-xs text-muted-foreground">Checking activity...</p>
             )}
             {usage.isError && (
-              <p className="mt-1 text-xs text-rose-600">Activity is unavailable right now.</p>
+              <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+                Activity is unavailable right now.
+              </p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
               Tap an idea to see its status and next step.
@@ -116,7 +118,11 @@ function Dashboard() {
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
               No ideas collected yet. This area stays empty until you confirm an idea in chat or add
               one in the plan.{" "}
-              <Link to="/chat" search={{}} className="underline">
+              <Link
+                to="/chat"
+                search={{}}
+                className="rounded underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 Start with a first idea
               </Link>
               .
@@ -125,7 +131,11 @@ function Dashboard() {
           {list.isError && (
             <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
               Your ideas could not be loaded.{" "}
-              <button type="button" className="underline" onClick={() => list.refetch()}>
+              <button
+                type="button"
+                className="rounded underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                onClick={() => list.refetch()}
+              >
                 Try again
               </button>
               .
@@ -136,7 +146,10 @@ function Dashboard() {
               key={idea.id}
               type="button"
               onClick={() => router.navigate({ to: "/idea/$id", params: { id: String(idea.id) } })}
-              className="flex w-full flex-col rounded-md border border-border bg-card p-3 text-left hover:bg-accent"
+              aria-label={`Open idea ${idea.title}. Status: ${
+                idea.statusSummary || getIdeaStatusLabel(idea.status)
+              }`}
+              className="flex w-full flex-col rounded-md border border-border bg-card p-3 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2">

@@ -30,7 +30,11 @@ const RUN_STATUS_CLASS: Record<string, string> = {
 };
 
 function dot(cls: string) {
-  return <span className={`inline-block h-2 w-2 rounded-full ${cls}`} />;
+  return <span className={`inline-block h-2 w-2 rounded-full ${cls}`} aria-hidden="true" />;
+}
+
+function statusLabel(status: string) {
+  return status.replace(/[-_]/g, " ");
 }
 
 function usd(val: string | null) {
@@ -50,6 +54,9 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
         <div className="flex items-center gap-2 min-w-0">
           {dot(TASK_STATUS_CLASS[task.status] ?? "bg-zinc-400")}
           <span className="text-sm font-medium truncate">{task.title}</span>
+          <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
+            {statusLabel(task.status)}
+          </span>
         </div>
         <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
           <span className="uppercase">{task.intent}</span>
@@ -62,7 +69,8 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           href={`https://github.com/gzug/01-One-L1fe/pull/${latestRun.githubPrNumber}`}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-primary hover:underline"
+          aria-label={`Review preparation pull request ${latestRun.githubPrNumber}`}
+          className="rounded text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
         >
           Review #{latestRun.githubPrNumber} &gt;
         </a>
@@ -73,6 +81,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           {taskRuns.map((run) => (
             <div key={run.id} className="flex items-center gap-2 text-xs text-muted-foreground">
               {dot(RUN_STATUS_CLASS[run.status] ?? "bg-zinc-400")}
+              <span className="capitalize">{statusLabel(run.status)}</span>
               <span className="font-mono">{run.tier ?? "n/a"}</span>
               <span className="truncate">{run.model ?? "n/a"}</span>
               <span className="ml-auto shrink-0">{usd(run.costUsd)}</span>
@@ -87,7 +96,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
       )}
 
       {latestRun?.error && (
-        <p className="rounded bg-rose-500/10 px-2 py-1 text-xs text-rose-400 break-words">
+        <p className="rounded bg-rose-500/10 px-2 py-1 text-xs text-rose-700 break-words dark:text-rose-300">
           {latestRun.error}
         </p>
       )}

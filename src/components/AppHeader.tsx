@@ -17,6 +17,11 @@ const OWNER_LINKS = [
   { to: "/owner-kpi", label: "Status" },
 ] as const;
 
+const navLinkClass =
+  "rounded px-2 py-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+const navActiveClass =
+  "rounded px-2 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
 export function AppHeader() {
   // The header resolves the role itself (signed cookie via checkAuth) so every page shows the
   // right nav — pages used to pass an `owner` prop and most forgot it, hiding the owner's links.
@@ -54,37 +59,35 @@ export function AppHeader() {
   return (
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-3 py-3 sm:max-w-5xl sm:px-4">
-        <Link to="/dashboard" className="shrink-0 text-sm font-semibold">
+        <Link
+          to="/dashboard"
+          className="shrink-0 rounded text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
           {owner ? "One L1fe · Control" : "One L1fe · Ideas"}
         </Link>
-        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm">
+        <nav
+          aria-label="Cockpit sections"
+          className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm"
+        >
           <Link
             to="/dashboard"
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+            className={navLinkClass}
+            activeProps={{ className: navActiveClass }}
           >
             Ideas
           </Link>
           <Link
             to="/chat"
             search={{}}
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+            className={navLinkClass}
+            activeProps={{ className: navActiveClass }}
           >
             New idea
           </Link>
-          <Link
-            to="/pipeline"
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-          >
+          <Link to="/pipeline" className={navLinkClass} activeProps={{ className: navActiveClass }}>
             Plan
           </Link>
-          <Link
-            to="/done"
-            className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
-          >
+          <Link to="/done" className={navLinkClass} activeProps={{ className: navActiveClass }}>
             Done
           </Link>
           {role !== null &&
@@ -93,8 +96,8 @@ export function AppHeader() {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
-                  activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
+                  className={navLinkClass}
+                  activeProps={{ className: navActiveClass }}
                 >
                   {item.label}
                 </Link>
@@ -104,8 +107,9 @@ export function AppHeader() {
                   className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
                   title="Owner area. Don checks and approves here."
                   aria-disabled="true"
+                  aria-label={`${item.label}, owner-only area`}
                 >
-                  <Lock className="h-3 w-3" />
+                  <Lock className="h-3 w-3" aria-hidden="true" />
                   {item.label}
                 </span>
               ),
@@ -117,9 +121,13 @@ export function AppHeader() {
             onClick={toggleTheme}
             aria-label="Toggle appearance"
           >
-            {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {isDark ? (
+              <Sun className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Moon className="h-4 w-4" aria-hidden="true" />
+            )}
           </Button>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+          <Button variant="ghost" size="sm" onClick={signOut} aria-label="Log out of cockpit">
             Log out
           </Button>
         </nav>

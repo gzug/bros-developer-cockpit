@@ -38,8 +38,9 @@ export function RoleSwitch() {
         size="sm"
         onClick={() => setOpen(true)}
         title="Switch between Main Dev and Co-Dev view"
+        aria-label="Switch between Main Dev and Co-Dev view"
       >
-        <Repeat className="mr-1 h-3 w-3" /> Switch view
+        <Repeat className="mr-1 h-3 w-3" aria-hidden="true" /> Switch view
       </Button>
     );
   }

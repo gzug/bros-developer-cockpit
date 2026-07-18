@@ -47,7 +47,7 @@ function DonePage() {
           )}
           {groups.map((group) => (
             <details key={group.category} className="rounded-md border border-border bg-card p-4">
-              <summary className="flex cursor-pointer items-center justify-between gap-3">
+              <summary className="flex cursor-pointer items-center justify-between gap-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
                 <span className="text-sm font-semibold">{group.label}</span>
                 <Badge variant="secondary">{group.count}</Badge>
               </summary>
@@ -58,7 +58,8 @@ function DonePage() {
                     href={idea.issueUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/20 p-3 text-sm hover:bg-muted/40"
+                    aria-label={`Open done idea ${idea.title}`}
+                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/20 p-3 text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
                   >
                     <span className="min-w-0 truncate font-medium">{idea.title}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
