@@ -5,14 +5,13 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
-  CheckCircle,
   Copy,
   ExternalLink,
   Loader2,
   RefreshCw,
-  ShieldAlert,
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { DcStatusBadge } from "@/components/DcStatusBadge";
 import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +34,7 @@ import {
 import { getDb } from "@/lib/db";
 import { runs } from "@/lib/db/schema";
 import { listMemoryRuns } from "@/lib/db/runs.server";
+import { formatDcCost } from "@/lib/dc-display";
 import type { DCIdea } from "@/lib/github-issues.server";
 import type { RunRow } from "@/lib/runs.functions";
 import { desc } from "drizzle-orm";
@@ -132,79 +132,6 @@ export const Route = createFileRoute("/_authenticated/dc")({
   },
   component: DcOperationalDashboard,
 });
-
-function statusBadge(status: string) {
-  const normalized = status.toLowerCase();
-  if (normalized === "submitted") {
-    return (
-      <Badge variant="outline" className="border-amber-500/30 text-amber-600">
-        Collected
-      </Badge>
-    );
-  }
-  if (normalized === "requested") {
-    return (
-      <Badge variant="outline" className="border-indigo-500/30 text-indigo-600">
-        Waiting on owner
-      </Badge>
-    );
-  }
-  if (normalized === "processing") {
-    return (
-      <Badge variant="outline" className="border-blue-500/30 text-blue-600">
-        Being checked
-      </Badge>
-    );
-  }
-  if (normalized === "sent") {
-    return (
-      <Badge variant="outline" className="border-sky-500/30 text-sky-600">
-        Ready
-      </Badge>
-    );
-  }
-  if (normalized === "approved") {
-    return (
-      <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-        Checked
-      </Badge>
-    );
-  }
-  if (normalized === "shipped") {
-    return (
-      <Badge variant="outline" className="border-violet-500/30 text-violet-600">
-        Published
-      </Badge>
-    );
-  }
-  if (normalized === "live") {
-    return (
-      <Badge variant="outline" className="border-emerald-700/30 text-emerald-700">
-        Live confirmed
-      </Badge>
-    );
-  }
-  if (normalized === "blocked" || normalized === "failed") {
-    return (
-      <Badge variant="outline" className="gap-1 border-rose-500/30 text-rose-600">
-        <ShieldAlert className="h-3 w-3" /> Paused
-      </Badge>
-    );
-  }
-  if (normalized === "completed") {
-    return (
-      <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-600">
-        <CheckCircle className="h-3 w-3" /> Done
-      </Badge>
-    );
-  }
-  return <Badge variant="outline">{status}</Badge>;
-}
-
-function formatCost(value: string | number | null | undefined) {
-  const cost = typeof value === "number" ? value : parseFloat(value || "0");
-  return `$${cost.toFixed(4)}`;
-}
 
 function generateSubmissionLink() {
   const context = window.prompt("Screen context (optional)", "")?.trim() ?? "";
@@ -443,7 +370,9 @@ function DcOperationalDashboard() {
                           <TableCell className="text-xs capitalize text-muted-foreground">
                             {idea.intent}
                           </TableCell>
-                          <TableCell>{statusBadge(idea.status)}</TableCell>
+                          <TableCell>
+                            <DcStatusBadge status={idea.status} />
+                          </TableCell>
                           <TableCell className="text-xs">
                             {idea.prNumber && idea.prUrl ? (
                               <a
@@ -590,9 +519,11 @@ function DcOperationalDashboard() {
                               : "-"}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {formatCost(run.costUsd)}
+                            {formatDcCost(run.costUsd)}
                           </TableCell>
-                          <TableCell>{statusBadge(run.status)}</TableCell>
+                          <TableCell>
+                            <DcStatusBadge status={run.status} />
+                          </TableCell>
                           <TableCell className="text-xs">
                             {run.githubPrNumber ? (
                               <a
@@ -622,7 +553,7 @@ function DcOperationalDashboard() {
               </CardHeader>
               <CardContent className="p-4 text-sm">
                 Total recorded cost:{" "}
-                <span className="font-mono font-semibold">{formatCost(totalCost)}</span>
+                <span className="font-mono font-semibold">{formatDcCost(totalCost)}</span>
               </CardContent>
             </Card>
           </div>
