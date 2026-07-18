@@ -300,6 +300,8 @@ describe("status and publication honesty", () => {
     expect(
       containsUnsupportedStatusClaim("This is already published and live on the phone.", false),
     ).toBe(true);
+    expect(containsUnsupportedStatusClaim("This task is done.", false)).toBe(true);
+    expect(containsUnsupportedStatusClaim("Open Done to see completed ideas.", false)).toBe(false);
     expect(containsUnsupportedStatusClaim("It is collected and waiting on owner.", false)).toBe(
       false,
     );
@@ -476,6 +478,20 @@ describe("offline prompt-surface checks", () => {
 
     const clean = await askAppHelpMessages([{ role: "user", content: "Who is Don?" }]);
     expect(clean.message).toBe("Don is the main developer and keeps final control.");
+
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          choices: [{ message: { content: "Open Done to see completed ideas." } }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )) as typeof fetch;
+
+    const doneScreen = await askAppHelpMessages([
+      { role: "user", content: "Where can I see finished ideas?" },
+    ]);
+    expect(doneScreen.message).toBe("Open Done to see completed ideas.");
   });
 
   test("fixed askAppHelp outputs are checked without network or auth lifecycle", () => {

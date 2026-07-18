@@ -20,7 +20,7 @@ export const IDEA_STATUS_VALUES = [
 export type RealIdeaStatus = (typeof IDEA_STATUS_VALUES)[number];
 
 const PUBLICATION_CLAIM_RE =
-  /\b(published|publish(?:ed|es)?|live|shipped|done|already fixed|already resolved|fixed already)\b/i;
+  /\b(published|publish(?:ed|es)?|live|shipped|already fixed|already resolved|fixed already)\b|\b(?:already\s+)?(?:it|this|task|idea|change)\s+(?:is\s+)?done\b/i;
 const FORBIDDEN_PERSON_RE =
   /\b(?:Sarah|Sara|Noah|Nora|Alex|Alice|Bob|Charlie|Product Owner|designer team|support team)\b/i;
 const FORBIDDEN_SCREEN_RE =
