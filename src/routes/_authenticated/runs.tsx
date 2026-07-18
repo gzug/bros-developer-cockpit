@@ -62,7 +62,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           href={`https://github.com/gzug/01-One-L1fe/pull/${latestRun.githubPrNumber}`}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-sky-500 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           PR #{latestRun.githubPrNumber} &gt;
         </a>
