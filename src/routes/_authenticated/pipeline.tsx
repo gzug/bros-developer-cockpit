@@ -239,8 +239,8 @@ function PipelinePage() {
           </summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
             <p>
-              The plan is the live list of collected tasks. It shows whether an idea can be prepared
-              directly, waits for the next app version, or has already been published.
+              The plan is the current list of collected tasks. It shows whether an idea can be
+              prepared directly, waits for the next app version, or has already been published.
             </p>
             <p>
               <span className="font-medium text-foreground">Direct to phone:</span> can be prepared
