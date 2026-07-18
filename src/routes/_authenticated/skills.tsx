@@ -85,6 +85,10 @@ function Skills() {
             Der Radar zeigt, wie sich Arbeitsmuster entwickeln. Ohne Upload zeigt er nur ein
             Beispiel.
           </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Diese Seite ist ein Owner-Werkzeug: Sie bewertet nur Metadaten aus KI-Sitzungen und
+            spielt nichts in One L1fe aus.
+          </p>
         </div>
 
         <Card>
@@ -125,6 +129,10 @@ function Skills() {
 
         {/* Text/table view so values are never color-only (accessibility). */}
         <div className="mt-4 space-y-1">
+          <p className="pb-1 text-xs text-muted-foreground">
+            Jede Zeile zeigt denselben Wert wie der Radar als Text: Start ist der erste bekannte
+            Stand, Jetzt der neueste Stand, die Zahl rechts ist die Veränderung.
+          </p>
           {skillData.map((row) => {
             const delta = row.now - row.start;
             return (
@@ -148,7 +156,8 @@ function Skills() {
         {!hasSnapshots && (
           <p className="mt-4 text-xs text-muted-foreground">
             Das sind Beispielwerte. Sie bleiben als Beispieldaten markiert, bis GitHub mindestens
-            einen echten skill-snapshot enthält.
+            einen echten skill-snapshot enthält. Beispielwerte sind Orientierung, keine echte
+            Bewertung.
           </p>
         )}
 
@@ -175,6 +184,10 @@ function Skills() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Ein Klick auf Upload verarbeiten erstellt eine neue Messung. Der Radar springt danach
+              von Beispieldaten auf echte Messung, wenn die Daten ausreichen.
+            </p>
             <form className="grid gap-3" onSubmit={submitUpload}>
               <label className="grid gap-1 text-sm font-medium">
                 Export-Dateien
@@ -232,6 +245,10 @@ function Skills() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm">
+            <p className="text-xs text-muted-foreground">
+              Die aufklappbaren Formeln erklären, welche Signale in einen Score einfließen. Ein
+              Klick auf eine Formel zeigt Details, ändert aber keine Messung.
+            </p>
             <div>
               <h2 className="mb-2 text-sm font-semibold">Signale</h2>
               <div className="grid gap-2">

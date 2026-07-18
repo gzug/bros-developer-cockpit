@@ -33,6 +33,10 @@ function PromptsPage() {
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
               Hier steht, welche Anweisungen das Cockpit benutzt und warum sie geändert wurden.
             </p>
+            <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+              Diese Seite ist nur zum Nachlesen. Sie zeigt, was sich an der KI-Anweisung geändert
+              hat, wann es passiert ist und welche Wirkung erwartet wird.
+            </p>
           </div>
           {data && <Badge variant="outline">{data.files.length} Dateien</Badge>}
         </div>
@@ -56,35 +60,43 @@ function PromptsPage() {
               <CardHeader>
                 <CardTitle className="text-base">Änderungsverlauf</CardTitle>
                 <CardDescription>
-                  Was geändert wurde, warum es geändert wurde und welche Wirkung erwartet wird.
+                  Was geändert wurde, warum es geändert wurde und welche Wirkung erwartet wird. Jede
+                  Zeile ist ein nachvollziehbarer Stand, kein Schalter.
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b border-border text-xs text-muted-foreground">
-                    <tr>
-                      <th className="py-2 pr-3 font-medium">Version</th>
-                      <th className="py-2 pr-3 font-medium">Wann</th>
-                      <th className="py-2 pr-3 font-medium">Was änderte sich?</th>
-                      <th className="py-2 pr-3 font-medium">Warum?</th>
-                      <th className="py-2 font-medium">Erwartete Wirkung</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.changelog.map((row) => (
-                      <tr
-                        key={`${row.version}-${row.date}`}
-                        className="border-b border-border/60 align-top"
-                      >
-                        <td className="py-3 pr-3 font-medium">{row.version}</td>
-                        <td className="py-3 pr-3 text-muted-foreground">{row.date}</td>
-                        <td className="py-3 pr-3">{row.whatChanged}</td>
-                        <td className="py-3 pr-3 text-muted-foreground">{row.why}</td>
-                        <td className="py-3 text-muted-foreground">{row.expectedEffect}</td>
+                {data.changelog.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
+                    Noch kein Änderungsverlauf gefunden. Sobald eine Version dokumentiert ist,
+                    erscheinen hier Datum, Änderung, Grund und erwartete Wirkung.
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[760px] text-left text-sm">
+                    <thead className="border-b border-border text-xs text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-3 font-medium">Version</th>
+                        <th className="py-2 pr-3 font-medium">Wann</th>
+                        <th className="py-2 pr-3 font-medium">Was sieht man?</th>
+                        <th className="py-2 pr-3 font-medium">Warum geändert?</th>
+                        <th className="py-2 font-medium">Erwartete Wirkung</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {data.changelog.map((row) => (
+                        <tr
+                          key={`${row.version}-${row.date}`}
+                          className="border-b border-border/60 align-top"
+                        >
+                          <td className="py-3 pr-3 font-medium">{row.version}</td>
+                          <td className="py-3 pr-3 text-muted-foreground">{row.date}</td>
+                          <td className="py-3 pr-3">{row.whatChanged}</td>
+                          <td className="py-3 pr-3 text-muted-foreground">{row.why}</td>
+                          <td className="py-3 text-muted-foreground">{row.expectedEffect}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </CardContent>
             </Card>
 
@@ -98,7 +110,10 @@ function PromptsPage() {
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           {file.title}
                         </CardTitle>
-                        <CardDescription>{file.filename}</CardDescription>
+                        <CardDescription>
+                          {file.filename}. Der Block darunter zeigt den aktuellen Text zum Lesen und
+                          Prüfen.
+                        </CardDescription>
                       </div>
                       <div className="flex gap-2">
                         <Badge variant="secondary">{file.version}</Badge>
@@ -107,6 +122,10 @@ function PromptsPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      Scrollen zeigt nur den Inhalt dieser Version. Hier wird keine Anweisung
+                      aktiviert, gespeichert oder ausgespielt.
+                    </p>
                     <pre className="max-h-[34rem] overflow-auto rounded-md border border-border bg-muted/30 p-3 text-xs leading-relaxed text-foreground">
                       {file.content}
                     </pre>

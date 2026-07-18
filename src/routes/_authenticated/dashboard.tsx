@@ -74,6 +74,10 @@ function Dashboard() {
           <div className="mt-3 space-y-3 text-xs text-muted-foreground">
             <p>Deine Ideen erscheinen hier zuerst. Neue Einträge stehen oben.</p>
             <p>
+              Ein Klick auf eine Idee öffnet die Detailansicht mit Beschreibung, aktuellem Stand und
+              dem nächsten sicheren Schritt. Dadurch wird nichts freigegeben oder ausgespielt.
+            </p>
+            <p>
               Die Begriffe sind absichtlich einfach: gesammelt, geprüft, bereit, pausiert, wartet
               auf Owner.
             </p>
@@ -96,15 +100,16 @@ function Dashboard() {
 
         <div className="mt-6 space-y-2">
           {list.isLoading && (
-            <>
+            <div role="status" aria-label="Ideen werden geladen">
               <Skeleton className="h-20 w-full rounded-md" />
               <Skeleton className="h-20 w-full rounded-md" />
               <Skeleton className="h-20 w-full rounded-md" />
-            </>
+            </div>
           )}
           {list.isSuccess && list.data.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Noch keine Ideen gesammelt.{" "}
+              Noch keine Ideen gesammelt. Der Bereich bleibt leer, bis du im Chat eine Idee
+              bestätigst oder im Plan eine Idee einträgst.{" "}
               <Link to="/chat" search={{}} className="underline">
                 Starte mit einer ersten Idee
               </Link>

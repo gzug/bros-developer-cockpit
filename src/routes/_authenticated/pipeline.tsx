@@ -130,6 +130,10 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           </select>
         </label>
       </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Klicks hier ändern nur den Cockpit-Stand: Besprechen öffnet den Chat, Owner bitten markiert
+        den Wunsch als wartet auf Owner, Weg ändert die Einordnung, Löschen schließt den Eintrag.
+      </p>
     </div>
   );
 }
@@ -221,6 +225,11 @@ function PipelinePage() {
           <summary className="cursor-pointer text-sm font-semibold">So liest du den Plan</summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
             <p>
+              Der Plan ist die Live-Liste der gesammelten Aufgaben. Er zeigt, ob eine Idee direkt
+              vorbereitet werden kann, auf die nächste App-Version wartet oder schon ausgespielt
+              wurde.
+            </p>
+            <p>
               <span className="font-medium text-foreground">Direkt aufs Handy:</span> kann ohne neue
               Installation vorbereitet werden, bleibt aber bis zur Owner-Freigabe gestoppt.
             </p>
@@ -232,13 +241,18 @@ function PipelinePage() {
               <span className="font-medium text-foreground">Owner bitten:</span> sammelt den Wunsch.
               Es spielt nichts aus. Don bleibt die letzte Kontrolle.
             </p>
+            <p>
+              Status wie gesammelt, geprüft, bereit, pausiert und wartet auf Owner sagen immer, wo
+              der nächste bewusste Schritt liegt.
+            </p>
           </div>
         </details>
 
         <section className="mt-5 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Idee sammeln</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Neue Ideen werden gesammelt und einsortiert. Du kannst den Weg später ändern.
+            Neue Ideen werden gesammelt und einsortiert. Ein Klick auf Idee sammeln legt einen
+            Eintrag im Plan an, aber spielt nichts aus.
           </p>
           <div className="mt-3 grid gap-3">
             <input
@@ -289,7 +303,7 @@ function PipelinePage() {
 
         <List
           title="Direkt aufs Handy"
-          hint="Kleine Änderungen, die vorbereitet werden können. Sie bleiben gesammelt, bis Don sie freigibt."
+          hint="Kleine Änderungen, die vorbereitet werden können. Ein Klick auf Owner bitten setzt sie auf wartet auf Owner."
           ideas={otaQueue}
           empty="Keine direkt vorbereitbaren Ideen gesammelt."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}
@@ -297,7 +311,7 @@ function PipelinePage() {
 
         <List
           title="Nächste App-Version"
-          hint="Größere Änderungen, die eine neue Installation brauchen. Sie werden hier nur gesammelt."
+          hint="Größere Änderungen, die eine neue Installation brauchen. Sie bleiben gesammelt und werden nicht direkt ausgespielt."
           ideas={nextApk}
           empty="Nichts wartet auf die nächste App-Version."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}
@@ -305,7 +319,7 @@ function PipelinePage() {
 
         <List
           title="Ausgespielt"
-          hint="Einträge, die veröffentlicht oder auf dem Handy bestätigt wurden."
+          hint="Einträge, die veröffentlicht oder auf dem Handy live bestätigt wurden. Diese Liste ist Verlauf, kein Startknopf."
           ideas={shipped}
           empty="Noch nichts ausgespielt."
           render={(idea) => <ShippedRow key={idea.id} idea={idea} />}

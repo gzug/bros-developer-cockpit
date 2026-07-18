@@ -23,13 +23,15 @@ function IdeaPage() {
       <AppHeader />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
-          ← back
+          ← Zurück zu deinen Ideen
         </Link>
 
-        {idea.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
+        {idea.isLoading && (
+          <p className="mt-4 text-sm text-muted-foreground">Idee wird geladen...</p>
+        )}
         {idea.isError && (
           <div className="mt-4 rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-            This idea could not be loaded. Please try again.
+            Diese Idee konnte nicht geladen werden. Bitte versuche es erneut.
           </div>
         )}
         {idea.data && (
@@ -37,25 +39,29 @@ function IdeaPage() {
             <div className="mt-3">
               <h1 className="text-xl font-semibold">{idea.data.title}</h1>
               <p className="mt-1 text-xs text-muted-foreground">
-                Current status: {getIdeaStatusLabel(idea.data.status)}
+                Aktueller Stand: {getIdeaStatusLabel(idea.data.status)}
               </p>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Diese Seite erklärt nur den Stand der Idee. Aktionen wie prüfen, freigeben oder
+              ausspielen bleiben in der Owner-Kontrolle.
+            </p>
             <p className="mt-3 rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
               {idea.data.statusSummary}
             </p>
 
             <section className="mt-6 space-y-4 rounded-lg border border-border bg-card p-4">
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Description</div>
+                <div className="text-xs uppercase text-muted-foreground">Beschreibung</div>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{idea.data.description}</p>
               </div>
               <div className="text-sm">
-                <div className="text-xs uppercase text-muted-foreground">Category</div>
+                <div className="text-xs uppercase text-muted-foreground">Art</div>
                 <p className="mt-1">{idea.data.intent}</p>
               </div>
               {idea.data.needsHelp && (
                 <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-sm">
-                  This needs Don's help before it can continue.
+                  Pausiert: Don muss diese Idee prüfen, bevor sie weitergehen kann.
                 </div>
               )}
             </section>
