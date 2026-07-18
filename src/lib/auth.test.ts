@@ -3,8 +3,10 @@ import {
   checkLoginThrottle,
   clearLoginThrottle,
   recordLoginFailure,
+  resolveLoginRole,
   resetLoginThrottleForTest,
   throttleKey,
+  validateLoginConfiguration,
 } from "./auth.server";
 
 test("login throttle locks after repeated failures and then expires", () => {
@@ -38,4 +40,32 @@ test("throttle key uses request IP when present", () => {
   expect(throttleKey(" 203.0.113.9 ")).toBe("ip:203.0.113.9");
   expect(throttleKey("")).toBe("global");
   expect(throttleKey()).toBe("global");
+});
+
+test("login codes resolve to separate brother and owner roles", () => {
+  const pins = { ownerPin: "4321", brotherPin: "1234" };
+  expect(resolveLoginRole("1234", pins)).toBe("brother");
+  expect(resolveLoginRole("4321", pins)).toBe("owner");
+  expect(resolveLoginRole("0000", pins)).toBeNull();
+});
+
+test("login trims whitespace and keeps the valid role usable", () => {
+  expect(resolveLoginRole("1234", { ownerPin: "legacy-owner-passphrase", brotherPin: " 1234 " })).toBe(
+    "brother",
+  );
+  expect(validateLoginConfiguration({ ownerPin: " 4321 ", brotherPin: " 1234 " })).toBeNull();
+});
+
+test("malformed credentials still fail closed when no valid role remains", () => {
+  expect(validateLoginConfiguration({ ownerPin: "98", brotherPin: undefined })).toContain(
+    "four digits",
+  );
+  expect(validateLoginConfiguration({ ownerPin: undefined, brotherPin: "12ab" })).toContain(
+    "four digits",
+  );
+  // the two codes must differ
+  expect(
+    validateLoginConfiguration({ ownerPin: "1234", brotherPin: "1234" }),
+  ).toContain("different");
+  expect(resolveLoginRole("98", { ownerPin: "98", brotherPin: undefined })).toBeNull();
 });

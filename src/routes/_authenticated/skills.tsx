@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart } from "recharts";
 import { UploadCloud } from "lucide-react";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,11 @@ import {
 import { getSkillDashboardData, uploadSkillExports } from "@/lib/skills.functions";
 
 export const Route = createFileRoute("/_authenticated/skills")({
+  beforeLoad: async () => {
+    const { checkAuth } = await import("@/lib/auth.server");
+    const auth = await checkAuth();
+    if (auth.role !== "owner") throw redirect({ to: "/dashboard" });
+  },
   component: Skills,
 });
 
@@ -36,6 +41,7 @@ const chartConfig = {
 
 function Skills() {
   const queryClient = useQueryClient();
+  const [selectedFileCount, setSelectedFileCount] = useState(0);
   const dashboard = useQuery({
     queryKey: ["skill-dashboard"],
     queryFn: () => getSkillDashboardData(),
@@ -58,6 +64,10 @@ function Skills() {
 
   function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (selectedFileCount === 0) {
+      toast.error("Choose a Claude, ChatGPT, Google/Gemini, or PNG file first.");
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     uploadMutation.mutate(formData);
   }
@@ -174,8 +184,14 @@ function Skills() {
                   type="file"
                   multiple
                   accept=".zip,.json,.html,.htm,.png,application/zip,application/json,text/html,image/png"
+                  onChange={(event) => setSelectedFileCount(event.currentTarget.files?.length ?? 0)}
                   className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
+                <span className="text-xs text-muted-foreground">
+                  {selectedFileCount > 0
+                    ? `${selectedFileCount} file${selectedFileCount === 1 ? "" : "s"} selected`
+                    : "Choose a supported export or PNG before processing."}
+                </span>
               </label>
               <label className="grid gap-1 text-sm font-medium">
                 Optional PNG note
@@ -186,7 +202,7 @@ function Skills() {
                 />
               </label>
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={uploadMutation.isPending}>
+                <Button type="submit" disabled={uploadMutation.isPending || selectedFileCount === 0}>
                   <UploadCloud className="h-4 w-4" />
                   {uploadMutation.isPending ? "Processing" : "Process upload"}
                 </Button>

@@ -173,6 +173,66 @@ test("synthetic ChatGPT ZIP yields skill snapshot values and provenance", async 
   expect(snapshotHasRawText(result.snapshot!, ["Review this PR diff", "Wrong assumption"])).toBe(false);
 });
 
+test("Google Gemini JSON yields skill snapshot values and provenance", async () => {
+  const conversations = [
+    {
+      title: "Gemini planning",
+      messages: [
+        { role: "user", content: "Plan this architecture change and add validation tests." },
+        { role: "model", content: "Use a small interface and test the risky path." },
+        { role: "user", content: "Review the output and keep the release blocked until verified." },
+      ],
+    },
+  ];
+  const file = new File([JSON.stringify(conversations)], "gemini-takeout.json", {
+    type: "application/json",
+  });
+  const result = await parseSkillUploadBatch([file]);
+
+  expect(result.ok).toBe(true);
+  expect(result.snapshot).toBeDefined();
+  assertScores(result.snapshot!);
+  expect(result.snapshot!.provenance.exports[0].provider).toBe("Google/Gemini");
+  expect(result.snapshot!.provenance.userPromptCount).toBe(2);
+  expect(snapshotHasRawText(result.snapshot!, ["Plan this architecture change"])).toBe(false);
+});
+
+test("Google Gemini HTML export is parsed without storing raw text", async () => {
+  const html = `
+    <html><body>
+      <p>User: debug this failed build before shipping</p>
+      <p>Model: inspect the logs and add a regression test</p>
+      <p>User: review the final diff</p>
+    </body></html>
+  `;
+  const file = new File([html], "google-gemini.html", { type: "text/html" });
+  const result = await parseSkillUploadBatch([file]);
+
+  expect(result.ok).toBe(true);
+  expect(result.snapshot).toBeDefined();
+  assertScores(result.snapshot!);
+  expect(result.snapshot!.provenance.exports[0].provider).toBe("Google/Gemini");
+  expect(snapshotHasRawText(result.snapshot!, ["debug this failed build"])).toBe(false);
+});
+
+test("PNG metadata upload accepts evidence without changing skill scores", async () => {
+  const file = new File([Buffer.from([0x89, 0x50, 0x4e, 0x47])], "radar.png", {
+    type: "image/png",
+    lastModified: Date.UTC(2026, 6, 18),
+  });
+  const result = await parseSkillUploadBatch([file], "Score screenshot from manual review");
+
+  expect(result.ok).toBe(true);
+  expect(result.snapshot).toBeUndefined();
+  expect(result.pngEvidence).toHaveLength(1);
+  expect(result.pngEvidence[0]).toMatchObject({
+    filename: "radar.png",
+    sizeBytes: 4,
+    note: "Score screenshot from manual review",
+  });
+  expect(result.message).toContain("PNG metadata accepted");
+});
+
 test("unsupported file returns friendly supported-format message", async () => {
   const file = new File(["not an export"], "notes.txt", { type: "text/plain" });
   const result = await parseSkillUploadBatch([file]);

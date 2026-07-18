@@ -8,6 +8,11 @@ owner decisions recorded here (2026-07-17).
 ## Role and screen model
 
 - ONE identical screen layout for both PINs. The PIN decides what is active.
+- Auth (owner decision 2026-07-17): BOTH codes are four digits — `APP_PIN` (Main-Dev) and
+  `BROTHER_PIN` (Co-Dev), which must differ. One login field; the server resolves the role from
+  whichever code matches. A `RoleSwitch` control in the header re-authenticates via the same
+  login path so the owner can move between the Main-Dev and Co-Dev setups without logging out.
+  Env vars are owner-set on Vercel (Preview + Production); secret values never enter an agent.
 - Owner PIN (Main-Dev): everything enabled.
 - Brother PIN (Co-Dev): locked features stay VISIBLE, greyed out, with a short
   "unlocks later" hint — so he can see what more experience will unlock.

@@ -1,12 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Save, Trash2 } from "lucide-react";
+import { Rocket, Save, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BDC_HELP_QUICK_QUESTIONS } from "@/lib/app-knowledge";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createIdeaEntry } from "@/lib/ideas.functions";
+import { createIdeaEntry, requestShipEntry } from "@/lib/ideas.functions";
+import { checkAuth } from "@/lib/auth.server";
 import { refineIdea } from "@/lib/chat.server";
 import { getPromptEffectSummary } from "@/lib/prompt-effect.server";
 import {
@@ -32,17 +34,47 @@ type EditablePreset = PresetConfig & { source: "shipped" | "local" };
 const LOCAL_PRESETS_KEY = "bdc.chat.presets.v1";
 
 const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; opener: string }> = [
-  { id: "wording", title: "Change wording", hint: "A word or sentence doesn't fit.", emoji: "✍️", opener: "What would you like rephrased?" },
-  { id: "look", title: "Change appearance", hint: "Color, size, or placement.", emoji: "🎨", opener: "What should look different?" },
-  { id: "wrong", title: "Something is broken", hint: "Something isn't working right.", emoji: "🐞", opener: "What's going wrong?" },
-  { id: "idea", title: "New idea", hint: "Something is completely missing.", emoji: "💡", opener: "What new idea do you have?" },
+  {
+    id: "wording",
+    title: "Change wording",
+    hint: "A word or sentence doesn't fit.",
+    emoji: "✍️",
+    opener: "What would you like rephrased?",
+  },
+  {
+    id: "look",
+    title: "Change appearance",
+    hint: "Color, size, or placement.",
+    emoji: "🎨",
+    opener: "What should look different?",
+  },
+  {
+    id: "wrong",
+    title: "Something is broken",
+    hint: "Something isn't working right.",
+    emoji: "🐞",
+    opener: "What's going wrong?",
+  },
+  {
+    id: "idea",
+    title: "New idea",
+    hint: "Something is completely missing.",
+    emoji: "💡",
+    opener: "What new idea do you have?",
+  },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
-  validateSearch: (search: Record<string, unknown>): { idea?: string; description?: string } => ({
-    idea: typeof search.idea === "string" ? search.idea : undefined,
-    description: typeof search.description === "string" ? search.description : undefined,
-  }),
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { idea?: string; description?: string; ship?: number } => {
+    const shipId = Number(search.ship);
+    return {
+      idea: typeof search.idea === "string" ? search.idea : undefined,
+      description: typeof search.description === "string" ? search.description : undefined,
+      ship: Number.isInteger(shipId) && shipId > 0 ? shipId : undefined,
+    };
+  },
   component: ChatPage,
 });
 
@@ -54,6 +86,26 @@ function splitSuggestion(text: string): { reply: string; suggestion: string | nu
     reply: text.slice(0, index).trim(),
     suggestion: text.slice(index + marker.length).trim(),
   };
+}
+
+// Task descriptions arrive with issue-body scaffolding (## headings, meta lines, the
+// "Submitted via BDC" stamp). Strip it so the chat opener reads like a sentence, not raw data.
+function cleanPreloadText(text: string): string {
+  return text
+    .replace(/_Submitted via BDC[^_]*_/g, "")
+    .split(/\r?\n/)
+    .filter((line) => {
+      const trimmed = line.trim();
+      return (
+        trimmed.length > 0 &&
+        trimmed !== "---" &&
+        !/^##\s/.test(trimmed) &&
+        !/^(Screen|Type)\s*:/i.test(trimmed)
+      );
+    })
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function buildTitle(intent: Intent, text: string): string {
@@ -92,6 +144,24 @@ function makeLocalPresetId(): string {
 
 function ChatPage() {
   const search = Route.useSearch();
+  const navigate = useNavigate();
+  // Preset/model tuning and the prompt-effect stats are the owner's tools; the co-dev gets a
+  // plain chat. Server functions stay the enforcement layer — this only unclutters the screen.
+  const auth = useQuery({ queryKey: ["auth-role"], queryFn: () => checkAuth(), staleTime: 60_000 });
+  const ownerView = auth.data?.role === "owner";
+  const [shipResult, setShipResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const shipMutation = useMutation({
+    mutationFn: (id: number) => requestShipEntry({ data: { id } }),
+    onSuccess: (result) =>
+      setShipResult({
+        ok: result.ok,
+        message: result.ok
+          ? "Shipping requested. Don still has to start the checks before anything is published."
+          : result.reason,
+      }),
+    onError: (error) =>
+      setShipResult({ ok: false, message: error instanceof Error ? error.message : "Could not request shipping." }),
+  });
   const [intent, setIntent] = useState<Intent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -189,13 +259,15 @@ function ChatPage() {
   );
 
   useEffect(() => {
-    if (preloaded || !search.idea) return;
-    const description = search.description?.trim() || search.idea;
+    // When arriving to confirm a ship (?ship=...), do NOT seed a new-idea draft — the ship card
+    // is the whole purpose; seeding would let the co-dev accidentally create a duplicate idea.
+    if (preloaded || search.ship != null || !search.idea) return;
+    const description = cleanPreloadText(search.description?.trim() || search.idea);
     setIntent("idea");
     setMessages([
       {
         role: "assistant",
-        content: `This idea means: ${description} It would change the app by turning that wish into a clear feature proposal first. Tell me what should stay exactly as you want it before we prepare anything.`,
+        content: `Let's talk about this idea: "${description}" — tell me what you'd like, or what should change about it, and I'll turn it into a clear proposal with you.`,
       },
     ]);
     setInput(description);
@@ -274,7 +346,57 @@ function ChatPage() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
       <main className="mx-auto flex min-h-[calc(100vh-57px)] max-w-3xl flex-col px-4 py-4">
+        {search.ship != null && (
+          <section className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-4">
+            {shipResult ? (
+              <div className="space-y-3">
+                <p className={`text-sm ${shipResult.ok ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+                  {shipResult.message}
+                </p>
+                <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
+                  Back to pipeline
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-primary" />
+                  <h2 className="text-sm font-semibold">Ship this task now?</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Ship {search.idea ? <span className="font-medium text-foreground">&ldquo;{search.idea}&rdquo;</span> : "this task"}?
+                  It goes through the safety checks first, and the owner&rsquo;s release gates still apply.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => shipMutation.mutate(search.ship!)}
+                    disabled={shipMutation.isPending}
+                  >
+                    <Rocket className="mr-1 h-3 w-3" /> Yes, ship it
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
+                    No, go back
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+        {ownerView && (
         <section className="mb-4 rounded-md border border-border bg-card p-4">
+          <details className="mb-3 rounded-md border border-border bg-background p-3 text-sm">
+            <summary className="cursor-pointer font-medium">What the preset controls</summary>
+            <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+              <p>
+                Preset is the saved behavior: tone, rules, model, and default length for this chat.
+              </p>
+              <p>
+                Model chooses the provider through OpenRouter. Temperature controls looseness; max
+                tokens controls answer length.
+              </p>
+            </div>
+          </details>
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
             <div className="space-y-2">
               <Label htmlFor="preset">Preset</Label>
@@ -366,11 +488,15 @@ function ChatPage() {
             />
           </div>
         </section>
+        )}
 
         {!intent && (
           <div className="grid gap-2">
             <h1 className="text-xl font-semibold">What kind of wish?</h1>
-            <p className="text-sm text-muted-foreground">Pick a direction, then we'll chat about it.</p>
+            <p className="text-sm text-muted-foreground">
+              Pick a direction, then we&rsquo;ll chat about it. You can also ask what this app, a
+              status, or Don means before you submit anything.
+            </p>
             {INTENTS.map((entry) => (
               <button
                 key={entry.id}
@@ -402,6 +528,42 @@ function ChatPage() {
               </Button>
             </div>
 
+            <section className="mb-4 rounded-xl border border-border bg-card p-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <h2 className="text-sm font-semibold">What happens here</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This chat can explain the app or turn your rough note into a clear wish.
+                  </p>
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Nothing is sent yet</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    GitHub and the pipeline only start after you accept a refined version or keep your
+                    own text.
+                  </p>
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold">Phone timing</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    OTA changes can reach the phone fast. Next APK changes wait for the next app build.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {BDC_HELP_QUICK_QUESTIONS.map((question) => (
+                  <button
+                    key={question}
+                    type="button"
+                    onClick={() => setInput(question)}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+            </section>
+
             <div className="flex-1 space-y-3 overflow-y-auto pb-4">
               {messages.map((message, index) => (
                 <div
@@ -421,7 +583,11 @@ function ChatPage() {
               ))}
 
               {refine.isPending && (
-                <div className="flex justify-start">
+                <div
+                  className="flex justify-start"
+                  role="status"
+                  aria-label="Preparing a suggestion"
+                >
                   <div className="rounded-2xl bg-muted px-4 py-3">
                     <div className="flex gap-1">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.2s]" />
@@ -437,16 +603,21 @@ function ChatPage() {
                   <div className="text-xs uppercase text-muted-foreground">Suggestion</div>
                   <p className="mt-2 whitespace-pre-wrap text-sm">{suggestion}</p>
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                    <Button onClick={() => submitFinal(suggestion)} disabled={createIdeaMutation.isPending}>
+                    <Button
+                      onClick={() => submitFinal(suggestion)}
+                      disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
+                    >
                       Accept suggestion
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => {
-                        const fallback = messages.filter((message) => message.role === "user").at(-1)?.content ?? suggestion;
+                        const fallback =
+                          messages.filter((message) => message.role === "user").at(-1)?.content ??
+                          suggestion;
                         submitFinal(fallback);
                       }}
-                      disabled={createIdeaMutation.isPending}
+                      disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
                     >
                       Keep my text
                     </Button>
@@ -457,7 +628,9 @@ function ChatPage() {
               {submittedIdeaId && createIdeaMutation.isSuccess && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
                   Your wish has been submitted!{" "}
-                  <Link to="/dashboard" className="underline">Go to dashboard</Link>
+                  <Link to="/dashboard" className="underline">
+                    Go to dashboard
+                  </Link>
                 </div>
               )}
             </div>
@@ -465,9 +638,10 @@ function ChatPage() {
             <div className="sticky bottom-0 border-t border-border bg-background py-3">
               <div className="flex gap-2">
                 <textarea
+                  aria-label="Describe your wish"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Describe your wish in your own words..."
+                  placeholder="Describe your wish or ask what something in this app means..."
                   className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
                   rows={2}
                 />
@@ -479,6 +653,7 @@ function ChatPage() {
           </>
         )}
 
+        {ownerView && (
         <section className="mt-5 rounded-md border border-border bg-card p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -526,6 +701,7 @@ function ChatPage() {
             </p>
           )}
         </section>
+        )}
       </main>
     </div>
   );

@@ -1,10 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOwnerKpis } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/owner-kpi")({
+  beforeLoad: async () => {
+    const { checkAuth } = await import("@/lib/auth.server");
+    const auth = await checkAuth();
+    if (auth.role !== "owner") throw redirect({ to: "/dashboard" });
+  },
   component: OwnerKpiPage,
 });
 
@@ -56,9 +61,11 @@ function OwnerKpiPage() {
               <Stat label="Total ideas" value={query.data.totalIdeas} />
               <Stat label="Confirmed live" value={query.data.liveCount} />
               <Stat label="Approved" value={query.data.approvedCount} />
+              <Stat label="Published; phone check" value={query.data.shippedCount} />
               <Stat label="Blocked" value={query.data.blockedCount} />
               <Stat label="PR waiting" value={query.data.sentCount} />
-              <Stat label="Open" value={query.data.submittedCount} />
+              <Stat label="Ship requested" value={query.data.requestedCount} />
+              <Stat label="Fresh intake" value={query.data.submittedCount} />
               <Stat label="Closed" value={query.data.closedCount} />
               <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
             </div>
@@ -66,15 +73,21 @@ function OwnerKpiPage() {
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">Needs action</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Approved items should ship in OL1 first. Waiting items need an owner decision. Blocked items need manual review.
+                Published items need a phone check. Waiting items need a decision. Blocked items
+                need manual review.
               </p>
 
               {query.data.actionQueue.length === 0 ? (
-                <p className="mt-4 text-sm text-muted-foreground">Nothing is waiting on the owner lane right now.</p>
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Nothing is waiting on the owner lane right now.
+                </p>
               ) : (
                 <div className="mt-4 space-y-3">
                   {query.data.actionQueue.map((idea) => (
-                    <div key={idea.id} className="rounded-md border border-border bg-background p-3">
+                    <div
+                      key={idea.id}
+                      className="rounded-md border border-border bg-background p-3"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <Link
@@ -91,11 +104,21 @@ function OwnerKpiPage() {
                         </span>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                        <a href={idea.issueUrl} target="_blank" rel="noreferrer" className="underline">
+                        <a
+                          href={idea.issueUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
                           Issue
                         </a>
                         {idea.prUrl && (
-                          <a href={idea.prUrl} target="_blank" rel="noreferrer" className="underline">
+                          <a
+                            href={idea.prUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
                             PR #{idea.prNumber}
                           </a>
                         )}

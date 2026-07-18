@@ -23,7 +23,7 @@ const DEFAULT_MODELS: Record<Tier, string> = {
 };
 
 export function modelForTier(t: Tier): string {
-  const env = process.env[`BDC_MODEL_${t.toUpperCase()}`];
+  const env = process.env[`BDC_MODEL_${t.toUpperCase()}`]?.trim();
   return (env && env.trim()) || DEFAULT_MODELS[t];
 }
 
@@ -40,9 +40,77 @@ export type ModelResult = {
 };
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_REQUEST_TIMEOUT_MS = 12_000;
+const MIN_REQUEST_TIMEOUT_MS = 1_000;
+const MAX_REQUEST_TIMEOUT_MS = 20_000;
+const DEFAULT_RETRIES = 1;
+const MAX_RETRIES = 2;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+class OpenRouterHttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "OpenRouterHttpError";
+  }
+}
+
+function abortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error("OpenRouter request aborted.");
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(abortReason(signal));
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal ? abortReason(signal) : new Error("OpenRouter backoff aborted."));
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+export function normalizeModelRequestTimeout(value?: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_REQUEST_TIMEOUT_MS;
+  return Math.min(
+    MAX_REQUEST_TIMEOUT_MS,
+    Math.max(MIN_REQUEST_TIMEOUT_MS, Math.trunc(value as number)),
+  );
+}
+
+export function normalizeModelRetries(value?: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_RETRIES;
+  return Math.min(MAX_RETRIES, Math.max(0, Math.trunc(value as number)));
+}
+
+export function isTransientOpenRouterStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+function openRouterErrorMessage(status: number, detail: string): string {
+  if (status === 401) {
+    return "OpenRouter rejected the API key. Check OPENROUTER_API_KEY.";
+  }
+  if (status === 402) {
+    return "OpenRouter credits or model access are unavailable for this account.";
+  }
+  if (status === 403) {
+    return "OpenRouter blocked this model or request for the current account.";
+  }
+  const normalized = detail.replace(/\s+/g, " ").trim();
+  return `OpenRouter ${status}: ${normalized.slice(0, isTransientOpenRouterStatus(status) ? 200 : 300)}`;
+}
+
+function isRetryableTransportError(error: unknown): boolean {
+  return (
+    error instanceof TypeError ||
+    (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError"))
+  );
 }
 
 /**
@@ -59,8 +127,9 @@ export async function callModel(opts: {
   responseJson?: boolean;
   signal?: AbortSignal;
   retries?: number;
+  requestTimeoutMs?: number;
 }): Promise<ModelResult> {
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = process.env.OPENROUTER_API_KEY?.trim();
   if (!key) throw new Error("OPENROUTER_API_KEY not set");
 
   if (!opts.tier && !opts.model) throw new Error("Either tier or model is required.");
@@ -75,7 +144,8 @@ export async function callModel(opts: {
     opts.model ? undefined : MAX_MAX_TOKENS_ENGINE,
   );
   const model = opts.model ? validateModelId(opts.model) : modelForTier(opts.tier!);
-  const retries = opts.retries ?? 2;
+  const retries = normalizeModelRetries(opts.retries);
+  const requestTimeoutMs = normalizeModelRequestTimeout(opts.requestTimeoutMs);
 
   const body: Record<string, unknown> = {
     model,
@@ -87,13 +157,20 @@ export async function callModel(opts: {
     usage: { include: true },
   };
   if (opts.responseJson) body.response_format = { type: "json_object" };
+  // Chat/preset calls run with small token budgets (a few hundred). Reasoning models
+  // (e.g. GPT-5 Mini) otherwise spend the whole budget on hidden reasoning and return
+  // empty content. Engine tier calls keep the provider default.
+  if (opts.model) body.reasoning = { enabled: false };
 
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      if (opts.signal?.aborted) throw abortReason(opts.signal);
+      const requestSignal = AbortSignal.timeout(requestTimeoutMs);
+      const signal = opts.signal ? AbortSignal.any([opts.signal, requestSignal]) : requestSignal;
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
-        signal: opts.signal,
+        signal,
         headers: {
           Authorization: `Bearer ${key}`,
           "Content-Type": "application/json",
@@ -104,16 +181,12 @@ export async function callModel(opts: {
         body: JSON.stringify(body),
       });
 
-      if (res.status === 429 || res.status >= 500) {
-        lastErr = new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 200)}`);
-        if (attempt < retries) {
-          await sleep(500 * Math.pow(2, attempt));
-          continue;
-        }
-        throw lastErr;
-      }
       if (!res.ok) {
-        throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 300)}`);
+        const detail = await res.text();
+        throw new OpenRouterHttpError(
+          res.status,
+          openRouterErrorMessage(res.status, detail),
+        );
       }
 
       const json = (await res.json()) as {
@@ -123,7 +196,11 @@ export async function callModel(opts: {
         usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
       };
       const content = json.choices?.[0]?.message?.content ?? "";
-      if (!content) throw new Error("OpenRouter returned empty content");
+      if (!content) {
+        throw new Error(
+          "The model returned no text. It may have spent all tokens on internal reasoning — raise Max tokens or pick another model.",
+        );
+      }
 
       return {
         content,
@@ -136,10 +213,12 @@ export async function callModel(opts: {
       };
     } catch (e) {
       lastErr = e;
-      // AbortError or non-transient: don't retry.
-      if (e instanceof Error && e.name === "AbortError") throw e;
-      if (attempt >= retries) throw e;
-      await sleep(500 * Math.pow(2, attempt));
+      if (opts.signal?.aborted) throw abortReason(opts.signal);
+      const retryable =
+        (e instanceof OpenRouterHttpError && isTransientOpenRouterStatus(e.status)) ||
+        isRetryableTransportError(e);
+      if (!retryable || attempt >= retries) throw e;
+      await sleep(500 * Math.pow(2, attempt), opts.signal);
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));

@@ -34,48 +34,44 @@ export type RunsData = {
 
 export const listRunsData = createServerFn({ method: "GET" }).handler(
   async (): Promise<RunsData> => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
 
     const db = getDb();
     if (!db) {
       return {
-        tasks: listMemoryTasks().slice(0, 50).map((t) => ({
-          issueNumber: t.issueNumber,
-          title: t.title,
-          intent: t.intent,
-          status: t.status,
-          updatedAt: t.updatedAt.toISOString(),
-        })),
-        runs: listMemoryRuns().slice(0, 100).map((r) => ({
-          id: r.id,
-          issueNumber: r.issueNumber,
-          status: r.status,
-          tier: r.tier,
-          model: r.model,
-          tokensPrompt: r.tokensPrompt,
-          tokensCompletion: r.tokensCompletion,
-          costUsd: r.costUsd,
-          githubBranchRef: r.githubBranchRef,
-          githubPrNumber: r.githubPrNumber,
-          error: r.error,
-          startedAt: r.startedAt.toISOString(),
-          finishedAt: r.finishedAt?.toISOString() ?? null,
-        })),
+        tasks: listMemoryTasks()
+          .slice(0, 50)
+          .map((t) => ({
+            issueNumber: t.issueNumber,
+            title: t.title,
+            intent: t.intent,
+            status: t.status,
+            updatedAt: t.updatedAt.toISOString(),
+          })),
+        runs: listMemoryRuns()
+          .slice(0, 100)
+          .map((r) => ({
+            id: r.id,
+            issueNumber: r.issueNumber,
+            status: r.status,
+            tier: r.tier,
+            model: r.model,
+            tokensPrompt: r.tokensPrompt,
+            tokensCompletion: r.tokensCompletion,
+            costUsd: r.costUsd,
+            githubBranchRef: r.githubBranchRef,
+            githubPrNumber: r.githubPrNumber,
+            error: r.error,
+            startedAt: r.startedAt.toISOString(),
+            finishedAt: r.finishedAt?.toISOString() ?? null,
+          })),
       };
     }
 
     const [taskRows, runRows] = await Promise.all([
-      db
-        .select()
-        .from(dbSchema.tasks)
-        .orderBy(desc(dbSchema.tasks.updatedAt))
-        .limit(50),
-      db
-        .select()
-        .from(dbSchema.runs)
-        .orderBy(desc(dbSchema.runs.startedAt))
-        .limit(100),
+      db.select().from(dbSchema.tasks).orderBy(desc(dbSchema.tasks.updatedAt)).limit(50),
+      db.select().from(dbSchema.runs).orderBy(desc(dbSchema.runs.startedAt)).limit(100),
     ]);
 
     return {

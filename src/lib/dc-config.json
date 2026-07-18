@@ -10,7 +10,6 @@
     "apps/mobile/src/components/**",
     "apps/mobile/src/screens/**",
     "apps/mobile/src/styles/**",
-    "apps/mobile/src/devHarness/**",
     "apps/mobile/src/lib/designTokens.*"
   ],
   "forbidden": [
@@ -34,7 +33,5 @@
     "apps/mobile/src/lib/db/**",
     "apps/mobile/src/lib/auth*",
     "apps/mobile/src/lib/api*"
-  ],
-  "promptTemplate": "smallest-correct-ui-change",
-  "templateVersion": "github-native-v1"
+  ]
 }

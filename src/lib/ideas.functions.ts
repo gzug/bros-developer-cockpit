@@ -1,8 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import {
-  addIdeaComment,
-  canTransitionIdeaStatus,
   canConfirmIdeaLive,
   createIdea,
   createSubmittedIdea,
@@ -13,7 +11,6 @@ import {
   getEngineRunStatsBatch,
   getIdea,
   getIdeaWithPull,
-  markIdeaApproved,
   markIdeaLive,
   getOwnerActionQueue,
   listIdeaActivity,
@@ -22,13 +19,17 @@ import {
   listPipelineIdeas,
   recentIdeaCount,
   requestIdeaChanges,
+  requestBrotherShip,
   setIdeaContext,
+  setIdeaDelivery,
   setIdeaPipelineState,
   setIdeaStatus,
   setIdeaWeight,
+  toBrotherIdea,
   type BdcSubmissionType,
   type DoneCategorySlug,
   type DCIdeaStatus,
+  type IdeaDelivery,
   type DCIdeaIntent,
   type IdeaPipelineState,
   type IdeaWeight,
@@ -52,7 +53,7 @@ const SubmitIdeaInput = z.object({
 const ParkedIdeaInput = z.object({
   title: z.string().trim().min(1).max(80),
   description: z.string().trim().min(1).max(600),
-  weight: z.enum(["light", "heavy"]),
+  weight: z.enum(["light", "heavy"]).optional(),
   context: z.string().trim().max(280).optional(),
 });
 
@@ -68,6 +69,10 @@ const WeightInput = IdInput.extend({
   weight: z.enum(["light", "heavy"]),
 });
 
+const DeliveryInput = IdInput.extend({
+  delivery: z.enum(["ota", "next-apk"]),
+});
+
 const ContextInput = IdInput.extend({
   context: z.string().trim().max(280).optional(),
 });
@@ -81,30 +86,45 @@ const PrActionInput = z.object({
   prNumber: z.number().int().positive(),
 });
 
-const UpdateIdeaStatusInput = z.object({
-  id: z.number().int().positive(),
-  status: z.enum(["approved", "live", "blocked"]),
-});
+async function enforceBrotherSubmissionQuota(role: "brother" | "owner"): Promise<void> {
+  if (role !== "brother") return;
+  const { getRequestIP } = await import("@tanstack/react-start/server");
+  const { consumeDurableActionQuota } = await import("./login-rate-limit.server");
+  await consumeDurableActionQuota(`submit:${getRequestIP()?.trim() || "unknown"}`);
+  if ((await recentIdeaCount()) >= 5) {
+    throw new Error(
+      "Five wishes were already sent in the last five hours. Please try again later.",
+    );
+  }
+}
 
 export const createIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => CreateIdeaInput.parse(input))
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     const { checkGuardrails } = await import("./guardrails.server");
-    requireAuth();
+    const role = requireAuth();
     const guardrail = checkGuardrails({
       title: data.title,
       body: data.description,
     });
     if (!guardrail.ok) throw new Error(guardrail.message);
-    return createIdea(data.intent as DCIdeaIntent, data.title, data.description);
+    await enforceBrotherSubmissionQuota(role);
+    const idea = await createIdea(data.intent as DCIdeaIntent, data.title, data.description);
+    await upsertTask({
+      issueNumber: idea.id,
+      title: idea.title,
+      intent: idea.intent,
+      status: idea.status,
+    });
+    return idea;
   });
 
 export const submitIdeaFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => input)
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const role = requireAuth();
 
     const parsed = SubmitIdeaInput.safeParse(data);
     if (!parsed.success) {
@@ -113,6 +133,15 @@ export const submitIdeaFn = createServerFn({ method: "POST" })
         error: parsed.error.issues[0]?.message ?? "Please check the form.",
       };
     }
+
+    const { checkGuardrails } = await import("./guardrails.server");
+    const guardrail = checkGuardrails({
+      title: parsed.data.title,
+      screen: parsed.data.screen,
+      body: parsed.data.description,
+    });
+    if (!guardrail.ok) return { ok: false as const, error: guardrail.message };
+    await enforceBrotherSubmissionQuota(role);
 
     try {
       const idea = await createSubmittedIdea({
@@ -139,7 +168,7 @@ export const submitIdeaFn = createServerFn({ method: "POST" })
 export const listIdeaEntries = createServerFn({ method: "GET" }).handler(async () => {
   const { requireAuth } = await import("./auth-session.server");
   requireAuth();
-  return listIdeas();
+  return (await listIdeas()).map(toBrotherIdea);
 });
 
 export const listPipelineEntries = createServerFn({ method: "GET" }).handler(async () => {
@@ -160,7 +189,7 @@ export const getUndoLastChangeEntry = createServerFn({ method: "GET" }).handler(
   return getUndoLastChangeStatus();
 });
 
-export const createParkedIdeaEntry = createServerFn({ method: "POST" })
+export const createPipelineIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => ParkedIdeaInput.parse(input))
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
@@ -171,12 +200,14 @@ export const createParkedIdeaEntry = createServerFn({ method: "POST" })
       body: `${data.description}\n${data.context ?? ""}`,
     });
     if (!guardrail.ok) throw new Error(guardrail.message);
+    // Active (not parked): pipeline tasks live in the OTA/Next-APK queue and must not be
+    // swept out by the 14-day parked auto-archive, which would silently drop them from every list.
     return createSubmittedIdea({
       type: "idea",
       title: data.title,
       description: data.description,
-      parked: true,
-      weight: data.weight as IdeaWeight,
+      parked: false,
+      weight: (data.weight as IdeaWeight | undefined) ?? "light",
       context: data.context,
     });
   });
@@ -199,6 +230,15 @@ export const updateIdeaWeightEntry = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const updateIdeaDeliveryEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => DeliveryInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    await setIdeaDelivery(data.id, data.delivery as IdeaDelivery);
+    return { ok: true as const };
+  });
+
 export const updateIdeaContextEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => ContextInput.parse(input))
   .handler(async ({ data }) => {
@@ -206,6 +246,24 @@ export const updateIdeaContextEntry = createServerFn({ method: "POST" })
     requireAuth();
     await setIdeaContext(data.id, data.context);
     return { ok: true as const };
+  });
+
+export const requestShipEntry = createServerFn({ method: "POST" })
+  .validator((input: unknown) => IdInput.parse(input))
+  .handler(async ({ data }) => {
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
+    const result = await requestBrotherShip(data.id);
+    if (result.ok) {
+      const idea = await getIdea(data.id);
+      await upsertTask({
+        issueNumber: idea.id,
+        title: idea.title,
+        intent: idea.intent,
+        status: idea.status,
+      });
+    }
+    return result;
   });
 
 export const deleteIdeaEntry = createServerFn({ method: "POST" })
@@ -220,8 +278,8 @@ export const deleteIdeaEntry = createServerFn({ method: "POST" })
 export const completeIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => DoneInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
     await completeIdea(data.id, data.category as DoneCategorySlug);
     return { ok: true as const };
   });
@@ -231,15 +289,7 @@ export const getIdeaEntry = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { requireAuth } = await import("./auth-session.server");
     requireAuth();
-    return getIdea(data.id);
-  });
-
-export const getIdeaActivityEntry = createServerFn({ method: "GET" })
-  .validator((input: unknown) => IdInput.parse(input))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
-    return listIdeaActivity(data.id);
+    return toBrotherIdea(await getIdea(data.id));
   });
 
 export const recentIdeaUsage = createServerFn({ method: "GET" }).handler(async () => {
@@ -252,86 +302,82 @@ export const recentIdeaUsage = createServerFn({ method: "GET" }).handler(async (
 export const processContribution = createServerFn({ method: "POST" })
   .validator((input: unknown) => IdInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
     const { processTask } = await import("./engine.server");
     return processTask(data.id);
   });
 
 export const pollNewBdcIssuesFn = createServerFn({ method: "POST" }).handler(async () => {
-  const { requireAuth } = await import("./auth-session.server");
-  requireAuth();
+  const { requireOwner } = await import("./auth-session.server");
+  requireOwner();
   const { pollNewBdcIssues } = await import("./issue-poller.server");
   return pollNewBdcIssues();
 });
 
-const STATUS_COMMENT: Record<"approved" | "live" | "blocked", string> = {
-  approved: "Owner marked this PR approved to ship.",
-  live: "Owner confirmed this change live in OL1.",
-  blocked: "Owner returned this idea to manual review.",
-};
+async function approveHeldPullRequest(issueNumber: number, prNumber: number) {
+  const { isBdcPaused } = await import("./engine.server");
+  if (isBdcPaused()) {
+    throw new Error(
+      "BDC shipping is paused. Arm it only after the production baseline is device-verified.",
+    );
+  }
+  const pr = await getPullRequest(prNumber);
+  if (pr.state !== "open") {
+    throw new Error(`PR #${prNumber} is not open.`);
+  }
+  const { isPullRequestForIdea } = await import("./github-issues.server");
+  if (!isPullRequestForIdea(issueNumber, pr)) {
+    throw new Error(`PR #${prNumber} is not the trusted held change for issue #${issueNumber}.`);
+  }
 
-export const updateIdeaStatusEntry = createServerFn({ method: "POST" })
-  .validator((input: unknown) => UpdateIdeaStatusInput.parse(input))
-  .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
-    const { idea, pr } = await getIdeaWithPull(data.id);
-
-    if (!canTransitionIdeaStatus(idea.status, data.status as DCIdeaStatus)) {
-      throw new Error(`Cannot move ${idea.status} to ${data.status}.`);
-    }
-
-    if (data.status === "live" && !canConfirmIdeaLive(pr)) {
-      throw new Error("Cannot confirm live until the linked PR is merged.");
-    }
-
-    await setIdeaStatus(data.id, data.status as DCIdeaStatus, idea.intent as DCIdeaIntent);
-    await addIdeaComment(data.id, STATUS_COMMENT[data.status]);
-    return { ok: true as const, statusSummary: describeIdeaStatus(data.status as DCIdeaStatus) };
+  await removeIssueLabel(prNumber, "bdc-changes-requested");
+  await removeIssueLabel(prNumber, "bdc-failed");
+  await removeIssueLabel(prNumber, "bdc-approved");
+  await removeIssueLabel(issueNumber, "bdc-changes-requested");
+  await removeIssueLabel(issueNumber, "bdc-failed");
+  await removeIssueLabel(issueNumber, "bdc-approved");
+  await removeIssueLabel(prNumber, "awaiting-owner-review");
+  await removeIssueLabel(issueNumber, "awaiting-owner-review");
+  await upsertTask({
+    issueNumber,
+    title: pr.title,
+    intent: "change",
+    status: "approved",
   });
+  // This label starts the privileged ship workflow. Keep it as the final mutation so
+  // a failed bookkeeping call can never look like a failed approval while shipment runs.
+  await addLabelsToIssue(prNumber, ["bdc-approved"]);
+
+  return {
+    ok: true as const,
+    shipLane: "one-l1fe-bdc-ship",
+    message: "Approved. The One L1fe checks will run before the update is published.",
+  };
+}
 
 export const approvePrFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => PrActionInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
-
-    const pr = await getPullRequest(data.prNumber);
-    const expectedHeldBranch = `bdc-hold/dc-issue-${data.issueNumber}`;
-    if (pr.state !== "open") {
-      throw new Error(`PR #${data.prNumber} is not open.`);
-    }
-    if (pr.headRef !== expectedHeldBranch) {
-      throw new Error(`PR #${data.prNumber} is on ${pr.headRef}, expected ${expectedHeldBranch}.`);
-    }
-
-    await addLabelsToIssue(data.prNumber, ["bdc-approved"]);
-    await markIdeaApproved(data.issueNumber);
-    await removeIssueLabel(data.prNumber, "awaiting-owner-review");
-    await removeIssueLabel(data.issueNumber, "awaiting-owner-review");
-    await upsertTask({
-      issueNumber: data.issueNumber,
-      title: pr.title,
-      intent: "change",
-      status: "approved",
-    });
-
-    return {
-      ok: true as const,
-      shipLane: "one-l1fe-bdc-ship",
-      message: "Approved. The One L1fe BDC ship workflow will validate, merge, and publish the production OTA.",
-    };
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
+    return approveHeldPullRequest(data.issueNumber, data.prNumber);
   });
 
 export const requestChangesFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => PrActionInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
+    const { pr } = await getIdeaWithPull(data.issueNumber);
+    if (!pr || pr.number !== data.prNumber || pr.state !== "open") {
+      throw new Error(
+        `PR #${data.prNumber} is not the open held change for issue #${data.issueNumber}.`,
+      );
+    }
     await requestIdeaChanges(data.issueNumber);
-    await addLabelsToIssue(data.prNumber, ["bdc-changes-requested"]);
-    await removeIssueLabel(data.prNumber, "awaiting-owner-review");
+    await addLabelsToIssue(pr.number, ["bdc-changes-requested"]);
+    await removeIssueLabel(pr.number, "awaiting-owner-review");
     await upsertTask({
       issueNumber: data.issueNumber,
       title: `Issue #${data.issueNumber}`,
@@ -344,8 +390,14 @@ export const requestChangesFn = createServerFn({ method: "POST" })
 export const markLiveFn = createServerFn({ method: "POST" })
   .validator((input: unknown) => IdInput.parse(input))
   .handler(async ({ data }) => {
-    const { requireAuth } = await import("./auth-session.server");
-    requireAuth();
+    const { requireOwner } = await import("./auth-session.server");
+    requireOwner();
+    const { idea, pr } = await getIdeaWithPull(data.id);
+    if (idea.status !== "shipped" || !canConfirmIdeaLive(pr)) {
+      throw new Error(
+        "Cannot confirm live until the update was published and the linked PR was merged.",
+      );
+    }
     await markIdeaLive(data.id);
     await upsertTask({
       issueNumber: data.id,
@@ -357,8 +409,8 @@ export const markLiveFn = createServerFn({ method: "POST" })
   });
 
 export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () => {
-  const { requireAuth } = await import("./auth-session.server");
-  requireAuth();
+  const { requireOwner } = await import("./auth-session.server");
+  requireOwner();
   const ideas = await listIdeas();
   const statsMap = await getEngineRunStatsBatch(ideas.map((idea) => idea.id));
   const flatRuns = ideas.flatMap((idea) => statsMap.get(idea.id) ?? []);
@@ -367,8 +419,10 @@ export const getOwnerKpis = createServerFn({ method: "GET" }).handler(async () =
     totalIdeas: ideas.length,
     liveCount: ideas.filter((idea) => idea.status === "live").length,
     approvedCount: ideas.filter((idea) => idea.status === "approved").length,
+    shippedCount: ideas.filter((idea) => idea.status === "shipped").length,
     blockedCount: ideas.filter((idea) => idea.status === "blocked").length,
     sentCount: ideas.filter((idea) => idea.status === "sent").length,
+    requestedCount: ideas.filter((idea) => idea.status === "requested").length,
     submittedCount: ideas.filter((idea) => idea.status === "submitted").length,
     closedCount: ideas.filter((idea) => idea.status === "closed").length,
     totalCostUsd: flatRuns.reduce((sum, run) => sum + run.costUsd, 0),

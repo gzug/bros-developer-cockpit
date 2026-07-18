@@ -16,11 +16,13 @@ import {
   type RepoIssue,
   type RepoIssueComment,
 } from "./github.server";
+import type { IdeaStatus } from "./idea-status";
 
 export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea" | "change";
-export type DCIdeaStatus = "submitted" | "processing" | "sent" | "approved" | "live" | "blocked" | "closed";
+export type DCIdeaStatus = IdeaStatus;
 export type BdcSubmissionType = "idea" | "change";
 export type IdeaWeight = "light" | "heavy";
+export type IdeaDelivery = "ota" | "next-apk";
 export type IdeaPipelineState = "active" | "parked" | "archived";
 export type DoneCategorySlug = "home" | "sleep" | "nutrition" | "activity" | "statistics" | "general";
 
@@ -44,9 +46,11 @@ export interface DCIdea {
   issueUrl: string;
   prNumber?: number;
   prUrl?: string;
+  prMerged?: boolean;
   blockReason?: string;
   labels: string[];
   weight: IdeaWeight;
+  delivery: IdeaDelivery;
   pipelineState: IdeaPipelineState;
   context?: string;
   parkedAt?: string;
@@ -61,7 +65,15 @@ export interface DCIdeaActivity {
   url: string;
 }
 
-export type OwnerActionIdea = Pick<DCIdea, "id" | "title" | "status" | "statusSummary" | "prNumber" | "prUrl" | "issueUrl">;
+export type BrotherIdea = Pick<
+  DCIdea,
+  "id" | "title" | "description" | "intent" | "status" | "statusSummary" | "createdAt"
+> & { needsHelp: boolean };
+
+export type OwnerActionIdea = Pick<
+  DCIdea,
+  "id" | "title" | "status" | "statusSummary" | "prNumber" | "prUrl" | "prMerged" | "issueUrl"
+>;
 
 export type PipelineIdeas = {
   active: DCIdea[];
@@ -95,6 +107,8 @@ type ParsedMeta = {
 const PARKED_LABEL = "parked";
 const ARCHIVED_LABEL = "archived";
 const WEIGHT_PREFIX = "weight:";
+const DELIVERY_PREFIX = "delivery:";
+const BROTHER_SHIP_REQUESTED_LABEL = "bdc-ship-requested";
 const DONE_CATEGORY_PREFIX = "done-category:";
 const DC_LABEL = "dc";
 const FROM_BROTHER_LABEL = "from-brother";
@@ -103,6 +117,8 @@ const BDC_ENGINE_STARTED_LABEL = "bdc-engine-started";
 const BDC_BLOCKED_GUARDRAILS_LABEL = "bdc-blocked-guardrails";
 const BDC_CHANGES_REQUESTED_LABEL = "bdc-changes-requested";
 const BDC_APPROVED_LABEL = "bdc-approved";
+const BDC_SHIPPED_LABEL = "bdc-shipped";
+const BDC_PUBLISH_FAILED_LABEL = "bdc-publish-failed";
 const BDC_LIVE_LABEL = "bdc-live";
 const UI_ONLY_LABEL = "ui-only";
 const DESIGN_LABEL = "one-l1fe-design";
@@ -189,6 +205,60 @@ function parseWeight(labels: string[]): IdeaWeight {
   return labels.includes("weight:heavy") ? "heavy" : "light";
 }
 
+export function parseDelivery(labels: string[]): IdeaDelivery {
+  return labels.includes(`${DELIVERY_PREFIX}next-apk`) ? "next-apk" : "ota";
+}
+
+// Deterministic fallback that flags a wish as needing a native APK build rather than an OTA
+// update. The chat AI refines this in dialog; this heuristic is the safe default and the
+// classifier used when no AI signal exists. Anything the cockpit cannot ship as a surface
+// change (native modules, permissions, sensors, dependencies, store metadata) is next-apk.
+const NEXT_APK_PATTERNS: RegExp[] = [
+  /\bnative\b/i,
+  /\bpermission(s)?\b/i,
+  /\bsensor(s)?\b/i,
+  /\bhealth connect\b/i,
+  /\bgarmin\b/i,
+  /\bbluetooth\b/i,
+  /\bnotification(s)?\b/i,
+  /\bbackground\b/i,
+  /\bwidget\b/i,
+  /\bapp icon\b/i,
+  /\bsplash\b/i,
+  /\bdependency|dependencies|library|sdk|package\b/i,
+  /\bandroid\b/i,
+  /\bplay store|app store|store listing\b/i,
+];
+
+export function classifyDelivery(text: string): IdeaDelivery {
+  return NEXT_APK_PATTERNS.some((pattern) => pattern.test(text)) ? "next-apk" : "ota";
+}
+
+export type BrotherShipCheck = { ok: boolean; reason: string };
+
+// Whether the co-dev may request a ship for this task. OTA-only (a next-apk change cannot go
+// over the air), and only while it is still open (not already shipping, live, or blocked). The
+// actual publish stays behind the scoped engine, guardrails, the bdc-ship workflow, and the
+// owner arming gates — this only records the brother's request.
+export function canBrotherShip(idea: Pick<DCIdea, "delivery" | "status">): BrotherShipCheck {
+  if (idea.delivery === "next-apk") {
+    return { ok: false, reason: "This change needs a new app version (APK) and cannot ship over the air." };
+  }
+  if (idea.status === "requested") {
+    return { ok: false, reason: "Shipping was already requested for this task." };
+  }
+  if (idea.status === "shipped" || idea.status === "live") {
+    return { ok: false, reason: "This task has already been shipped." };
+  }
+  if (idea.status === "blocked") {
+    return { ok: false, reason: "This task is blocked and needs a fix before it can ship." };
+  }
+  if (idea.status === "closed") {
+    return { ok: false, reason: "This task is closed." };
+  }
+  return { ok: true, reason: "" };
+}
+
 function parsePipelineState(labels: string[]): IdeaPipelineState {
   if (labels.includes(ARCHIVED_LABEL)) return "archived";
   if (labels.includes(PARKED_LABEL)) return "parked";
@@ -231,11 +301,18 @@ function parseMeta(issue: RepoIssue): ParsedMeta {
   if (labels.includes("idea")) return { intent: "idea" };
 
   const labelIntent = labels.find(
-    (label) => label.startsWith(INTENT_PREFIX) && label !== DC_LABEL && !label.startsWith(STATUS_PREFIX),
+    (label) =>
+      label.startsWith(INTENT_PREFIX) && label !== DC_LABEL && !label.startsWith(STATUS_PREFIX),
   );
   if (labelIntent) {
     const candidate = labelIntent.slice(INTENT_PREFIX.length);
-    if (candidate === "wording" || candidate === "look" || candidate === "wrong" || candidate === "idea" || candidate === "change") {
+    if (
+      candidate === "wording" ||
+      candidate === "look" ||
+      candidate === "wrong" ||
+      candidate === "idea" ||
+      candidate === "change"
+    ) {
       return { intent: candidate };
     }
   }
@@ -244,26 +321,35 @@ function parseMeta(issue: RepoIssue): ParsedMeta {
   if (!match) return { intent: "idea" };
   try {
     const parsed = JSON.parse(match[1]) as Partial<ParsedMeta>;
-    if (parsed.intent === "wording" || parsed.intent === "look" || parsed.intent === "wrong" || parsed.intent === "idea" || parsed.intent === "change") {
+    if (
+      parsed.intent === "wording" ||
+      parsed.intent === "look" ||
+      parsed.intent === "wrong" ||
+      parsed.intent === "idea" ||
+      parsed.intent === "change"
+    ) {
       return { intent: parsed.intent };
     }
-  } catch {}
+  } catch {
+    return { intent: "idea" };
+  }
   return { intent: "idea" };
+}
+
+export function isPullRequestForIdea(issueNumber: number, pull: PullState): boolean {
+  const branch = `bdc-hold/dc-issue-${issueNumber}`;
+  const marker = `Resolves: gzug/01-One-L1fe#${issueNumber}`;
+  return (
+    pull.headRef === branch &&
+    pull.baseRef === "main" &&
+    pull.author === "gzug" &&
+    pull.body.split(/\r?\n/).some((line) => line.trim() === marker)
+  );
 }
 
 function matchPullRequest(issueNumber: number, pulls: PullState[]): PullState | undefined {
   return pulls.find((pull) => {
-    const ref = `#${issueNumber}`;
-    const fullRef = `gzug/01-One-L1fe#${issueNumber}`;
-    const branch = `bdc-hold/dc-issue-${issueNumber}`;
-    return (
-      pull.headRef === branch ||
-      pull.body.includes(`Closes ${ref}`) ||
-      pull.body.includes(`Resolves: ${fullRef}`) ||
-      pull.body.includes(fullRef) ||
-      pull.title.includes(ref) ||
-      pull.body.includes(ref)
-    );
+    return isPullRequestForIdea(issueNumber, pull);
   });
 }
 
@@ -279,16 +365,23 @@ export function deriveIdeaStatus(input: {
 }): DCIdeaStatus {
   const labels = new Set([...input.issueLabels, ...(input.pr?.labels ?? [])]);
 
-  if (labels.has("bdc-failed") || labels.has(BDC_BLOCKED_GUARDRAILS_LABEL) || labels.has(BDC_CHANGES_REQUESTED_LABEL)) {
+  if (
+    labels.has("bdc-failed") ||
+    labels.has(BDC_PUBLISH_FAILED_LABEL) ||
+    labels.has(BDC_BLOCKED_GUARDRAILS_LABEL) ||
+    labels.has(BDC_CHANGES_REQUESTED_LABEL)
+  ) {
     return "blocked";
   }
   if (labels.has(BDC_LIVE_LABEL)) return "live";
+  if (labels.has(BDC_SHIPPED_LABEL)) return "shipped";
   if (labels.has(BDC_APPROVED_LABEL)) return "approved";
   if (labels.has(statusLabel("live"))) return "live";
   if (labels.has(statusLabel("approved"))) return "approved";
   if (labels.has(statusLabel("blocked"))) return "blocked";
   if (input.pr) return "sent";
   if (labels.has(BDC_ENGINE_STARTED_LABEL)) return "processing";
+  if (labels.has(BROTHER_SHIP_REQUESTED_LABEL)) return "requested";
   if (input.issueState === "closed") return "closed";
   return "submitted";
 }
@@ -297,12 +390,16 @@ export function canTransitionIdeaStatus(from: DCIdeaStatus, to: DCIdeaStatus): b
   if (from === to) return true;
 
   switch (from) {
+    case "requested":
+      return to === "processing" || to === "blocked";
     case "processing":
       return to === "sent" || to === "blocked";
     case "sent":
       return to === "approved" || to === "blocked";
     case "approved":
-      return to === "live" || to === "blocked";
+      return to === "blocked";
+    case "shipped":
+      return to === "live";
     default:
       return false;
   }
@@ -315,19 +412,23 @@ export function canConfirmIdeaLive(pr?: Pick<PullState, "merged"> | null): boole
 export function describeIdeaStatus(status: DCIdeaStatus): string {
   switch (status) {
     case "submitted":
-      return "Ready to start the bridge pipeline.";
+      return "Received. Don can start preparing it.";
+    case "requested":
+      return "Shipping was requested. It is waiting for Don to start the checks.";
     case "processing":
-      return "BDC is preparing a held PR.";
+      return "The change is being prepared safely.";
     case "sent":
-      return "A held PR exists. Review it and either approve shipping or return it to manual review.";
+      return "The change is ready for Don to review.";
     case "approved":
-      return "Approved in Cockpit. The One L1fe ship lane will validate, merge, and publish OTA.";
+      return "Don approved it. Automatic safety checks are running.";
+    case "shipped":
+      return "Update published. Reopen One L1fe twice, check the change, then confirm it here.";
     case "live":
-      return "Confirmed live in OL1.";
+      return "The update was checked on the phone.";
     case "blocked":
-      return "Stopped for manual review.";
+      return "This needs Don's help before it can continue.";
     case "closed":
-      return "Closed without a live confirmation.";
+      return "This wish was closed.";
   }
 }
 
@@ -344,26 +445,30 @@ export function toIdeaActivity(comments: RepoComment[]): DCIdeaActivity[] {
 }
 
 const OWNER_ACTION_PRIORITY: Partial<Record<DCIdeaStatus, number>> = {
-  approved: 0,
+  shipped: 0,
   sent: 1,
-  blocked: 2,
+  requested: 2,
+  blocked: 3,
+  approved: 4,
 };
 
 export function getOwnerActionQueue(ideas: DCIdea[]): OwnerActionIdea[] {
   return ideas
     .filter((idea) => OWNER_ACTION_PRIORITY[idea.status] != null)
     .sort((a, b) => {
-      const priorityDiff = (OWNER_ACTION_PRIORITY[a.status] ?? 99) - (OWNER_ACTION_PRIORITY[b.status] ?? 99);
+      const priorityDiff =
+        (OWNER_ACTION_PRIORITY[a.status] ?? 99) - (OWNER_ACTION_PRIORITY[b.status] ?? 99);
       if (priorityDiff !== 0) return priorityDiff;
       return a.createdAt < b.createdAt ? 1 : -1;
     })
-    .map(({ id, title, status, statusSummary, prNumber, prUrl, issueUrl }) => ({
+    .map(({ id, title, status, statusSummary, prNumber, prUrl, prMerged, issueUrl }) => ({
       id,
       title,
       status,
       statusSummary,
       prNumber,
       prUrl,
+      prMerged,
       issueUrl,
     }));
 }
@@ -377,7 +482,9 @@ async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea>
   let blockReason: string | undefined;
 
   if (status === "blocked") {
-    blockReason = parseBlockReason(await listIssueComments(pr?.labels.includes("bdc-failed") ? pr.number : issue.number));
+    blockReason = parseBlockReason(
+      await listIssueComments(pr?.labels.includes("bdc-failed") ? pr.number : issue.number),
+    );
   }
 
   return {
@@ -391,9 +498,11 @@ async function deriveIdea(issue: RepoIssue, pulls: PullState[]): Promise<DCIdea>
     issueUrl: issue.html_url,
     prNumber: pr?.number,
     prUrl: pr?.html_url,
+    prMerged: pr?.merged,
     blockReason,
     labels,
     weight: parseWeight(labels),
+    delivery: parseDelivery(labels),
     pipelineState: parsePipelineState(labels),
     context: readTextMeta(issue.body, "context"),
     parkedAt: readTextMeta(issue.body, "parked-at"),
@@ -460,10 +569,13 @@ export async function createSubmittedIdea(input: {
   screen?: string;
   parked?: boolean;
   weight?: IdeaWeight;
+  delivery?: IdeaDelivery;
   context?: string;
 }): Promise<DCIdea> {
   const weight = input.weight ?? "light";
+  const delivery = input.delivery ?? classifyDelivery(`${input.title} ${input.description}`);
   const labels = baseSubmissionLabels(input.type, weight);
+  labels.push(`${DELIVERY_PREFIX}${delivery}`);
   const parkedAt = input.parked ? normalizeDateOnly() : undefined;
   if (input.parked) labels.push(PARKED_LABEL);
   const issue = await createIssue({
@@ -482,6 +594,7 @@ export async function createSubmittedIdea(input: {
     issueUrl: issue.html_url,
     labels,
     weight,
+    delivery,
     pipelineState: input.parked ? "parked" : "active",
     context: input.context?.trim() || undefined,
     parkedAt,
@@ -490,10 +603,19 @@ export async function createSubmittedIdea(input: {
 
 export async function listIdeas(): Promise<DCIdea[]> {
   const [issues, pulls] = await Promise.all([
-    listIssues({ labels: BDC_SUBMITTED_LABEL, state: "all", sort: "created", direction: "desc", perPage: 50 }),
+    listIssues({
+      labels: BDC_SUBMITTED_LABEL,
+      state: "all",
+      sort: "created",
+      direction: "desc",
+      perPage: 50,
+    }),
     listPullRequests("all"),
   ]);
-  const realIssues = issues.filter((issue) => !issue.pull_request);
+  const realIssues = issues.filter(
+    (issue) =>
+      !issue.pull_request && issue.labels.some((label) => label.name === FROM_BROTHER_LABEL),
+  );
   return Promise.all(realIssues.map((issue) => deriveIdea(issue, pulls)));
 }
 
@@ -509,7 +631,24 @@ export async function listPipelineIdeas(): Promise<PipelineIdeas> {
 
 export async function getIdea(issueNumber: number): Promise<DCIdea> {
   const [issue, pulls] = await Promise.all([getIssue(issueNumber), listPullRequests("all")]);
+  const labels = new Set(issue.labels.map((label) => label.name));
+  if (issue.pull_request || !labels.has(FROM_BROTHER_LABEL) || !labels.has(BDC_SUBMITTED_LABEL)) {
+    throw new Error("BDC wish not found.");
+  }
   return deriveIdea(issue, pulls);
+}
+
+export function toBrotherIdea(idea: DCIdea): BrotherIdea {
+  return {
+    id: idea.id,
+    title: idea.title,
+    description: idea.description,
+    intent: idea.intent,
+    status: idea.status,
+    statusSummary: idea.statusSummary,
+    createdAt: idea.createdAt,
+    needsHelp: idea.status === "blocked",
+  };
 }
 
 export async function recentIdeaCount(): Promise<number> {
@@ -522,15 +661,21 @@ export async function recentIdeaCount(): Promise<number> {
     perPage: 100,
     since: sinceDate.toISOString(),
   });
-  return issues.filter((issue) => !issue.pull_request && new Date(issue.created_at) >= sinceDate).length;
+  return issues.filter((issue) => !issue.pull_request && new Date(issue.created_at) >= sinceDate)
+    .length;
 }
 
-export async function setIdeaStatus(issueNumber: number, status: DCIdeaStatus, intent?: DCIdeaIntent): Promise<void> {
+export async function setIdeaStatus(
+  issueNumber: number,
+  status: DCIdeaStatus,
+  intent?: DCIdeaIntent,
+): Promise<void> {
   const issue = await getIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   const next = labels.filter(
     (label) =>
       !label.startsWith(STATUS_PREFIX) &&
+      label !== BROTHER_SHIP_REQUESTED_LABEL &&
       label !== BDC_APPROVED_LABEL &&
       label !== BDC_LIVE_LABEL &&
       label !== BDC_CHANGES_REQUESTED_LABEL &&
@@ -542,6 +687,7 @@ export async function setIdeaStatus(issueNumber: number, status: DCIdeaStatus, i
   if (!next.includes(DESIGN_LABEL)) next.push(DESIGN_LABEL);
   const type = intent ? submissionTypeForIntent(intent) : "idea";
   if (!next.includes(type)) next.push(type);
+  if (status === "requested") next.push(BROTHER_SHIP_REQUESTED_LABEL);
   if (status === "processing" || status === "sent") {
     if (!next.includes(BDC_ENGINE_STARTED_LABEL)) next.push(BDC_ENGINE_STARTED_LABEL);
   }
@@ -576,9 +722,35 @@ export async function setIdeaWeight(issueNumber: number, weight: IdeaWeight): Pr
   await updateIssueLabels(issueNumber, setLabel(labels, `${WEIGHT_PREFIX}${weight}`, (label) => label.startsWith(WEIGHT_PREFIX)));
 }
 
+export async function setIdeaDelivery(issueNumber: number, delivery: IdeaDelivery): Promise<void> {
+  const issue = await requireBdcPipelineIssue(issueNumber);
+  const labels = issue.labels.map((label) => label.name);
+  await updateIssueLabels(
+    issueNumber,
+    setLabel(labels, `${DELIVERY_PREFIX}${delivery}`, (label) => label.startsWith(DELIVERY_PREFIX)),
+  );
+}
+
 export async function setIdeaContext(issueNumber: number, context?: string): Promise<void> {
   const issue = await requireBdcPipelineIssue(issueNumber);
   await updateIssueBody(issueNumber, replaceTextMeta(issue.body, "context", context));
+}
+
+// Records a co-dev ship request on their own OTA pipeline task. Ownership is enforced by
+// requireBdcPipelineIssue; canBrotherShip gates category/state server-side. This adds a marker
+// label + comment only — it does not merge, publish, or arm anything. The bdc-ship workflow and
+// owner arming gates remain the sole path to an actual OTA.
+export async function requestBrotherShip(issueNumber: number): Promise<BrotherShipCheck> {
+  await requireBdcPipelineIssue(issueNumber);
+  const idea = await getIdea(issueNumber);
+  const check = canBrotherShip(idea);
+  if (!check.ok) return check;
+  await addLabelsToIssue(issueNumber, [BROTHER_SHIP_REQUESTED_LABEL]);
+  await addIssueComment(
+    issueNumber,
+    "Shipping was requested from the cockpit. This records the request only. Don still has to start the checks and approve any real publication.",
+  );
+  return { ok: true, reason: "" };
 }
 
 export async function closeIdeaAsDeleted(issueNumber: number): Promise<void> {
@@ -591,7 +763,6 @@ export async function completeIdea(issueNumber: number, category: DoneCategorySl
   const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   const next = setLabel(labels, `${DONE_CATEGORY_PREFIX}${category}`, (label) => label.startsWith(DONE_CATEGORY_PREFIX));
-  if (!next.includes(BDC_LIVE_LABEL)) next.push(BDC_LIVE_LABEL);
   await updateIssueLabels(issueNumber, next);
   await addIssueComment(issueNumber, `Completed in BDC. Retro category: ${doneCategoryLabel(category)}.`);
   await closeIssue(issueNumber, "completed");
@@ -643,7 +814,10 @@ export async function markIdeaGuardrailBlocked(issueNumber: number, reason: stri
 
 export async function markIdeaApproved(issueNumber: number): Promise<void> {
   await addLabelsToIssue(issueNumber, [BDC_APPROVED_LABEL]);
-  await addIssueComment(issueNumber, "Approved by owner. The One L1fe BDC ship lane will validate, merge, and publish the OTA.");
+  await addIssueComment(
+    issueNumber,
+    "Approved by owner. The One L1fe BDC ship lane will validate, merge, and publish the OTA.",
+  );
 }
 
 export async function markIdeaLive(issueNumber: number): Promise<void> {
@@ -667,7 +841,12 @@ export async function listNewBdcIssues(): Promise<RepoIssue[]> {
   return issues.filter((issue) => {
     if (issue.pull_request) return false;
     const labels = new Set(issue.labels.map((label) => label.name));
-    return !labels.has(BDC_ENGINE_STARTED_LABEL) && !labels.has(BDC_BLOCKED_GUARDRAILS_LABEL);
+    return (
+      labels.has(FROM_BROTHER_LABEL) &&
+      labels.has(BDC_SUBMITTED_LABEL) &&
+      !labels.has(BDC_ENGINE_STARTED_LABEL) &&
+      !labels.has(BDC_BLOCKED_GUARDRAILS_LABEL)
+    );
   });
 }
 
@@ -675,7 +854,10 @@ export async function addIdeaComment(issueNumber: number, body: string): Promise
   await addIssueComment(issueNumber, body);
 }
 
-export async function addEngineRunComment(issueNumber: number, stats: EngineRunStats): Promise<void> {
+export async function addEngineRunComment(
+  issueNumber: number,
+  stats: EngineRunStats,
+): Promise<void> {
   const prPart = stats.prNumber ? ` | PR #${stats.prNumber}` : "";
   await addIssueComment(
     issueNumber,

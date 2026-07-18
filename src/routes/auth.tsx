@@ -5,6 +5,7 @@ import { loginWithPin } from "@/lib/auth.server";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { safeNext } from "@/lib/safe-next";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -15,29 +16,24 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function safeNext(candidate: string): string {
-  if (!candidate.startsWith("/") || candidate.startsWith("//")) return "";
-  return candidate;
-}
-
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
   const nextSafe = safeNext(next ?? "");
-  const [pin, setPin] = useState("");
+  const [secret, setSecret] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!/^\d{4}$/.test(pin.trim())) {
+    if (!/^\d{4}$/.test(secret.trim())) {
       toast.error("Please enter exactly four digits.");
       return;
     }
     setBusy(true);
     try {
-      await loginWithPin({ data: { pin: pin.trim() } });
+      const result = await loginWithPin({ data: { secret: secret.trim() } });
       if (nextSafe) window.location.replace(nextSafe);
-      else navigate({ to: "/dashboard", replace: true });
+      else navigate({ to: result.role === "owner" ? "/dc" : "/dashboard", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wrong code");
     } finally {
@@ -50,17 +46,19 @@ function AuthPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Log in</CardTitle>
-          <CardDescription>Enter the four-digit code.</CardDescription>
+          <CardDescription>Enter your four-digit code.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               type="password"
+              aria-label="Four-digit code"
               inputMode="numeric"
               autoComplete="current-password"
-              placeholder="1234"
-              value={pin}
-              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
+              maxLength={4}
+              value={secret}
+              onChange={(e) => setSecret(e.target.value.replace(/\D/g, "").slice(0, 4))}
               required
               autoFocus
               className="text-center text-2xl tracking-[0.45em]"

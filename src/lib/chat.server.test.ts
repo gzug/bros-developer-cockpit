@@ -40,5 +40,7 @@ test("refineIdeaChat round-trips preset model, system prompt, and params into th
   expect(body?.model).toBe("openai/gpt-5-mini");
   expect(body?.temperature).toBe(0.6);
   expect(body?.max_tokens).toBe(700);
-  expect(body?.messages?.[0]).toEqual({ role: "system", content: systemPrompt });
+  expect(body?.messages?.[0]?.role).toBe("system");
+  expect(String(body?.messages?.[0]?.content ?? "")).toContain(systemPrompt);
+  expect(String(body?.messages?.[0]?.content ?? "")).toContain("Don is the main developer");
 });

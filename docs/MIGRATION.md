@@ -1,98 +1,55 @@
-# BDC engine migration — Lovable import → OpenRouter own-harness
+# BDC current architecture
 
-Status: **import baseline** (code pulled verbatim out of the Lovable "Dev Companion"
-project, commit `9ec3fc15`). This doc is the working spec for turning that import into the
-decided engine. Canonical background lives in the One L1fe repo:
-`docs/ops/worker-briefs/bdc-lovable-buildkit.md` (+ `bdc-lovable-openrouter.md`).
+_Replaces the historical Lovable-import plan. Verified against live code on 2026-07-15._
 
-## What this app is
+## Purpose
 
-Single-user front door for the **One L1fe** Android health app. The brother logs in (owner's
-one profile), types a scoped UI wish in plain words → the app turns it into an actual code
-patch and opens a `bdc/*` **Pull Request** on the One L1fe repo. The repo's existing
-**reviewer lane** (reviewer-validate / reviewer-ship / reviewer-revert workflows) validates
-and ships it as an OTA update. The app only ever OPENS PRs — it never merges, labels, or ships.
+Bros Developer Cockpit is the private, brother-facing wishes channel for One L1fe. The brother uses
+plain English and never sees GitHub or release controls. The owner reviews every generated change.
 
-## What the import already gives us (keep)
+## Trust boundary
 
-- **Auth + single-profile gate** — `src/lib/allowlist.server.ts` (`assertAllowedEmail`, env
-  `ALLOWED_EMAIL`). Every server function that touches contribution data must call it.
-- **Layer-1 guardrails** — `src/lib/guardrails.server.ts` (`checkGuardrails`,
-  `sanitizeForFence`): destructive / scope / reask brakes. KEEP as-is.
-- **Submit form, dashboard, idea detail** — `src/routes/_authenticated/*`.
-- **Supabase schema** — `ideas` + `user_roles` tables (migrations under `supabase/migrations/`).
-  The `ideas` row is already the task record (intent/screen/wrong/should/req_id/github_*).
+- `BROTHER_PIN`: four-digit brother session. May refine, submit, list, and read wishes.
+- `APP_PIN`: distinct four-digit owner code (must differ from `BROTHER_PIN`). May run the engine, inspect runs, approve or reject held PRs,
+  and confirm an already-published update on the phone.
+- Owner routes and mutations use server-side `requireOwner()` checks. Hidden navigation is only a UX aid.
+- Sessions are HMAC-signed, expire after 30 days, and reject unknown roles or future timestamps.
+- GitHub access is hard-coded to `gzug/01-One-L1fe`; the BDC PAT has no workflow permission.
+- Brother input is checked on every submission path and fenced as untrusted text before model calls.
 
-## What gets replaced (the engine)
+## Flow
 
-Current flow (`contribution.server.ts` → `buildBrief` → `github.server.ts createIssue`) opens a
-GitHub **Issue** ending in `@codex please implement …`. That whole Codex-mention path is
-**superseded**. Replace with:
+1. A brother wish creates a GitHub issue labeled `from-brother` and `bdc-submitted`.
+2. The owner starts processing. OpenRouter may edit only the configured presentation paths.
+3. BDC writes all proposed files in one Git tree/commit and opens
+   `bdc-hold/dc-issue-<issue-number>`.
+4. The owner reviews and applies `bdc-approved` to that exact held PR.
+5. One L1fe's trusted `bdc-ship` workflow validates without write credentials, rechecks the base,
+   merges the exact reviewed head, and publishes only when the confirmed production baseline matches.
+6. A successful EAS update is `shipped`, not `live`. `live` requires a separate phone check.
 
-### `processTask(ideaId)` — fail-closed
-1. Load idea + `app_config` (routing map, path lists, prompt template, `bdc_paused`).
-2. If `bdc_paused` → mark `blocked`, stop.
-3. Route by **intent** to a model tier (`wording`→cheap tier, `look`/`idea`→higher). Cascade
-   is fallback only, not the primary router.
-4. Call **OpenRouter** (`OPENROUTER_API_KEY`, Supabase backend secret) for a patch: a set of
-   `{path, newContent}` edits, constrained to the allowed paths.
-5. **Validate the patch** (see path rules below). On parse/validation fail → escalate one tier
-   and retry; on repeated fail → `blocked` with reason.
-6. On success: create branch `bdc/<reqId>` → commit the files → open a PR referencing `reqId`.
-7. Log provenance to `task_log` (model requested vs served, provider, base_sha, template
-   version, attempts, escalations, tokens, validate result).
+Lifecycle:
 
-### Path validator (security boundary)
-An **exact-path allow entry wins over a broad forbidden glob**; glob allows never override
-forbids. (Bug already fixed in the buildkit spec — carry it over verbatim.)
+```text
+submitted → processing → sent → approved → shipped → live
+                       ↘ blocked       ↘ publish failed
 ```
-isPathAllowed(p): exact-literal allow → true; forbidden glob → false; else allow-glob match
-```
-Forbidden: `src/data/**`, native (`android/**`, `ios/**`, `*.gradle`, `AndroidManifest.xml`),
-schema/migrations, secrets/env. Editable carve-outs (e.g. `reviewerContent.ts`) are exact-path
-allows. **Values-only-never-keys** for reviewer content.
 
-### Kill-switch / interlock
-`bdc_paused` flag in `app_config` + auto-pause on **2 reverts in the last 10** shipped PRs +
-fail-closed on any engine error. Lead KPI = **rework-free rate** (not cost-per-task).
+## Operational limits
 
-## Additive schema (new migration, never destructive)
+- Processing is owner-triggered/polled, not a durable background worker. A stuck `processing` item can
+  be retried manually in `/dc`.
+- GitHub Free private-repository rulesets are unavailable; the trusted workflow and owner review are the gate.
+- A local build is not end-to-end proof. Keep the bridge disabled until one harmless production wish has
+  produced an Action run, EAS update group, and phone confirmation.
+- No health data belongs in BDC. Refinement text is processed through OpenRouter and accepted wishes are
+  stored in the private GitHub repository.
 
-- `app_config` (single-row living config): `routing_map jsonb`, `allowed_paths text[]`,
-  `forbidden_paths text[]`, `prompt_template text`, `template_version text`,
-  `bdc_paused boolean`, updated_at. Service-role write only.
-- `task_log` (one row per model attempt): idea_id, req_id, model_requested, model_served,
-  provider, tier, attempt_number, escalated_from, base_sha, template_version, tokens_prompt,
-  tokens_completion, validate_result, blocked_reason, created_at.
+## Current production identity
 
-## `github.server.ts` additions
+- URL: https://bros-developer-cockpit.vercel.app
+- Vercel project: `bros-developer-cockpit`
+- Project ID: `prj_S53pvisoyTbyrCx2Or0DVJsq4mwb`
+- Team: `gzugang-8969s-projects`
 
-Keep `createIssue` (may drop later) + `findPullRequestByReqId`. ADD:
-- `getDefaultBranchSha()` — read the base SHA to stamp provenance + branch from.
-- `createBranch(name, fromSha)`.
-- `commitFiles(branch, files[], message)` — via the Git Data API (create blobs → tree → commit)
-  or Contents API per file.
-- `openPullRequest({head, base, title, body})` — returns number + html_url.
-PAT stays fine-grained: THIS one repo, `contents:write` + `pull-requests:write`, no merge/admin.
-
-## To remove (Lovable-runtime + superseded)
-
-- MCP-server layer: `src/lib/mcp/*`, `src/routes/[.mcp]/*`,
-  `src/routes/[.]lovable.oauth.consent.tsx`, `src/routes/[.well-known]/oauth-protected-resource.ts`.
-- Lovable error reporting / capture shims if they block a clean off-Lovable build.
-- Evaluate `@lovable.dev/cloud-auth-js`: if it hard-requires Lovable Cloud, swap for raw
-  Supabase auth (magic-link or GitHub OAuth) against our own Supabase project.
-
-## Owner-run before go-live (PL never sees the values)
-
-- Stand up a Supabase project (or keep Lovable Cloud's), run migrations.
-- Set backend secrets: `OPENROUTER_API_KEY` (+ load OpenRouter $10–20), `GITHUB_TOKEN`
-  (fine-grained to `gzug/01-One-L1fe`), `APP_PIN`, `APP_SECRET`, and `DATABASE_URL`.
-- Keep `EXPO_TOKEN` as a GitHub Actions secret in `gzug/01-One-L1fe`; the trusted `bdc-ship`
-  workflow owns validate, merge, and production OTA publish after BDC approval.
-- 1-click deploy the frontend (Vercel / Cloudflare).
-
-## Hard rules (inherited from One L1fe)
-
-No secrets/PHI/.env in git. Additive-only schema. The app opens PRs only — the reviewer lane is
-the sole path to the device. All brother-facing UI is plain English; owner chat is German.
+Environment and acceptance steps are canonical in `docs/setup-guide.md`.
