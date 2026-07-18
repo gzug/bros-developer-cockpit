@@ -153,7 +153,7 @@ function SubmitPage() {
             <Button
               type="submit"
               disabled={submit.isPending}
-              className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+              className="w-full"
             >
               {submit.isPending ? "Submitting..." : submitLabel}
             </Button>

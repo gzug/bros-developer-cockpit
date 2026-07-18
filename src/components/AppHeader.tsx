@@ -102,7 +102,7 @@ export function AppHeader() {
                 <span
                   key={item.to}
                   className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
-                  title="Owner area — unlocks with more experience"
+                  title="Owner area, unlocks with more experience"
                   aria-disabled="true"
                 >
                   <Lock className="h-3 w-3" />

@@ -17,7 +17,7 @@ export function RoleSwitch() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!/^\d{4}$/.test(pin)) {
-      toast.error("Enter your four-digit code.");
+      toast.error("Enter your 4 digit code.");
       return;
     }
     setBusy(true);

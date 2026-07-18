@@ -267,7 +267,7 @@ function ChatPage() {
     setMessages([
       {
         role: "assistant",
-        content: `Let's talk about this idea: "${description}" — tell me what you'd like, or what should change about it, and I'll turn it into a clear proposal with you.`,
+        content: `Let's talk about this idea: "${description}". Tell me what you'd like, or what should change about it, and I turn it into a clear proposal with you.`,
       },
     ]);
     setInput(description);

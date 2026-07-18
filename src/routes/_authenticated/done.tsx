@@ -28,9 +28,9 @@ function DonePage() {
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Done retro</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Completed</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Completed ideas grouped by over-category. Total completed: {total}.
+              Finished wishes, grouped by category. {total} done so far.
             </p>
           </div>
           <Button asChild variant="outline" size="sm">

@@ -198,7 +198,7 @@ export async function callModel(opts: {
       const content = json.choices?.[0]?.message?.content ?? "";
       if (!content) {
         throw new Error(
-          "The model returned no text. It may have spent all tokens on internal reasoning — raise Max tokens or pick another model.",
+          "The model returned no text. It may have spent all tokens on internal reasoning. Raise Max tokens or pick another model.",
         );
       }
 

@@ -11,7 +11,7 @@ type HelpMessage = { role: "user" | "assistant"; content: string };
 const OPENER: HelpMessage = {
   role: "assistant",
   content:
-    "Hi! Ask me anything about this app — what a screen does, what a status on your wish means, or when a change shows up on the phone.",
+    "Hi! Ask me anything about this app. For example what a screen does, what a status on your wish means, or when a change shows up on the phone.",
 };
 
 // Always-available floating help chat, bottom right on every signed-in screen.

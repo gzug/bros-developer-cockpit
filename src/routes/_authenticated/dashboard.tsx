@@ -35,50 +35,39 @@ function Dashboard() {
               <p className="mt-1 text-xs text-rose-600">Recent activity is unavailable.</p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              A wish can move through these steps: received → shipping requested → being prepared →
-              Don review → published → checked on the phone. Tap one to see where it is.
+              Tap a wish to see where it is.
+              {usage.data ? ` ${usage.data.count} in the last ${usage.data.windowHours} hours.` : ""}
             </p>
-            {usage.data && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {usage.data.count} wishes in the last {usage.data.windowHours} hours.
-              </p>
-            )}
           </div>
           <Button asChild size="sm">
             <Link to="/chat" search={{}}>New</Link>
           </Button>
         </div>
 
-        <section className="mt-4 rounded-xl border border-border bg-card p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <h2 className="text-sm font-semibold">What appears here</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                This list shows your own wishes. Newer wishes usually appear first.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">What request shipping means</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Requesting shipping only asks Don to start the path. It does not mean the update is
-                already published.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">What shipped means</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Shipped means the update was published. Fully close One L1fe and open it twice to check
-                the phone.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">What live means</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Live means someone already confirmed the change on the phone.
-              </p>
-            </div>
+        <details className="mt-4 rounded-xl border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold">How this works</summary>
+          <div className="mt-3 space-y-3 text-xs text-muted-foreground">
+            <p>Your wishes appear here, newest first.</p>
+            <p>
+              A wish moves through these steps: received, shipping requested, being prepared, Don
+              review, published, then checked on the phone.
+            </p>
+            <ul className="space-y-1.5">
+              <li>
+                <span className="font-medium text-foreground">Request shipping</span> asks Don to
+                start. It is not published yet.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Shipped</span> means published. Fully
+                close One L1fe and open it twice to check the phone.
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Live</span> means someone confirmed the
+                change on the phone.
+              </li>
+            </ul>
           </div>
-        </section>
+        </details>
 
         <div className="mt-6 space-y-2">
           {list.isLoading && (

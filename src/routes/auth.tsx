@@ -46,13 +46,13 @@ function AuthPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle>Log in</CardTitle>
-          <CardDescription>Enter your four-digit code.</CardDescription>
+          <CardDescription>Enter your 4 digit code.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               type="password"
-              aria-label="Four-digit code"
+              aria-label="4 digit code"
               inputMode="numeric"
               autoComplete="current-password"
               placeholder="••••"
