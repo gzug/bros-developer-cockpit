@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { BDC_APP_KNOWLEDGE } from "./app-knowledge";
-import { filterAssistantHonestyReply } from "./eval/bdc-honesty";
+import { stripRefinedVersionLabel } from "./eval/bdc-honesty";
 import { sanitizeForFence } from "./guardrails.server";
 import { validateChatModelOptions } from "./model-presets";
 import { callModel } from "./openrouter.server";
@@ -117,10 +117,7 @@ ${options.systemPrompt}`,
   const content = result.content.trim();
   if (!content) throw new Error("No response received.");
   return {
-    message: filterAssistantHonestyReply(content, {
-      hasRealStatusData: false,
-      allowRefinedVersionLabel: allowsRefinedVersionLabel(input),
-    }),
+    message: allowsRefinedVersionLabel(input) ? content : stripRefinedVersionLabel(content),
   };
 }
 

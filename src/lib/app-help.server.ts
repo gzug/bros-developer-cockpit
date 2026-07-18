@@ -63,6 +63,7 @@ export async function askAppHelpMessages(messages: AppHelpMessage[]): Promise<{ 
     message: filterAssistantHonestyReply(content, {
       hasRealStatusData: false,
       allowRefinedVersionLabel: false,
+      statusClaimMode: "own-idea",
     }),
   };
 }

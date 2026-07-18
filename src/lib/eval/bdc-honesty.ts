@@ -21,6 +21,8 @@ export type RealIdeaStatus = (typeof IDEA_STATUS_VALUES)[number];
 
 const PUBLICATION_CLAIM_RE =
   /\b(published|publish(?:ed|es)?|live|shipped|already fixed|already resolved|fixed already)\b|\b(?:already\s+)?(?:it|this|task|idea|change)\s+(?:is\s+)?done\b/i;
+const OWN_IDEA_PUBLICATION_CLAIM_RE =
+  /\b(?:your|the user's)\s+(?:idea|change|task)\s+(?:is|was|has been|have been)(?:\s+already)?\s+(?:published|live|shipped|done)\b/i;
 const FORBIDDEN_PERSON_RE =
   /\b(?:Sarah|Sara|Noah|Nora|Alex|Alice|Bob|Charlie|Product Owner|designer team|support team)\b/i;
 const FORBIDDEN_SCREEN_RE =
@@ -93,6 +95,13 @@ export function containsUnsupportedStatusClaim(text: string, hasRealStatusData: 
   return !hasRealStatusData && PUBLICATION_CLAIM_RE.test(text);
 }
 
+export function containsUnsupportedOwnIdeaStatusClaim(
+  text: string,
+  hasRealStatusData: boolean,
+): boolean {
+  return !hasRealStatusData && OWN_IDEA_PUBLICATION_CLAIM_RE.test(text);
+}
+
 export function containsInventedPersonRoleOrScreen(text: string): boolean {
   return FORBIDDEN_PERSON_RE.test(text) || FORBIDDEN_SCREEN_RE.test(text);
 }
@@ -101,26 +110,42 @@ export function hasRefinedVersionLabel(text: string): boolean {
   return /\bRefined version:/i.test(text);
 }
 
+export function stripRefinedVersionLabel(text: string): string {
+  return text.replace(/\bRefined version:\s*/i, "").trim();
+}
+
 export function filterAssistantHonestyReply(
   text: string,
-  options: { hasRealStatusData: boolean; allowRefinedVersionLabel: boolean },
+  options: {
+    hasRealStatusData: boolean;
+    allowRefinedVersionLabel: boolean;
+    statusClaimMode?: "any" | "own-idea";
+  },
 ): string {
-  const trimmed = text.trim();
-  if (!trimmed) return trimmed;
+  try {
+    const trimmed = text.trim();
+    if (!trimmed) return trimmed;
 
-  if (containsUnsupportedStatusClaim(trimmed, options.hasRealStatusData)) {
-    return "I cannot verify that from this chat. In the cockpit, collected, ready, and waiting on owner are working states, not proof that a change reached the phone.";
+    const hasUnsupportedStatusClaim =
+      options.statusClaimMode === "own-idea"
+        ? containsUnsupportedOwnIdeaStatusClaim(trimmed, options.hasRealStatusData)
+        : containsUnsupportedStatusClaim(trimmed, options.hasRealStatusData);
+    if (hasUnsupportedStatusClaim) {
+      return "I cannot verify that from this chat. In the cockpit, collected, ready, and waiting on owner are working states, not proof that a change reached the phone.";
+    }
+
+    if (containsInventedPersonRoleOrScreen(trimmed)) {
+      return "I cannot verify that person, role, or screen in this cockpit. Don is the only named owner here, and I should stick to the real cockpit screens and statuses.";
+    }
+
+    if (!options.allowRefinedVersionLabel && hasRefinedVersionLabel(trimmed)) {
+      return stripRefinedVersionLabel(trimmed);
+    }
+
+    return trimmed;
+  } catch {
+    return text;
   }
-
-  if (containsInventedPersonRoleOrScreen(trimmed)) {
-    return "I cannot verify that person, role, or screen in this cockpit. Don is the only named owner here, and I should stick to the real cockpit screens and statuses.";
-  }
-
-  if (!options.allowRefinedVersionLabel && hasRefinedVersionLabel(trimmed)) {
-    return trimmed.replace(/\bRefined version:\s*/i, "").trim();
-  }
-
-  return trimmed;
 }
 
 export function isRealIdeaStatus(value: string): value is RealIdeaStatus {
