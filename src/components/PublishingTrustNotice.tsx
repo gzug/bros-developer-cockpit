@@ -17,7 +17,11 @@ export function PublishingTrustNotice({ compact = false, className }: Publishing
       aria-label="Publishing safety status"
     >
       <div className="flex gap-3">
-        <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" />
+        <ShieldAlert
+          aria-hidden="true"
+          focusable="false"
+          className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300"
+        />
         <div>
           <h2 className="text-sm font-semibold">Publishing is paused</h2>
           <p className="mt-1 text-xs text-muted-foreground">
