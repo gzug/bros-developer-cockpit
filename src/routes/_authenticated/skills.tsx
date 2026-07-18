@@ -7,13 +7,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ChartContainer,
@@ -84,21 +78,22 @@ function Skills() {
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-3xl">
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Skill tracking</h1>
-            <Badge variant="outline">{hasSnapshots ? "Snapshot data" : "Sample data"}</Badge>
+            <h1 className="text-2xl font-semibold tracking-tight">Fähigkeiten</h1>
+            <Badge variant="outline">{hasSnapshots ? "Echte Messung" : "Beispieldaten"}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Upload Claude, ChatGPT, or Google exports to replace the sample radar with measured snapshots.
+            Der Radar zeigt, wie sich Arbeitsmuster entwickeln. Ohne Upload zeigt er nur ein
+            Beispiel.
           </p>
         </div>
 
         <Card>
           <CardHeader className="items-center pb-2">
-            <CardTitle>Skill radar</CardTitle>
+            <CardTitle>Fähigkeiten-Radar</CardTitle>
             <CardDescription>
               {hasSnapshots
-                ? `Start is the earliest snapshot. Now is the latest of ${data?.snapshotCount ?? 0}.`
-                : "Sample data until the first real snapshot is saved."}
+                ? `Start ist die erste Messung. Jetzt ist die neueste von ${data?.snapshotCount ?? 0}.`
+                : "Beispieldaten, bis die erste echte Messung gespeichert ist."}
             </CardDescription>
           </CardHeader>
           <CardContent className="pb-2">
@@ -139,7 +134,7 @@ function Skills() {
               >
                 <span className="font-medium">{row.skill}</span>
                 <span className="text-muted-foreground tabular-nums">
-                  {row.start} to {row.now}
+                  {row.start} zu {row.now}
                   <span className={delta >= 0 ? "ml-2 text-emerald-600" : "ml-2 text-rose-600"}>
                     {delta >= 0 ? "+" : ""}
                     {delta}
@@ -152,33 +147,37 @@ function Skills() {
 
         {!hasSnapshots && (
           <p className="mt-4 text-xs text-muted-foreground">
-            These are the prototype values from the radar page. They are labeled sample data until GitHub has at least one `skill-snapshot` issue.
+            Das sind Beispielwerte. Sie bleiben als Beispieldaten markiert, bis GitHub mindestens
+            einen echten skill-snapshot enthält.
           </p>
         )}
 
         {data?.githubError && (
           <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
-            GitHub snapshots are not available: {data.githubError}
+            GitHub-Messungen sind gerade nicht verfügbar: {data.githubError}
           </div>
         )}
 
         {latest?.smallData && (
           <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700">
-            Small data sample. The latest snapshot has {latest.provenance.conversationCount} conversations and {latest.provenance.userPromptCount} user prompts, so treat the scores as directional.
+            Kleine Datenbasis. Die neueste Messung enthält {latest.provenance.conversationCount}{" "}
+            Gespräche und {latest.provenance.userPromptCount} Nutzer-Nachrichten. Die Werte zeigen
+            deshalb nur die Richtung.
           </div>
         )}
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Upload AI session exports</CardTitle>
+            <CardTitle>KI-Sitzungen hochladen</CardTitle>
             <CardDescription>
-              Raw text is parsed on the server and discarded. The issue stores only scores, counts, provider, dates, and PNG metadata.
+              Rohtext wird nur auf dem Server gelesen und danach verworfen. Gespeichert werden
+              Scores, Zählwerte, Anbieter, Daten und PNG-Metadaten.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="grid gap-3" onSubmit={submitUpload}>
               <label className="grid gap-1 text-sm font-medium">
-                Export files
+                Export-Dateien
                 <input
                   name="files"
                   type="file"
@@ -189,25 +188,29 @@ function Skills() {
                 />
                 <span className="text-xs text-muted-foreground">
                   {selectedFileCount > 0
-                    ? `${selectedFileCount} file${selectedFileCount === 1 ? "" : "s"} selected`
-                    : "Choose a supported export or PNG before processing."}
+                    ? `${selectedFileCount} Datei${selectedFileCount === 1 ? "" : "en"} ausgewählt`
+                    : "Wähle zuerst einen unterstützten Export oder ein PNG."}
                 </span>
               </label>
               <label className="grid gap-1 text-sm font-medium">
-                Optional PNG note
+                Optionale PNG-Notiz
                 <Textarea
                   name="note"
-                  placeholder="Short context for a screenshot. Screenshots are not parsed or stored as files."
+                  placeholder="Kurzer Kontext für einen Screenshot. Screenshots werden nicht als Dateien gespeichert."
                   className="min-h-20"
                 />
               </label>
               <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" disabled={uploadMutation.isPending || selectedFileCount === 0}>
+                <Button
+                  type="submit"
+                  disabled={uploadMutation.isPending || selectedFileCount === 0}
+                >
                   <UploadCloud className="h-4 w-4" />
-                  {uploadMutation.isPending ? "Processing" : "Process upload"}
+                  {uploadMutation.isPending ? "Wird verarbeitet" : "Upload verarbeiten"}
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  Supports Claude ZIP, ChatGPT ZIP, Google/Gemini JSON or HTML, and PNG metadata.
+                  Unterstützt Claude ZIP, ChatGPT ZIP, Google/Gemini JSON oder HTML und
+                  PNG-Metadaten.
                 </span>
               </div>
               {uploadMutation.data?.warnings.length ? (
@@ -223,12 +226,14 @@ function Skills() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>How this is measured</CardTitle>
-            <CardDescription>Every score is based on countable metadata from normalized conversations.</CardDescription>
+            <CardTitle>Wie gemessen wird</CardTitle>
+            <CardDescription>
+              Jeder Score basiert auf zählbaren Metadaten aus normalisierten Gesprächen.
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 text-sm">
             <div>
-              <h2 className="mb-2 text-sm font-semibold">Signals</h2>
+              <h2 className="mb-2 text-sm font-semibold">Signale</h2>
               <div className="grid gap-2">
                 {measurement?.signals.map((signal) => (
                   <div key={signal.key} className="rounded-md border border-border p-3">
@@ -239,7 +244,7 @@ function Skills() {
               </div>
             </div>
             <div>
-              <h2 className="mb-2 text-sm font-semibold">Formulas</h2>
+              <h2 className="mb-2 text-sm font-semibold">Formeln</h2>
               <div className="grid gap-2">
                 {measurement?.dimensions.map((dimension) => (
                   <details key={dimension.key} className="rounded-md border border-border p-3">
@@ -248,12 +253,19 @@ function Skills() {
                       {dimension.formula}
                     </code>
                     <div className="mt-2 text-xs text-muted-foreground">
-                      Inputs: {dimension.inputs.join(", ")}
+                      Eingaben: {dimension.inputs.join(", ")}
                     </div>
-                    {latest?.dimensionDetails?.[dimension.key as keyof typeof latest.dimensionDetails] && (
+                    {latest?.dimensionDetails?.[
+                      dimension.key as keyof typeof latest.dimensionDetails
+                    ] && (
                       <div className="mt-2 grid gap-1 text-xs">
-                        {latest.dimensionDetails[dimension.key as keyof typeof latest.dimensionDetails].inputs.map((input) => (
-                          <div key={`${dimension.key}-${input.key}`} className="flex justify-between gap-3">
+                        {latest.dimensionDetails[
+                          dimension.key as keyof typeof latest.dimensionDetails
+                        ].inputs.map((input) => (
+                          <div
+                            key={`${dimension.key}-${input.key}`}
+                            className="flex justify-between gap-3"
+                          >
                             <span className="text-muted-foreground">{input.label}</span>
                             <span className="tabular-nums">{input.value}</span>
                           </div>

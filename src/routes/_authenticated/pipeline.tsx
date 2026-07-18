@@ -31,11 +31,17 @@ function chatUrl(params: Record<string, string>) {
 
 function DeliveryBadge({ delivery }: { delivery: IdeaDelivery }) {
   return delivery === "next-apk" ? (
-    <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
-      <Smartphone className="mr-1 h-3 w-3" /> Next APK
+    <Badge
+      variant="outline"
+      className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+    >
+      <Smartphone className="mr-1 h-3 w-3" /> Nächste App-Version
     </Badge>
   ) : (
-    <Badge variant="outline" className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+    <Badge
+      variant="outline"
+      className="border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+    >
       OTA
     </Badge>
   );
@@ -51,12 +57,15 @@ function QueueRow({ idea }: { idea: DCIdea }) {
   const remove = useMutation({
     mutationFn: () => deleteIdeaEntry({ data: { id: idea.id } }),
     onSuccess: invalidate,
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not delete task."),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not delete task."),
   });
   const setDelivery = useMutation({
-    mutationFn: (delivery: IdeaDelivery) => updateIdeaDeliveryEntry({ data: { id: idea.id, delivery } }),
+    mutationFn: (delivery: IdeaDelivery) =>
+      updateIdeaDeliveryEntry({ data: { id: idea.id, delivery } }),
     onSuccess: invalidate,
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not change category."),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not change category."),
   });
 
   const nextApk = idea.delivery === "next-apk";
@@ -70,41 +79,54 @@ function QueueRow({ idea }: { idea: DCIdea }) {
             <DeliveryBadge delivery={idea.delivery} />
           </div>
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
-          <p className="mt-2 text-xs text-muted-foreground">{idea.statusSummary}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {idea.statusSummary || "Gesammelt, aber noch nicht ausgespielt."}
+          </p>
           {nextApk && (
             <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
-              This change needs a new app version (APK) and cannot ship over the air. It stays queued for
-              the next APK build.
+              Diese Änderung braucht eine neue App-Version und kann nicht direkt aufs Handy. Sie
+              bleibt gesammelt, bis Don eine neue Version freigibt.
             </p>
           )}
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={() => remove.mutate()} disabled={remove.isPending}>
-          <Trash2 className="mr-1 h-3 w-3" /> Delete
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => remove.mutate()}
+          disabled={remove.isPending}
+        >
+          <Trash2 className="mr-1 h-3 w-3" /> Löschen
         </Button>
         {!nextApk && (
           <Button size="sm" asChild>
-            <a href={chatUrl({ ship: String(idea.id), idea: idea.title, description: idea.description })}>
-              <Rocket className="mr-1 h-3 w-3" /> Request ship
+            <a
+              href={chatUrl({
+                ship: String(idea.id),
+                idea: idea.title,
+                description: idea.description,
+              })}
+            >
+              <Rocket className="mr-1 h-3 w-3" /> Owner bitten
             </a>
           </Button>
         )}
         <Button size="sm" variant="outline" asChild>
           <a href={chatUrl({ idea: idea.title, description: idea.description })}>
-            <MessageCircle className="mr-1 h-3 w-3" /> Change
+            <MessageCircle className="mr-1 h-3 w-3" /> Besprechen
           </a>
         </Button>
         <label className="ml-auto text-xs text-muted-foreground">
-          Category
+          Weg
           <select
             value={idea.delivery}
             onChange={(event) => setDelivery.mutate(event.target.value as IdeaDelivery)}
             className="ml-2 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground"
           >
             <option value="ota">OTA</option>
-            <option value="next-apk">Next APK</option>
+            <option value="next-apk">Nächste App-Version</option>
           </select>
         </label>
       </div>
@@ -117,7 +139,9 @@ function ShippedRow({ idea }: { idea: DCIdea }) {
     <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold">{idea.title}</h3>
-        <Badge variant="secondary">{idea.status === "live" ? "Live" : "Shipped"}</Badge>
+        <Badge variant="secondary">
+          {idea.status === "live" ? "Live bestätigt" : "Ausgespielt"}
+        </Badge>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{idea.statusSummary}</p>
     </div>
@@ -145,7 +169,11 @@ function List({
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
       <div className="mt-3 space-y-3">
-        {ideas.length === 0 ? <p className="text-sm text-muted-foreground">{empty}</p> : ideas.map(render)}
+        {ideas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          ideas.map(render)
+        )}
       </div>
     </section>
   );
@@ -182,48 +210,47 @@ function PipelinePage() {
       <AppHeader />
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Plan</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your tasks, sorted by how they reach the phone: over the air now, or bundled into the next
-            app version.
+            Hier siehst du, welche Ideen nur gesammelt sind, welche Don prüfen muss und was schon
+            ausgespielt wurde.
           </p>
         </div>
 
-        <details className="mt-5 rounded-xl border border-border bg-card px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold">How this works</summary>
+        <details className="mt-5 rounded-md border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold">So liest du den Plan</summary>
           <div className="mt-3 space-y-2 text-xs text-muted-foreground">
             <p>
-              <span className="font-medium text-foreground">OTA Queue:</span> can go out without a new
-              install, once Don reviews and approves.
+              <span className="font-medium text-foreground">Direkt aufs Handy:</span> kann ohne neue
+              Installation vorbereitet werden, bleibt aber bis zur Owner-Freigabe gestoppt.
             </p>
             <p>
-              <span className="font-medium text-foreground">Next APK:</span> waits for the next full app
-              version, so it will not appear on the phone yet.
+              <span className="font-medium text-foreground">Nächste App-Version:</span> wartet auf
+              die nächste komplette App-Version und erscheint vorher nicht auf dem Handy.
             </p>
             <p>
-              <span className="font-medium text-foreground">Request, Shipped, Live:</span> request asks
-              Don to start, shipped means published, live means confirmed on the phone after reopening
-              One L1fe.
+              <span className="font-medium text-foreground">Owner bitten:</span> sammelt den Wunsch.
+              Es spielt nichts aus. Don bleibt die letzte Kontrolle.
             </p>
           </div>
         </details>
 
         <section className="mt-5 rounded-md border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Add an idea</h2>
+          <h2 className="text-sm font-semibold">Idee sammeln</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            New ideas are sorted into OTA or Next APK automatically. You can change the category on each task.
+            Neue Ideen werden gesammelt und einsortiert. Du kannst den Weg später ändern.
           </p>
           <div className="mt-3 grid gap-3">
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Idea title"
+              placeholder="Kurzer Titel"
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             />
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
-              placeholder="One sentence idea"
+              placeholder="Ein Satz, was anders sein soll"
               className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
@@ -233,15 +260,15 @@ function PipelinePage() {
             onClick={() => createParked.mutate()}
             disabled={createParked.isPending || !title || !description}
           >
-            <ParkingCircle className="mr-2 h-4 w-4" /> Add idea
+            <ParkingCircle className="mr-2 h-4 w-4" /> Idee sammeln
           </Button>
         </section>
 
         <section className="mt-6">
-          <h2 className="text-sm font-semibold">Suggestions</h2>
+          <h2 className="text-sm font-semibold">Vorschläge</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Ideas Don prepared for this app. Tap one to talk it through in the chat. Nothing happens
-            until you approve it there.
+            Vorbereitete Ideen für die App. Tippe eine an, um sie im Chat verständlich
+            auszuformulieren. Erst danach wird sie gesammelt.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {chips.map((chip) => (
@@ -256,35 +283,37 @@ function PipelinePage() {
           </div>
         </section>
 
-        {pipeline.isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading...</p>}
+        {pipeline.isLoading && (
+          <p className="mt-6 text-sm text-muted-foreground">Plan wird geladen...</p>
+        )}
 
         <List
-          title="OTA Queue"
-          hint="Surface changes that can go out over the air. Request shipping, refine them, or delete them."
+          title="Direkt aufs Handy"
+          hint="Kleine Änderungen, die vorbereitet werden können. Sie bleiben gesammelt, bis Don sie freigibt."
           ideas={otaQueue}
-          empty="No OTA tasks waiting."
+          empty="Keine direkt vorbereitbaren Ideen gesammelt."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}
         />
 
         <List
-          title="Next APK"
-          hint="Deeper changes that need a new app version. Collected for the next APK build."
+          title="Nächste App-Version"
+          hint="Größere Änderungen, die eine neue Installation brauchen. Sie werden hier nur gesammelt."
           ideas={nextApk}
-          empty="Nothing waiting for the next APK."
+          empty="Nichts wartet auf die nächste App-Version."
           render={(idea) => <QueueRow key={idea.id} idea={idea} />}
         />
 
         <List
-          title="Shipped"
-          hint="Tasks that already went out."
+          title="Ausgespielt"
+          hint="Einträge, die veröffentlicht oder auf dem Handy bestätigt wurden."
           ideas={shipped}
-          empty="Nothing shipped yet."
+          empty="Noch nichts ausgespielt."
           render={(idea) => <ShippedRow key={idea.id} idea={idea} />}
         />
 
         <div className="mt-8 text-right">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/done">Completed</Link>
+            <Link to="/done">Erledigt</Link>
           </Button>
         </div>
       </main>

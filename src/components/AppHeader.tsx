@@ -10,11 +10,11 @@ import { useEffect, useState } from "react";
 // locked labels for the co-dev — so the brother can see what more experience will unlock.
 // Access is enforced server-side (requireOwner); this is UI affordance only.
 const OWNER_LINKS = [
-  { to: "/runs", label: "Runs" },
-  { to: "/dc", label: "DC" },
-  { to: "/skills", label: "Skills" },
-  { to: "/prompts", label: "Prompts" },
-  { to: "/owner-kpi", label: "Stats" },
+  { to: "/runs", label: "Prüfläufe" },
+  { to: "/dc", label: "Kontrolle" },
+  { to: "/skills", label: "Fähigkeiten" },
+  { to: "/prompts", label: "Anweisungen" },
+  { to: "/owner-kpi", label: "Status" },
 ] as const;
 
 export function AppHeader() {
@@ -55,7 +55,7 @@ export function AppHeader() {
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-3 py-3 sm:max-w-5xl sm:px-4">
         <Link to="/dashboard" className="shrink-0 text-sm font-semibold">
-          {owner ? "OL1 · Owner" : "One L1fe · Ideas"}
+          {owner ? "One L1fe · Kontrolle" : "One L1fe · Ideen"}
         </Link>
         <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm">
           <Link
@@ -63,7 +63,7 @@ export function AppHeader() {
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
           >
-            Mine
+            Ideen
           </Link>
           <Link
             to="/chat"
@@ -71,21 +71,21 @@ export function AppHeader() {
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
           >
-            New
+            Neue Idee
           </Link>
           <Link
             to="/pipeline"
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
           >
-            Pipeline
+            Plan
           </Link>
           <Link
             to="/done"
             className="rounded px-2 py-1 text-muted-foreground hover:text-foreground"
             activeProps={{ className: "rounded px-2 py-1 text-foreground" }}
           >
-            Done
+            Erledigt
           </Link>
           {role !== null &&
             OWNER_LINKS.map((item) =>
@@ -102,7 +102,7 @@ export function AppHeader() {
                 <span
                   key={item.to}
                   className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
-                  title="Owner area, unlocks with more experience"
+                  title="Owner-Bereich. Don prüft und gibt hier frei."
                   aria-disabled="true"
                 >
                   <Lock className="h-3 w-3" />
@@ -115,12 +115,12 @@ export function AppHeader() {
             variant="ghost"
             className="h-8 w-8 p-0"
             onClick={toggleTheme}
-            aria-label="Toggle dark mode"
+            aria-label="Darstellung wechseln"
           >
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           <Button variant="ghost" size="sm" onClick={signOut}>
-            Log out
+            Abmelden
           </Button>
         </nav>
       </div>
