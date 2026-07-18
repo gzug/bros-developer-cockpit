@@ -10,15 +10,15 @@ export type IdeaStatus =
   | "closed";
 
 export const IDEA_STATUS_LABELS: Record<IdeaStatus, string> = {
-  submitted: "Received",
-  requested: "Shipping requested",
-  processing: "Being prepared",
-  sent: "Ready for Don to review",
-  approved: "Approved, safety checks are running",
-  shipped: "Update published, check your phone",
-  live: "Checked on the phone",
-  blocked: "Needs Don's help",
-  closed: "Closed",
+  submitted: "Gesammelt",
+  requested: "Wartet auf Owner",
+  processing: "Wird geprüft",
+  sent: "Bereit zur Owner-Prüfung",
+  approved: "Geprüft, wartet auf letzte Kontrolle",
+  shipped: "Ausgespielt, wartet auf Handy-Check",
+  live: "Live bestätigt",
+  blocked: "Pausiert: braucht Owner",
+  closed: "Erledigt",
 };
 
 export const IDEA_STATUS_DOT_CLASS: Record<IdeaStatus, string> = {
@@ -45,33 +45,33 @@ export type IdeaTimelineStep = {
 const IDEA_TIMELINE_TEMPLATE: Array<Omit<IdeaTimelineStep, "state">> = [
   {
     key: "submitted",
-    title: "Received",
-    detail: "Your idea exists in the cockpit.",
+    title: "Gesammelt",
+    detail: "Deine Idee ist angekommen und bleibt sichtbar.",
   },
   {
     key: "requested",
-    title: "Shipping requested",
-    detail: "You asked Don to start the path.",
+    title: "Wartet auf Owner",
+    detail: "Du hast den nächsten Schritt angefragt. Don muss bewusst starten.",
   },
   {
     key: "processing",
-    title: "Being prepared",
-    detail: "The change is being prepared safely.",
+    title: "Wird geprüft",
+    detail: "Der Vorschlag wird vorbereitet und kontrolliert.",
   },
   {
     key: "review",
-    title: "Don review and checks",
-    detail: "A held change exists or approval checks are running.",
+    title: "Bereit zur Owner-Prüfung",
+    detail: "Ein vorbereiteter Stand wartet auf Don oder auf Checks.",
   },
   {
     key: "shipped",
-    title: "Published",
-    detail: "The update was published for the phone app.",
+    title: "Ausgespielt",
+    detail: "Der Stand wurde veröffentlicht und braucht danach den Handy-Check.",
   },
   {
     key: "live",
-    title: "Checked on phone",
-    detail: "Someone confirmed it on the phone.",
+    title: "Live bestätigt",
+    detail: "Jemand hat die Änderung auf dem Handy geprüft.",
   },
 ];
 
@@ -98,23 +98,23 @@ export function getIdeaStatusDotClass(status: IdeaStatus): string {
 export function getIdeaNextStep(status: IdeaStatus): string {
   switch (status) {
     case "submitted":
-      return "Nothing is published yet. Don can start whenever he is ready.";
+      return "Gesammelt. Noch nichts wurde ausgespielt. Don kann den nächsten Schritt starten.";
     case "requested":
-      return "Don still has to start the checks and preparation.";
+      return "Wartet auf Owner. Don muss die Prüfung und Vorbereitung bewusst starten.";
     case "processing":
-      return "Wait for the prepared change to appear for review.";
+      return "Wird geprüft. Warte, bis ein vorbereiteter Stand zur Owner-Prüfung bereitsteht.";
     case "sent":
-      return "Don needs to review the held change and decide whether it should ship.";
+      return "Bereit. Don muss den vorbereiteten Stand prüfen und freigeben oder Änderungen anfordern.";
     case "approved":
-      return "The approval is in. Automatic checks and publication are the next step.";
+      return "Geprüft. Die letzte Kontrolle bleibt bei Don, bevor etwas ausgespielt wird.";
     case "shipped":
-      return "Close One L1fe fully, open it twice, then check the change on the phone.";
+      return "Ausgespielt. One L1fe komplett schließen, zweimal öffnen und die Änderung auf dem Handy prüfen.";
     case "live":
-      return "No action is needed here unless a follow-up idea appears.";
+      return "Live bestätigt. Hier ist nichts mehr zu tun, außer es entsteht eine neue Idee.";
     case "blocked":
-      return "Don has to inspect the blocker and decide the next fix.";
+      return "Pausiert. Don muss den Blocker ansehen und den nächsten sicheren Schritt entscheiden.";
     case "closed":
-      return "This record is finished and stays here for history.";
+      return "Erledigt. Der Eintrag bleibt als Verlauf sichtbar.";
   }
 }
 

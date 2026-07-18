@@ -29,12 +29,12 @@ function PromptsPage() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Prompt versions</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Anweisungen</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Versioned Projektleiter prompt files and their changelog from the repo.
+              Hier steht, welche Anweisungen das Cockpit benutzt und warum sie geändert wurden.
             </p>
           </div>
-          {data && <Badge variant="outline">{data.files.length} files</Badge>}
+          {data && <Badge variant="outline">{data.files.length} Dateien</Badge>}
         </div>
 
         {promptVersions.isLoading && (
@@ -46,7 +46,7 @@ function PromptsPage() {
 
         {promptVersions.isError && (
           <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-            Prompt versions could not be loaded.
+            Die Anweisungen konnten nicht geladen werden.
           </div>
         )}
 
@@ -54,23 +54,28 @@ function PromptsPage() {
           <>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Changelog</CardTitle>
-                <CardDescription>{data.changelogSource}</CardDescription>
+                <CardTitle className="text-base">Änderungsverlauf</CardTitle>
+                <CardDescription>
+                  Was geändert wurde, warum es geändert wurde und welche Wirkung erwartet wird.
+                </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead className="border-b border-border text-xs text-muted-foreground">
                     <tr>
                       <th className="py-2 pr-3 font-medium">Version</th>
-                      <th className="py-2 pr-3 font-medium">Date</th>
-                      <th className="py-2 pr-3 font-medium">Changed</th>
-                      <th className="py-2 pr-3 font-medium">Why</th>
-                      <th className="py-2 font-medium">Expected effect</th>
+                      <th className="py-2 pr-3 font-medium">Wann</th>
+                      <th className="py-2 pr-3 font-medium">Was änderte sich?</th>
+                      <th className="py-2 pr-3 font-medium">Warum?</th>
+                      <th className="py-2 font-medium">Erwartete Wirkung</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.changelog.map((row) => (
-                      <tr key={`${row.version}-${row.date}`} className="border-b border-border/60 align-top">
+                      <tr
+                        key={`${row.version}-${row.date}`}
+                        className="border-b border-border/60 align-top"
+                      >
                         <td className="py-3 pr-3 font-medium">{row.version}</td>
                         <td className="py-3 pr-3 text-muted-foreground">{row.date}</td>
                         <td className="py-3 pr-3">{row.whatChanged}</td>
@@ -97,7 +102,7 @@ function PromptsPage() {
                       </div>
                       <div className="flex gap-2">
                         <Badge variant="secondary">{file.version}</Badge>
-                        {file.stale && <Badge variant="outline">stale/superseded</Badge>}
+                        {file.stale && <Badge variant="outline">ersetzt</Badge>}
                       </div>
                     </div>
                   </CardHeader>

@@ -27,44 +27,68 @@ function Dashboard() {
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Your ideas</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Deine Ideen</h1>
             {usage.isLoading && (
-              <p className="mt-1 text-xs text-muted-foreground">Checking recent activity…</p>
+              <p className="mt-1 text-xs text-muted-foreground">Aktivität wird geprüft...</p>
             )}
             {usage.isError && (
-              <p className="mt-1 text-xs text-rose-600">Recent activity is unavailable.</p>
+              <p className="mt-1 text-xs text-rose-600">Aktivität ist gerade nicht verfügbar.</p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              Tap an idea to see where it is.
-              {usage.data ? ` ${usage.data.count} in the last ${usage.data.windowHours} hours.` : ""}
+              Tippe eine Idee an, um ihren Stand und den nächsten Schritt zu sehen.
+              {usage.data
+                ? ` ${usage.data.count} in den letzten ${usage.data.windowHours} Stunden.`
+                : ""}
             </p>
           </div>
           <Button asChild size="sm">
-            <Link to="/chat" search={{}}>New</Link>
+            <Link to="/chat" search={{}}>
+              Neue Idee
+            </Link>
           </Button>
         </div>
 
-        <details className="mt-4 rounded-xl border border-border bg-card px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold">How this works</summary>
+        <section className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-md border border-border bg-card p-3">
+            <h2 className="text-sm font-semibold">Was ist das?</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Das Cockpit sammelt deine Ideen zur One L1fe App und macht daraus klare Aufgaben.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <h2 className="text-sm font-semibold">Was passiert gerade?</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Jeder Eintrag zeigt seinen Stand: gesammelt, wird geprüft, bereit oder live bestätigt.
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <h2 className="text-sm font-semibold">Was ist pausiert?</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Nichts wird automatisch ausgespielt. Don bleibt die letzte Kontrolle.
+            </p>
+          </div>
+        </section>
+
+        <details className="mt-4 rounded-md border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold">Status kurz erklärt</summary>
           <div className="mt-3 space-y-3 text-xs text-muted-foreground">
-            <p>You pitch an idea here. It becomes a task, gets built, and is deployed to the phone.</p>
-            <p>Your ideas appear newest first.</p>
+            <p>Deine Ideen erscheinen hier zuerst. Neue Einträge stehen oben.</p>
             <p>
-              Steps: received, shipping requested, being prepared, Don review, published, then
-              checked on the phone.
+              Die Begriffe sind absichtlich einfach: gesammelt, geprüft, bereit, pausiert, wartet
+              auf Owner.
             </p>
             <ul className="space-y-1.5">
               <li>
-                <span className="font-medium text-foreground">Request shipping</span> asks Don to
-                start. It is not published yet.
+                <span className="font-medium text-foreground">Gesammelt</span> heißt: Die Idee ist
+                da, aber es wurde nichts gebaut oder ausgespielt.
               </li>
               <li>
-                <span className="font-medium text-foreground">Shipped</span> means published. Fully
-                close One L1fe and open it twice to check the phone.
+                <span className="font-medium text-foreground">Wartet auf Owner</span> heißt: Don
+                muss bewusst prüfen, starten oder freigeben.
               </li>
               <li>
-                <span className="font-medium text-foreground">Live</span> means someone confirmed the
-                change on the phone.
+                <span className="font-medium text-foreground">Live bestätigt</span> heißt: Die
+                Änderung wurde auf dem Handy gesehen und geprüft.
               </li>
             </ul>
           </div>
@@ -80,14 +104,18 @@ function Dashboard() {
           )}
           {list.isSuccess && list.data.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              Nothing here yet. <Link to="/chat" search={{}} className="underline">Pitch your first idea</Link>!
+              Noch keine Ideen gesammelt.{" "}
+              <Link to="/chat" search={{}} className="underline">
+                Starte mit einer ersten Idee
+              </Link>
+              .
             </div>
           )}
           {list.isError && (
             <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-              Your ideas could not be loaded.{" "}
+              Deine Ideen konnten nicht geladen werden.{" "}
               <button type="button" className="underline" onClick={() => list.refetch()}>
-                Try again
+                Erneut versuchen
               </button>
               .
             </div>

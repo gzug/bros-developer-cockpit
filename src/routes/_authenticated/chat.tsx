@@ -36,31 +36,31 @@ const LOCAL_PRESETS_KEY = "bdc.chat.presets.v1";
 const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; opener: string }> = [
   {
     id: "wording",
-    title: "Change wording",
-    hint: "A word or sentence doesn't fit.",
+    title: "Text ändern",
+    hint: "Ein Wort oder Satz passt nicht.",
     emoji: "✍️",
-    opener: "What would you like rephrased?",
+    opener: "Was soll anders formuliert werden?",
   },
   {
     id: "look",
-    title: "Change appearance",
-    hint: "Color, size, or placement.",
+    title: "Aussehen ändern",
+    hint: "Farbe, Größe oder Platzierung.",
     emoji: "🎨",
-    opener: "What should look different?",
+    opener: "Was soll anders aussehen?",
   },
   {
     id: "wrong",
-    title: "Something is broken",
-    hint: "Something isn't working right.",
+    title: "Etwas ist kaputt",
+    hint: "Etwas funktioniert nicht richtig.",
     emoji: "🐞",
-    opener: "What's going wrong?",
+    opener: "Was funktioniert gerade nicht?",
   },
   {
     id: "idea",
-    title: "New idea",
-    hint: "Something is completely missing.",
+    title: "Neue Idee",
+    hint: "Etwas fehlt komplett.",
     emoji: "💡",
-    opener: "What new idea do you have?",
+    opener: "Welche neue Idee hast du?",
   },
 ];
 
@@ -120,13 +120,14 @@ function loadLocalPresets(): PresetConfig[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((entry): entry is PresetConfig =>
-      typeof entry?.id === "string" &&
-      typeof entry?.name === "string" &&
-      typeof entry?.model === "string" &&
-      typeof entry?.systemPrompt === "string" &&
-      typeof entry?.params?.temperature === "number" &&
-      typeof entry?.params?.maxTokens === "number",
+    return parsed.filter(
+      (entry): entry is PresetConfig =>
+        typeof entry?.id === "string" &&
+        typeof entry?.name === "string" &&
+        typeof entry?.model === "string" &&
+        typeof entry?.systemPrompt === "string" &&
+        typeof entry?.params?.temperature === "number" &&
+        typeof entry?.params?.maxTokens === "number",
     );
   } catch {
     return [];
@@ -156,11 +157,14 @@ function ChatPage() {
       setShipResult({
         ok: result.ok,
         message: result.ok
-          ? "Shipping requested. Don still has to start the checks before anything is published."
+          ? "Wunsch gesammelt. Don muss die Checks bewusst starten, bevor etwas ausgespielt wird."
           : result.reason,
       }),
     onError: (error) =>
-      setShipResult({ ok: false, message: error instanceof Error ? error.message : "Could not request shipping." }),
+      setShipResult({
+        ok: false,
+        message: error instanceof Error ? error.message : "Could not request shipping.",
+      }),
   });
   const [intent, setIntent] = useState<Intent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -170,9 +174,13 @@ function ChatPage() {
   const [localPresets, setLocalPresets] = useState<PresetConfig[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState(shippedPresets[0]?.id ?? "");
   const [presetName, setPresetName] = useState(shippedPresets[0]?.name ?? "");
-  const [selectedModel, setSelectedModel] = useState(shippedPresets[0]?.model ?? curatedModels[0]?.id ?? "");
+  const [selectedModel, setSelectedModel] = useState(
+    shippedPresets[0]?.model ?? curatedModels[0]?.id ?? "",
+  );
   const [systemPrompt, setSystemPrompt] = useState(shippedPresets[0]?.systemPrompt ?? "");
-  const [params, setParams] = useState<ModelParams>(shippedPresets[0]?.params ?? { temperature: 0.4, maxTokens: 300 });
+  const [params, setParams] = useState<ModelParams>(
+    shippedPresets[0]?.params ?? { temperature: 0.4, maxTokens: 300 },
+  );
 
   useEffect(() => {
     setLocalPresets(loadLocalPresets());
@@ -350,7 +358,9 @@ function ChatPage() {
           <section className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-4">
             {shipResult ? (
               <div className="space-y-3">
-                <p className={`text-sm ${shipResult.ok ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+                <p
+                  className={`text-sm ${shipResult.ok ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}
+                >
                   {shipResult.message}
                 </p>
                 <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
@@ -361,11 +371,16 @@ function ChatPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Rocket className="h-4 w-4 text-primary" />
-                  <h2 className="text-sm font-semibold">Ship this task now?</h2>
+                  <h2 className="text-sm font-semibold">Owner um Freigabe bitten?</h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Ship {search.idea ? <span className="font-medium text-foreground">&ldquo;{search.idea}&rdquo;</span> : "this task"}?
-                  It goes through the safety checks first, and the owner&rsquo;s release gates still apply.
+                  {search.idea ? (
+                    <span className="font-medium text-foreground">&ldquo;{search.idea}&rdquo;</span>
+                  ) : (
+                    "Diese Aufgabe"
+                  )}{" "}
+                  wird nur als Wunsch markiert. Die Owner-Kontrolle und alle sicheren Gates bleiben
+                  davor.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -373,10 +388,10 @@ function ChatPage() {
                     onClick={() => shipMutation.mutate(search.ship!)}
                     disabled={shipMutation.isPending}
                   >
-                    <Rocket className="mr-1 h-3 w-3" /> Yes, ship it
+                    <Rocket className="mr-1 h-3 w-3" /> Owner bitten
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => navigate({ to: "/pipeline" })}>
-                    No, go back
+                    Zurück zum Plan
                   </Button>
                 </div>
               </div>
@@ -384,118 +399,132 @@ function ChatPage() {
           </section>
         )}
         {ownerView && (
-        <section className="mb-4 rounded-md border border-border bg-card p-4">
-          <details className="mb-3 rounded-md border border-border bg-background p-3 text-sm">
-            <summary className="cursor-pointer font-medium">What the preset controls</summary>
-            <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-              <p>
-                Preset is the saved behavior: tone, rules, model, and default length for this chat.
-              </p>
-              <p>
-                Model chooses the provider through OpenRouter. Temperature controls looseness; max
-                tokens controls answer length.
-              </p>
-            </div>
-          </details>
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
-            <div className="space-y-2">
-              <Label htmlFor="preset">Preset</Label>
-              <Select value={selectedPresetId} onValueChange={setSelectedPresetId}>
-                <SelectTrigger id="preset">
-                  <SelectValue placeholder="Choose preset" />
-                </SelectTrigger>
-                <SelectContent>
-                  {presets.map((preset) => (
-                    <SelectItem key={preset.id} value={preset.id}>
-                      {preset.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model">Model</Label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger id="model">
-                  <SelectValue placeholder="Choose model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {curatedModels.map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {model.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedModelMeta && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedModelMeta.provider}. {selectedModelMeta.strength} Cost: {selectedModelMeta.costClass}.
+          <section className="mb-4 rounded-md border border-border bg-card p-4">
+            <details className="mb-3 rounded-md border border-border bg-background p-3 text-sm">
+              <summary className="cursor-pointer font-medium">What the preset controls</summary>
+              <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                <p>
+                  Preset is the saved behavior: tone, rules, model, and default length for this
+                  chat.
                 </p>
-              )}
+                <p>
+                  Model chooses the provider through OpenRouter. Temperature controls looseness; max
+                  tokens controls answer length.
+                </p>
+              </div>
+            </details>
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
+              <div className="space-y-2">
+                <Label htmlFor="preset">Preset</Label>
+                <Select value={selectedPresetId} onValueChange={setSelectedPresetId}>
+                  <SelectTrigger id="preset">
+                    <SelectValue placeholder="Choose preset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map((preset) => (
+                      <SelectItem key={preset.id} value={preset.id}>
+                        {preset.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="model">Model</Label>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger id="model">
+                    <SelectValue placeholder="Choose model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {curatedModels.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedModelMeta && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedModelMeta.provider}. {selectedModelMeta.strength} Cost:{" "}
+                    {selectedModelMeta.costClass}.
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_120px_auto]">
-            <div className="space-y-2">
-              <Label htmlFor="preset-name">Preset name</Label>
-              <Input
-                id="preset-name"
-                value={presetName}
-                onChange={(event) => setPresetName(event.target.value.slice(0, 60))}
-              />
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_120px_120px_auto]">
+              <div className="space-y-2">
+                <Label htmlFor="preset-name">Preset name</Label>
+                <Input
+                  id="preset-name"
+                  value={presetName}
+                  onChange={(event) => setPresetName(event.target.value.slice(0, 60))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="temperature">Temperature</Label>
+                <Input
+                  id="temperature"
+                  type="number"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={params.temperature}
+                  onChange={(event) => updateTemperature(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-tokens">Max tokens</Label>
+                <Input
+                  id="max-tokens"
+                  type="number"
+                  min={64}
+                  max={4096}
+                  step={1}
+                  value={params.maxTokens}
+                  onChange={(event) => updateMaxTokens(event.target.value)}
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={savePreset}
+                  title="Save preset"
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={deletePreset}
+                  title="Delete preset"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="temperature">Temperature</Label>
-              <Input
-                id="temperature"
-                type="number"
-                min={0}
-                max={2}
-                step={0.1}
-                value={params.temperature}
-                onChange={(event) => updateTemperature(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="max-tokens">Max tokens</Label>
-              <Input
-                id="max-tokens"
-                type="number"
-                min={64}
-                max={4096}
-                step={1}
-                value={params.maxTokens}
-                onChange={(event) => updateMaxTokens(event.target.value)}
-              />
-            </div>
-            <div className="flex items-end gap-2">
-              <Button type="button" size="icon" variant="outline" onClick={savePreset} title="Save preset">
-                <Save className="h-4 w-4" />
-              </Button>
-              <Button type="button" size="icon" variant="outline" onClick={deletePreset} title="Delete preset">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
 
-          <div className="mt-3 space-y-2">
-            <Label htmlFor="system-prompt">System prompt</Label>
-            <Textarea
-              id="system-prompt"
-              value={systemPrompt}
-              onChange={(event) => setSystemPrompt(event.target.value.slice(0, 4000))}
-              rows={4}
-            />
-          </div>
-        </section>
+            <div className="mt-3 space-y-2">
+              <Label htmlFor="system-prompt">System prompt</Label>
+              <Textarea
+                id="system-prompt"
+                value={systemPrompt}
+                onChange={(event) => setSystemPrompt(event.target.value.slice(0, 4000))}
+                rows={4}
+              />
+            </div>
+          </section>
         )}
 
         {!intent && (
           <div className="grid gap-2">
-            <h1 className="text-xl font-semibold">What kind of idea?</h1>
+            <h1 className="text-xl font-semibold">Was möchtest du festhalten?</h1>
             <p className="text-sm text-muted-foreground">
-              Pick a direction, then we&rsquo;ll chat about it. You can also ask what this app, a
-              status, or Don means before you submit anything.
+              Wähle eine Richtung. Danach hilft dir der Chat, aus einem groben Gedanken eine klare
+              Idee zu machen. Gesammelt wird erst, wenn du es bestätigst.
             </p>
             {INTENTS.map((entry) => (
               <button
@@ -524,29 +553,30 @@ function ChatPage() {
                 <p className="text-sm text-muted-foreground">{selectedIntent?.hint}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setIntent(null)}>
-                Switch
+                Wechseln
               </Button>
             </div>
 
             <section className="mb-4 rounded-xl border border-border bg-card p-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
-                  <h2 className="text-sm font-semibold">What happens here</h2>
+                  <h2 className="text-sm font-semibold">Was passiert hier?</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    This chat can explain the app or turn your rough note into a clear idea.
+                    Der Chat erklärt dir die App oder macht aus deiner Notiz eine klare Idee.
                   </p>
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold">Nothing is sent yet</h2>
+                  <h2 className="text-sm font-semibold">Noch nichts gesammelt</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    GitHub and the pipeline only start after you accept a refined version or keep your
-                    own text.
+                    Der Plan bekommt erst einen Eintrag, wenn du eine Version annimmst oder deinen
+                    eigenen Text speicherst.
                   </p>
                 </div>
                 <div>
-                  <h2 className="text-sm font-semibold">Phone timing</h2>
+                  <h2 className="text-sm font-semibold">Handy-Zeitpunkt</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    OTA changes can reach the phone fast. Next APK changes wait for the next app build.
+                    Kleine Änderungen können vorbereitet werden. Größere warten auf die nächste
+                    App-Version.
                   </p>
                 </div>
               </div>
@@ -586,7 +616,7 @@ function ChatPage() {
                 <div
                   className="flex justify-start"
                   role="status"
-                  aria-label="Preparing a suggestion"
+                  aria-label="Vorschlag wird vorbereitet"
                 >
                   <div className="rounded-2xl bg-muted px-4 py-3">
                     <div className="flex gap-1">
@@ -600,14 +630,14 @@ function ChatPage() {
 
               {suggestion && (
                 <div className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Suggestion</div>
+                  <div className="text-xs uppercase text-muted-foreground">Vorschlag</div>
                   <p className="mt-2 whitespace-pre-wrap text-sm">{suggestion}</p>
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Button
                       onClick={() => submitFinal(suggestion)}
                       disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
                     >
-                      Accept suggestion
+                      Vorschlag übernehmen
                     </Button>
                     <Button
                       variant="outline"
@@ -619,7 +649,7 @@ function ChatPage() {
                       }}
                       disabled={createIdeaMutation.isPending || submittedIdeaId !== null}
                     >
-                      Keep my text
+                      Meinen Text speichern
                     </Button>
                   </div>
                 </div>
@@ -627,9 +657,9 @@ function ChatPage() {
 
               {submittedIdeaId && createIdeaMutation.isSuccess && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
-                  Your idea has been submitted!{" "}
+                  Deine Idee wurde gesammelt.{" "}
                   <Link to="/dashboard" className="underline">
-                    Go to dashboard
+                    Zu deinen Ideen
                   </Link>
                 </div>
               )}
@@ -638,15 +668,15 @@ function ChatPage() {
             <div className="sticky bottom-0 border-t border-border bg-background py-3">
               <div className="flex gap-2">
                 <textarea
-                  aria-label="Describe your idea"
+                  aria-label="Idee beschreiben"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Describe your idea or ask what something in this app means..."
+                  placeholder="Beschreibe deine Idee oder frag, was etwas im Cockpit bedeutet..."
                   className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
                   rows={2}
                 />
                 <Button onClick={sendMessage} disabled={refine.isPending || !input.trim()}>
-                  Send
+                  Senden
                 </Button>
               </div>
             </div>
@@ -654,53 +684,67 @@ function ChatPage() {
         )}
 
         {ownerView && (
-        <section className="mt-5 rounded-md border border-border bg-card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold">Prompt effect</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Experimental, small sample</p>
+          <section className="mt-5 rounded-md border border-border bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold">Wirkung der Anweisungen</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Experimentell, kleine Datenbasis
+                </p>
+              </div>
+              <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
+                GitHub Issues
+              </span>
             </div>
-            <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
-              GitHub Issues
-            </span>
-          </div>
 
-          {promptEffect.data ? (
-            <div className="mt-4 space-y-3">
-              {promptEffect.data.versions.map((version) => (
-                <div key={version.version} className="rounded-md border border-border bg-background p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{version.version}</span>
-                    <span className="text-xs text-muted-foreground">{version.date}</span>
+            {promptEffect.data ? (
+              <div className="mt-4 space-y-3">
+                {promptEffect.data.versions.map((version) => (
+                  <div
+                    key={version.version}
+                    className="rounded-md border border-border bg-background p-3 text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{version.version}</span>
+                      <span className="text-xs text-muted-foreground">{version.date}</span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
+                      <span>Ideen: {version.issuesCreated}</span>
+                      <span>PRs: {version.prsCreated}</span>
+                      <span>Akzeptiert: {version.accepted}</span>
+                      <span>Überarbeitet: {version.reworked}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">{version.promptFile}</p>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground sm:grid-cols-4">
-                    <span>Issues: {version.issuesCreated}</span>
-                    <span>PRs: {version.prsCreated}</span>
-                    <span>Accepted: {version.accepted}</span>
-                    <span>Reworked: {version.reworked}</span>
+                ))}
+                {promptEffect.data.skillSnapshots.length > 0 ? (
+                  <div className="text-xs text-muted-foreground">
+                    Fähigkeits-Messungen:{" "}
+                    {promptEffect.data.skillSnapshots.map((snapshot) => (
+                      <a
+                        key={snapshot.id}
+                        href={snapshot.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mr-2 underline"
+                      >
+                        #{snapshot.id}
+                      </a>
+                    ))}
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">{version.promptFile}</p>
-                </div>
-              ))}
-              {promptEffect.data.skillSnapshots.length > 0 ? (
-                <div className="text-xs text-muted-foreground">
-                  Skill snapshots:{" "}
-                  {promptEffect.data.skillSnapshots.map((snapshot) => (
-                    <a key={snapshot.id} href={snapshot.url} target="_blank" rel="noreferrer" className="mr-2 underline">
-                      #{snapshot.id}
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">No skill snapshot issues found yet.</p>
-              )}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted-foreground">
-              No prompt effect data available yet. This section will stay empty until GitHub Issues or PRs create a sample.
-            </p>
-          )}
-        </section>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Noch keine Fähigkeits-Messungen gefunden.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Noch keine Wirkungsdaten vorhanden. Dieser Bereich bleibt leer, bis GitHub-Ideen
+                oder PRs eine Datenbasis liefern.
+              </p>
+            )}
+          </section>
         )}
       </main>
     </div>

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/done")({
 });
 
 function dateOnly(value?: string) {
-  if (!value) return "Unknown date";
+  if (!value) return "Datum unbekannt";
   return value.slice(0, 10);
 }
 
@@ -28,21 +28,24 @@ function DonePage() {
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Completed</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Erledigt</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Finished ideas, grouped by category. {total} done so far.
+              Abgeschlossene Ideen, nach Bereich sortiert. {total} bisher erledigt.
             </p>
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link to="/pipeline">Pipeline</Link>
+            <Link to="/pipeline">Plan</Link>
           </Button>
         </div>
 
         <div className="mt-6 space-y-3">
-          {done.isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+          {done.isLoading && (
+            <p className="text-sm text-muted-foreground">Erledigte Ideen werden geladen...</p>
+          )}
           {!done.isLoading && groups.length === 0 && (
             <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              No completed ideas yet.
+              Noch keine erledigten Ideen. Sobald etwas abgeschlossen ist, bleibt es hier als
+              Verlauf sichtbar.
             </div>
           )}
           {groups.map((group) => (
@@ -61,7 +64,9 @@ function DonePage() {
                     className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/20 p-3 text-sm hover:bg-muted/40"
                   >
                     <span className="min-w-0 truncate font-medium">{idea.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">{dateOnly(idea.closedAt)}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {dateOnly(idea.closedAt)}
+                    </span>
                   </a>
                 ))}
               </div>

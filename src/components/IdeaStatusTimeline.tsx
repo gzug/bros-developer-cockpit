@@ -14,13 +14,13 @@ export function IdeaStatusTimeline({ status }: IdeaStatusTimelineProps) {
     <section className="rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Timeline</h2>
+          <h2 className="text-sm font-semibold">Weg der Idee</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Follow your idea from request to phone.
+            Von gesammelt bis live bestätigt. Jeder Schritt sagt, wer als Nächstes dran ist.
           </p>
         </div>
         <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">
-          Next step
+          Nächster Schritt
         </span>
       </div>
 
@@ -59,7 +59,7 @@ export function IdeaStatusTimeline({ status }: IdeaStatusTimelineProps) {
                   <p className="text-sm font-medium">{step.title}</p>
                   {step.state === "current" && (
                     <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-                      Current
+                      Jetzt
                     </span>
                   )}
                 </div>

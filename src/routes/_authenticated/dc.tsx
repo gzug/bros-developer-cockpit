@@ -137,63 +137,63 @@ function statusBadge(status: string) {
   if (normalized === "submitted") {
     return (
       <Badge variant="outline" className="border-amber-500/30 text-amber-600">
-        Submitted
+        Gesammelt
       </Badge>
     );
   }
   if (normalized === "requested") {
     return (
       <Badge variant="outline" className="border-indigo-500/30 text-indigo-600">
-        Ship requested
+        Wartet auf Owner
       </Badge>
     );
   }
   if (normalized === "processing") {
     return (
       <Badge variant="outline" className="border-blue-500/30 text-blue-600">
-        Processing
+        Wird geprüft
       </Badge>
     );
   }
   if (normalized === "sent") {
     return (
       <Badge variant="outline" className="border-sky-500/30 text-sky-600">
-        Sent
+        Bereit
       </Badge>
     );
   }
   if (normalized === "approved") {
     return (
       <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-        Approved
+        Geprüft
       </Badge>
     );
   }
   if (normalized === "shipped") {
     return (
       <Badge variant="outline" className="border-violet-500/30 text-violet-600">
-        Published
+        Ausgespielt
       </Badge>
     );
   }
   if (normalized === "live") {
     return (
       <Badge variant="outline" className="border-emerald-700/30 text-emerald-700">
-        Live
+        Live bestätigt
       </Badge>
     );
   }
   if (normalized === "blocked" || normalized === "failed") {
     return (
       <Badge variant="outline" className="gap-1 border-rose-500/30 text-rose-600">
-        <ShieldAlert className="h-3 w-3" /> Blocked
+        <ShieldAlert className="h-3 w-3" /> Pausiert
       </Badge>
     );
   }
   if (normalized === "completed") {
     return (
       <Badge variant="outline" className="gap-1 border-emerald-500/30 text-emerald-600">
-        <CheckCircle className="h-3 w-3" /> Completed
+        <CheckCircle className="h-3 w-3" /> Erledigt
       </Badge>
     );
   }
@@ -300,18 +300,19 @@ function DcOperationalDashboard() {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">Developer Cockpit</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Owner-Kontrolle</h1>
               <Badge variant="outline" className="text-xs">
-                DC
+                pausiert sicher
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Issue queue, held PRs, approval, and the real One L1fe shipping path.
+              Hier prüft Don gesammelte Ideen, vorbereitete Pull Requests und den letzten
+              Freigabeschritt.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={generateSubmissionLink}>
-              <Copy className="mr-2 h-4 w-4" /> Generate submission link
+              <Copy className="mr-2 h-4 w-4" /> Link für Idee kopieren
             </Button>
             <Button
               size="sm"
@@ -323,7 +324,7 @@ function DcOperationalDashboard() {
               ) : (
                 <RefreshCw className="mr-2 h-4 w-4" />
               )}
-              Refresh
+              Aktualisieren
             </Button>
           </div>
         </div>
@@ -338,10 +339,12 @@ function DcOperationalDashboard() {
                 <div className="flex gap-3">
                   <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                   <div>
-                    <h2 className="text-sm font-semibold text-amber-600">Shipping is paused</h2>
+                    <h2 className="text-sm font-semibold text-amber-600">
+                      Ausspielen ist pausiert
+                    </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Set BDC_PAUSED=false only after the production baseline and a harmless full
-                      run are proven.
+                      Das Cockpit darf sammeln und vorbereiten. Nichts wird ausgespielt, solange Don
+                      die sichere Owner-Freigabe nicht bewusst öffnet.
                     </p>
                   </div>
                 </div>
@@ -353,12 +356,11 @@ function DcOperationalDashboard() {
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
                   <div>
                     <h2 className="text-sm font-semibold text-rose-600">
-                      OpenRouter not connected
+                      KI-Hilfe nicht verbunden
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      OPENROUTER_API_KEY is missing. Every chat model on the New/help screens and the
-                      engine itself uses this same OpenRouter key, so the Developer Cockpit can collect
-                      ideas but cannot refine them or create held PRs.
+                      Der OpenRouter-Schlüssel fehlt. Das Cockpit kann Ideen sammeln, aber keine
+                      Vorschläge verfeinern oder vorbereiten.
                     </p>
                   </div>
                 </div>
@@ -369,7 +371,7 @@ function DcOperationalDashboard() {
                 <div className="flex gap-3">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
                   <div>
-                    <h2 className="text-sm font-semibold text-rose-600">GitHub not connected</h2>
+                    <h2 className="text-sm font-semibold text-rose-600">GitHub nicht verbunden</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {data?.githubError ?? "Set GITHUB_TOKEN."}
                     </p>
@@ -382,10 +384,11 @@ function DcOperationalDashboard() {
                 <div className="flex gap-3">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                   <div>
-                    <h2 className="text-sm font-semibold text-amber-600">DB not connected</h2>
+                    <h2 className="text-sm font-semibold text-amber-600">
+                      Datenbank nicht verbunden
+                    </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      DATABASE_URL is missing or unavailable. Run data uses a temporary memory
-                      fallback for this server process.
+                      Die Laufdaten bleiben nur im Speicher dieses Server-Prozesses sichtbar.
                     </p>
                   </div>
                 </div>
@@ -396,7 +399,7 @@ function DcOperationalDashboard() {
 
         {dashboard.isLoading ? (
           <div className="flex h-64 items-center justify-center text-muted-foreground">
-            <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading cockpit data...
+            <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Cockpit-Daten werden geladen...
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -404,31 +407,32 @@ function DcOperationalDashboard() {
               <CardHeader className="border-b border-border py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base font-semibold">Queue</CardTitle>
+                    <CardTitle className="text-base font-semibold">Ideen und Aufgaben</CardTitle>
                     <CardDescription className="text-xs">
-                      Live issues from gzug/01-One-L1fe. "Ship requested" means the cockpit recorded a request, not a publication.
+                      Live aus GitHub. "Wartet auf Owner" heißt: Wunsch gesammelt, aber nicht
+                      ausgespielt.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
-                    {queue.length} Items
+                    {queue.length} Einträge
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto p-0">
                 {queue.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    No submissions yet.
+                    Noch keine Ideen gesammelt. Sobald jemand etwas einreicht, erscheint es hier.
                   </div>
                 ) : (
                   <Table>
                     <TableHeader className="sticky top-0 z-10 bg-muted/30">
                       <TableRow>
                         <TableHead className="w-20 text-xs">Issue</TableHead>
-                        <TableHead className="text-xs">Title</TableHead>
-                        <TableHead className="w-24 text-xs">Type</TableHead>
+                        <TableHead className="text-xs">Titel</TableHead>
+                        <TableHead className="w-24 text-xs">Art</TableHead>
                         <TableHead className="w-28 text-xs">Status</TableHead>
                         <TableHead className="w-20 text-xs">PR</TableHead>
-                        <TableHead className="w-64 text-xs text-right">Action</TableHead>
+                        <TableHead className="w-64 text-xs text-right">Nächster Schritt</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -481,7 +485,7 @@ function DcOperationalDashboard() {
                                     envStatus?.bdcPaused !== false || processMutation.isPending
                                   }
                                 >
-                                  {idea.status === "processing" ? "Retry" : "Process"}
+                                  {idea.status === "processing" ? "Erneut prüfen" : "Prüfen"}
                                 </Button>
                               )}
                               {(idea.status === "sent" ||
@@ -500,7 +504,9 @@ function DcOperationalDashboard() {
                                         envStatus?.bdcPaused !== false || approveMutation.isPending
                                       }
                                     >
-                                      {idea.status === "blocked" ? "Retry approval" : "Approve"}
+                                      {idea.status === "blocked"
+                                        ? "Freigabe erneut prüfen"
+                                        : "Freigeben"}
                                     </Button>
                                     <Button
                                       size="sm"
@@ -513,18 +519,18 @@ function DcOperationalDashboard() {
                                       }
                                       disabled={requestChangesMutation.isPending}
                                     >
-                                      Request Changes
+                                      Änderungen anfordern
                                     </Button>
                                   </>
                                 )}
                               {idea.status === "blocked" && idea.prMerged && (
                                 <span className="self-center text-xs text-muted-foreground">
-                                  Repair publication in GitHub
+                                  Veröffentlichung in GitHub prüfen
                                 </span>
                               )}
                               {idea.status === "blocked" && !idea.prNumber && (
                                 <span className="self-center text-xs text-muted-foreground">
-                                  Manual review needed
+                                  Manuelle Prüfung nötig
                                 </span>
                               )}
                               {idea.status === "shipped" && (
@@ -534,7 +540,7 @@ function DcOperationalDashboard() {
                                   onClick={() => markLiveMutation.mutate(idea.id)}
                                   disabled={markLiveMutation.isPending}
                                 >
-                                  Confirm on phone
+                                  Auf Handy bestätigen
                                 </Button>
                               )}
                             </div>
@@ -551,20 +557,20 @@ function DcOperationalDashboard() {
               <CardHeader className="border-b border-border py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base font-semibold">Run Log</CardTitle>
+                    <CardTitle className="text-base font-semibold">Prüfläufe</CardTitle>
                     <CardDescription className="text-xs">
-                      Engine execution and PR creation
+                      Was das Cockpit vorbereitet hat und ob dabei Fehler entstanden sind.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
-                    {runsList.length} Runs
+                    {runsList.length} Läufe
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto p-0">
                 {runsList.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    No runs recorded yet.
+                    Noch keine Prüfläufe aufgezeichnet.
                   </div>
                 ) : (
                   <Table>
@@ -625,13 +631,13 @@ function DcOperationalDashboard() {
 
             <Card className="lg:col-span-2">
               <CardHeader className="border-b border-border py-4">
-                <CardTitle className="text-base font-semibold">Costs</CardTitle>
+                <CardTitle className="text-base font-semibold">Kosten</CardTitle>
                 <CardDescription className="text-xs">
-                  Aggregate model spend from recorded runs
+                  Summe der aufgezeichneten KI-Läufe
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 text-sm">
-                Total recorded spend:{" "}
+                Aufgezeichnete Gesamtkosten:{" "}
                 <span className="font-mono font-semibold">{formatCost(totalCost)}</span>
               </CardContent>
             </Card>
