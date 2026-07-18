@@ -26,9 +26,9 @@ export function PublishingTrustNotice({ compact = false, className }: Publishing
           </p>
           {!compact && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Collected, checked, ready, paused, and waiting on owner are working states. Published
-              appears only after the owner-controlled path has run, and live still needs a phone
-              check.
+              Collected, checking, checked, ready, paused, and waiting on owner are working states.
+              Published appears only after the owner-controlled path has run, and live still needs a
+              phone check.
             </p>
           )}
         </div>

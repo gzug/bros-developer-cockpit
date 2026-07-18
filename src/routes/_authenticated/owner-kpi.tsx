@@ -37,7 +37,8 @@ function OwnerKpiPage() {
         </Link>
         <h1 className="mt-3 text-xl font-semibold">Status</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Quick overview of what is collected, checked, ready, paused, or live confirmed.
+          Quick overview of what is collected, checking, checked, ready, paused, published, or live
+          confirmed.
         </p>
 
         {query.isLoading && (
@@ -61,9 +62,9 @@ function OwnerKpiPage() {
               <Stat label="All ideas" value={query.data.totalIdeas} />
               <Stat label="Live confirmed" value={query.data.liveCount} />
               <Stat label="Checked" value={query.data.approvedCount} />
-              <Stat label="Published; phone check open" value={query.data.shippedCount} />
+              <Stat label="Published" value={query.data.shippedCount} />
               <Stat label="Paused" value={query.data.blockedCount} />
-              <Stat label="Ready for owner" value={query.data.sentCount} />
+              <Stat label="Ready" value={query.data.sentCount} />
               <Stat label="Waiting on owner" value={query.data.requestedCount} />
               <Stat label="Collected" value={query.data.submittedCount} />
               <Stat label="Done" value={query.data.closedCount} />
@@ -73,8 +74,8 @@ function OwnerKpiPage() {
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">Needs owner</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Published entries need a phone check. Waiting entries need a deliberate decision.
-                Paused entries need a manual check.
+                Published entries need a phone check. Ready and waiting entries need a deliberate
+                decision. Paused entries need a manual check.
               </p>
 
               {query.data.actionQueue.length === 0 ? (
@@ -110,7 +111,7 @@ function OwnerKpiPage() {
                           rel="noreferrer"
                           className="underline"
                         >
-                          Issue
+                          Task
                         </a>
                         {idea.prUrl && (
                           <a
@@ -119,7 +120,7 @@ function OwnerKpiPage() {
                             rel="noreferrer"
                             className="underline"
                           >
-                            PR #{idea.prNumber}
+                            Review #{idea.prNumber}
                           </a>
                         )}
                       </div>

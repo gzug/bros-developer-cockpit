@@ -64,7 +64,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           rel="noreferrer"
           className="text-xs text-primary hover:underline"
         >
-          PR #{latestRun.githubPrNumber} &gt;
+          Review #{latestRun.githubPrNumber} &gt;
         </a>
       )}
 
@@ -105,9 +105,9 @@ function RunsPage() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight">Check runs</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Preparation log</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Visible for Don: which idea was prepared, with what result, and at what cost.
+          Visible for Don: each preparation attempt, its result, and the recorded cost.
         </p>
 
         <div className="mt-6 space-y-3">
@@ -120,7 +120,7 @@ function RunsPage() {
 
           {data.isSuccess && data.data.tasks.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              No check runs yet. They appear once Don prepares a collected idea.
+              No preparation log yet. Entries appear once Don prepares a collected idea.
             </p>
           )}
 

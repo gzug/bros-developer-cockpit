@@ -20,7 +20,7 @@ export function DcStatusBadge({ status }: { status: string }) {
   if (normalized === "processing") {
     return (
       <Badge variant="outline" className="border-blue-500/30 text-blue-600">
-        Being checked
+        Checking
       </Badge>
     );
   }

@@ -12,12 +12,12 @@ export type IdeaStatus =
 export const IDEA_STATUS_LABELS: Record<IdeaStatus, string> = {
   submitted: "Collected",
   requested: "Waiting on owner",
-  processing: "Being checked",
-  sent: "Ready for owner review",
-  approved: "Checked, waiting for final control",
-  shipped: "Published, waiting for phone check",
+  processing: "Checking",
+  sent: "Ready",
+  approved: "Checked",
+  shipped: "Published",
   live: "Live confirmed",
-  blocked: "Paused: needs owner",
+  blocked: "Paused",
   closed: "Done",
 };
 
@@ -55,12 +55,12 @@ const IDEA_TIMELINE_TEMPLATE: Array<Omit<IdeaTimelineStep, "state">> = [
   },
   {
     key: "processing",
-    title: "Being checked",
+    title: "Checking",
     detail: "The proposal is being prepared and checked. It is not published.",
   },
   {
     key: "review",
-    title: "Ready for owner review",
+    title: "Ready",
     detail: "A prepared state is waiting for Don. Owner approval is still required.",
   },
   {
@@ -102,7 +102,7 @@ export function getIdeaNextStep(status: IdeaStatus): string {
     case "requested":
       return "Waiting on owner. Don has to deliberately start the check and preparation.";
     case "processing":
-      return "Being checked. This is preparation only; nothing has been published.";
+      return "Checking. This is preparation only; nothing has been published.";
     case "sent":
       return "Ready. Don has to check the prepared state and approve it or request changes before publication.";
     case "approved":

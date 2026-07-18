@@ -59,7 +59,8 @@ function Dashboard() {
           <div className="rounded-md border border-border bg-card p-3">
             <h2 className="text-sm font-semibold">What is happening?</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Each entry shows its status: collected, being checked, ready, or live confirmed.
+              Each entry shows its status: collected, checking, ready, paused, published, or live
+              confirmed.
             </p>
           </div>
           <div className="rounded-md border border-border bg-card p-3">
@@ -81,8 +82,8 @@ function Dashboard() {
               safe step. It does not approve or publish anything.
             </p>
             <p>
-              The terms are intentionally simple: collected, checked, ready, paused, waiting on
-              owner.
+              The terms are intentionally simple: collected, checking, checked, ready, paused,
+              waiting on owner, published, and live confirmed.
             </p>
             <ul className="space-y-1.5">
               <li>
