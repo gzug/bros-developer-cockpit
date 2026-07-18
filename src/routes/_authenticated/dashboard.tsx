@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
+import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getIdeaStatusDotClass, getIdeaStatusLabel } from "@/lib/idea-status";
@@ -99,6 +100,8 @@ function Dashboard() {
             </ul>
           </div>
         </details>
+
+        <PublishingTrustNotice compact className="mt-4" />
 
         <div className="mt-6 space-y-2">
           {list.isLoading && (

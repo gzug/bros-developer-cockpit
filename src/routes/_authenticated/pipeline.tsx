@@ -4,6 +4,7 @@ import { MessageCircle, ParkingCircle, Rocket, Smartphone, Trash2 } from "lucide
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
+import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import chips from "@/config/suggestion-chips.json";
@@ -82,6 +83,12 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           <p className="mt-2 text-xs text-muted-foreground">
             {idea.statusSummary || "Collected, but not published yet."}
           </p>
+          {idea.status === "requested" && (
+            <p className="mt-2 rounded border border-indigo-500/30 bg-indigo-500/5 p-2 text-xs text-indigo-700 dark:text-indigo-300">
+              Waiting on owner means the request is recorded. It is not published and does not move
+              forward until Don checks it.
+            </p>
+          )}
           {nextApk && (
             <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
               This change needs a new app version and cannot go straight to the phone. It stays
@@ -132,7 +139,8 @@ function QueueRow({ idea }: { idea: DCIdea }) {
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
         Clicks here only change the cockpit status: Discuss opens chat, Ask owner marks the task as
-        waiting on owner, Reroute changes the category, and Delete closes the entry.
+        waiting on owner, Reroute changes the category, and Delete closes the entry. None of these
+        buttons publishes the app.
       </p>
     </div>
   );
@@ -245,11 +253,13 @@ function PipelinePage() {
           </div>
         </details>
 
+        <PublishingTrustNotice className="mt-4" />
+
         <section className="mt-5 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Collect an idea</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             New ideas are collected and sorted. Clicking Collect idea creates an entry in the plan,
-            but does not publish anything.
+            but does not check, approve, or publish anything.
           </p>
           <div className="mt-3 grid gap-3">
             <input

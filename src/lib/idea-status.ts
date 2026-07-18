@@ -56,17 +56,17 @@ const IDEA_TIMELINE_TEMPLATE: Array<Omit<IdeaTimelineStep, "state">> = [
   {
     key: "processing",
     title: "Being checked",
-    detail: "The proposal is being prepared and checked.",
+    detail: "The proposal is being prepared and checked. It is not published.",
   },
   {
     key: "review",
     title: "Ready for owner review",
-    detail: "A prepared state is waiting for Don or for checks.",
+    detail: "A prepared state is waiting for Don. Owner approval is still required.",
   },
   {
     key: "shipped",
     title: "Published",
-    detail: "The state was published and then needs the phone check.",
+    detail: "The owner-controlled path ran. The phone check is still required.",
   },
   {
     key: "live",
@@ -102,11 +102,11 @@ export function getIdeaNextStep(status: IdeaStatus): string {
     case "requested":
       return "Waiting on owner. Don has to deliberately start the check and preparation.";
     case "processing":
-      return "Being checked. Wait until a prepared state is ready for owner review.";
+      return "Being checked. This is preparation only; nothing has been published.";
     case "sent":
-      return "Ready. Don has to check the prepared state and approve it or request changes.";
+      return "Ready. Don has to check the prepared state and approve it or request changes before publication.";
     case "approved":
-      return "Checked. Final control stays with Don before anything is published.";
+      return "Checked. Final owner control still stands before anything is published.";
     case "shipped":
       return "Published. Fully close One L1fe, open it twice, and check the change on the phone.";
     case "live":

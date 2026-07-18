@@ -13,6 +13,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -306,7 +307,8 @@ function DcOperationalDashboard() {
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Don checks collected ideas, prepared pull requests, and the final approval step here.
+              Don checks collected ideas, prepared pull requests, and the final owner-controlled
+              step here.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -333,20 +335,7 @@ function DcOperationalDashboard() {
           envStatus?.openrouterKeySet === false ||
           envStatus?.bdcPaused) && (
           <div className="mb-6 grid gap-3">
-            {envStatus?.bdcPaused && (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-4">
-                <div className="flex gap-3">
-                  <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-                  <div>
-                    <h2 className="text-sm font-semibold text-amber-600">Publishing is paused</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      The cockpit may collect and prepare. Nothing is published unless Don
-                      deliberately opens the safe owner approval path.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {envStatus?.bdcPaused && <PublishingTrustNotice />}
             {envStatus?.openrouterKeySet === false && (
               <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4">
                 <div className="flex gap-3">
@@ -406,8 +395,8 @@ function DcOperationalDashboard() {
                   <div>
                     <CardTitle className="text-base font-semibold">Ideas and tasks</CardTitle>
                     <CardDescription className="text-xs">
-                      Live from GitHub. "Waiting on owner" means the request was collected, but not
-                      published.
+                      Live from GitHub. Collected, ready, and waiting on owner are working states,
+                      not publication.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">
