@@ -170,9 +170,9 @@ function Skills() {
 
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Upload AI-session exports</CardTitle>
+            <CardTitle>Upload AI session exports</CardTitle>
             <CardDescription>
-              Raw text is parsed server-side and discarded. The issue stores only scores, counts, provider, dates, and PNG metadata.
+              Raw text is parsed on the server and discarded. The issue stores only scores, counts, provider, dates, and PNG metadata.
             </CardDescription>
           </CardHeader>
           <CardContent>

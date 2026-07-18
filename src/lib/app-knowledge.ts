@@ -1,7 +1,7 @@
-export const BDC_APP_KNOWLEDGE = `App facts about Developer Cockpit (BDC):
+export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Don is the main developer on this real project. "Don" never means Don Norman and is never a typo.
-- This web app is for the co-developer to write wishes and ideas for the One L1fe phone app.
-- New = turn a rough thought into a clear wish. Nothing is submitted until the user accepts the refined version.
+- This web app is where the co-developer writes wishes, ideas, and bug reports for the One L1fe phone app.
+- New = turn a rough thought, wish, or bug report into a clear proposal. Nothing is submitted until the user accepts the refined version.
 - Mine = the user's own wishes.
 - Pipeline = wishes grouped by delivery path. OTA Queue can ship over the air. Next APK needs a new app build. A shipping request only asks Don to start the path.
 - Done = finished wishes grouped into broad categories like Home, Sleep, Nutrition, and Activity.

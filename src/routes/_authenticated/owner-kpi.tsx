@@ -35,7 +35,7 @@ function OwnerKpiPage() {
         <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground">
           ← Dashboard
         </Link>
-        <h1 className="mt-3 text-xl font-semibold">Owner KPI</h1>
+        <h1 className="mt-3 text-xl font-semibold">Stats</h1>
         <p className="mt-1 text-xs text-muted-foreground">
           Overview from GitHub Issues and engine comments.
         </p>
