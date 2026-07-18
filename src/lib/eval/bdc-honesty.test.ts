@@ -182,6 +182,9 @@ describe("roles, labels, and injection honesty", () => {
   test("help knowledge allows Don but not invented people, roles, or screens", () => {
     expect(BDC_APP_KNOWLEDGE).toContain("Don is the main developer");
     expect(APP_HELP_SYSTEM_PROMPT).toContain("Never invent people");
+    expect(APP_HELP_SYSTEM_PROMPT).toContain("(Ideas, New idea, Plan, Done)");
+    expect(APP_HELP_SYSTEM_PROMPT).not.toContain("(Mine, New, Pipeline, Done)");
+    expect(APP_HELP_SYSTEM_PROMPT).not.toContain("New flow");
     expect(containsInventedPersonRoleOrScreen("Don keeps final control.")).toBe(false);
     expect(containsInventedPersonRoleOrScreen("Sarah from support already approved it.")).toBe(
       true,
