@@ -127,6 +127,7 @@ const INTENT_PREFIX = "dc:";
 const META_RE = /<!--\s*dc:(\{[\s\S]*?\})\s*-->/;
 const TEXT_META_KEYS = ["parked-at", "context"] as const;
 const TEXT_META_SENTINEL = "<!-- bdc:text-meta -->";
+const BLOCK_REASON_SENTINEL = "<!-- bdc:block-reason -->";
 const ENGINE_RE =
   /🤖\s*Model:\s*(.+?)\s*\|\s*Tokens:\s*(\d+)\+(\d+)\s*\|\s*\$([0-9.]+)(?:\s*\|\s*PR\s+#(\d+))?/;
 
@@ -395,9 +396,28 @@ function matchPullRequest(issueNumber: number, pulls: PullState[]): PullState | 
   });
 }
 
-function parseBlockReason(comments: RepoComment[]): string | undefined {
-  const last = [...comments].reverse().find((comment) => comment.body.trim());
-  return last?.body.trim();
+function blockReasonComment(reason: string): string {
+  return [BLOCK_REASON_SENTINEL, reason.trim()].join("\n");
+}
+
+export function parseBlockReason(comments: RepoComment[]): string | undefined {
+  const latestWithMarker = [...comments]
+    .reverse()
+    .find((comment) => comment.body.includes(BLOCK_REASON_SENTINEL));
+  if (latestWithMarker) {
+    const reason = latestWithMarker.body.split(BLOCK_REASON_SENTINEL).at(1)?.trim();
+    if (reason) return reason;
+  }
+
+  const legacyGuardrail = [...comments]
+    .reverse()
+    .find((comment) => comment.body.trim().startsWith("Blocked by BDC guardrails."));
+  if (legacyGuardrail) return legacyGuardrail.body.trim();
+
+  const latestHumanComment = [...comments]
+    .reverse()
+    .find((comment) => comment.body.trim() && !parseEngineRunStats(comment.body));
+  return latestHumanComment?.body.trim();
 }
 
 export function deriveIdeaStatus(input: {
@@ -852,7 +872,7 @@ export async function claimIdeaForEngine(issueNumber: number): Promise<void> {
 
 export async function markIdeaGuardrailBlocked(issueNumber: number, reason: string): Promise<void> {
   await addLabelsToIssue(issueNumber, [BDC_BLOCKED_GUARDRAILS_LABEL]);
-  await addIssueComment(issueNumber, `Blocked by BDC guardrails.\n\n${reason}`);
+  await addIssueComment(issueNumber, blockReasonComment(`Blocked by BDC guardrails.\n\n${reason}`));
 }
 
 export async function markIdeaApproved(issueNumber: number): Promise<void> {
@@ -870,7 +890,10 @@ export async function markIdeaLive(issueNumber: number): Promise<void> {
 
 export async function requestIdeaChanges(issueNumber: number): Promise<void> {
   await addLabelsToIssue(issueNumber, [BDC_CHANGES_REQUESTED_LABEL]);
-  await addIssueComment(issueNumber, "Owner requested changes. Check /dc for details.");
+  await addIssueComment(
+    issueNumber,
+    blockReasonComment("Owner requested changes. Check /dc for details."),
+  );
 }
 
 export async function listNewBdcIssues(): Promise<RepoIssue[]> {

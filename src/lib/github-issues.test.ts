@@ -13,12 +13,13 @@ import {
   isParkedOlderThanDays,
   isBdcPipelineIssue,
   isPullRequestForIdea,
+  parseBlockReason,
   readTextMeta,
   replaceTextMeta,
   toIdeaActivity,
   type DCIdea,
 } from "./github-issues.server";
-import type { PullState } from "./github.server";
+import type { PullState, RepoComment } from "./github.server";
 
 function pull(overrides: Partial<PullState> = {}): PullState {
   return {
@@ -339,6 +340,34 @@ test("groupEngineRunStats groups engine comments by issue number", () => {
   ]);
   expect(stats.get(3)).toEqual([]);
   expect(stats.has(99)).toBe(false);
+});
+
+test("parseBlockReason prefers tagged block comments over engine cost comments", () => {
+  const comment = (id: number, body: string): RepoComment => ({
+    id,
+    body,
+    created_at: `2026-07-13T10:0${id}:00Z`,
+    updated_at: `2026-07-13T10:0${id}:00Z`,
+    html_url: `https://example.com/comments/${id}`,
+  });
+
+  expect(
+    parseBlockReason([
+      comment(1, "Started preparation."),
+      comment(
+        2,
+        "<!-- bdc:block-reason -->\nBlocked by BDC guardrails.\n\nAuth changes are out of scope.",
+      ),
+      comment(3, "🤖 Model: gpt-x | Tokens: 100+50 | $0.0123 | PR #10"),
+    ]),
+  ).toBe("Blocked by BDC guardrails.\n\nAuth changes are out of scope.");
+
+  expect(
+    parseBlockReason([
+      comment(1, "Blocked by BDC guardrails.\n\nLegacy guardrail reason."),
+      comment(2, "🤖 Model: gpt-x | Tokens: 100+50 | $0.0123"),
+    ]),
+  ).toBe("Blocked by BDC guardrails.\n\nLegacy guardrail reason.");
 });
 
 test("parked ideas older than 14 days are archive eligible", () => {
