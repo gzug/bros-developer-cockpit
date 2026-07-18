@@ -101,6 +101,28 @@ export function hasRefinedVersionLabel(text: string): boolean {
   return /\bRefined version:/i.test(text);
 }
 
+export function filterAssistantHonestyReply(
+  text: string,
+  options: { hasRealStatusData: boolean; allowRefinedVersionLabel: boolean },
+): string {
+  const trimmed = text.trim();
+  if (!trimmed) return trimmed;
+
+  if (containsUnsupportedStatusClaim(trimmed, options.hasRealStatusData)) {
+    return "I cannot verify that from this chat. In the cockpit, collected, ready, and waiting on owner are working states, not proof that a change reached the phone.";
+  }
+
+  if (containsInventedPersonRoleOrScreen(trimmed)) {
+    return "I cannot verify that person, role, or screen in this cockpit. Don is the only named owner here, and I should stick to the real cockpit screens and statuses.";
+  }
+
+  if (!options.allowRefinedVersionLabel && hasRefinedVersionLabel(trimmed)) {
+    return trimmed.replace(/\bRefined version:\s*/i, "").trim();
+  }
+
+  return trimmed;
+}
+
 export function isRealIdeaStatus(value: string): value is RealIdeaStatus {
   return (IDEA_STATUS_VALUES as readonly string[]).includes(value);
 }
