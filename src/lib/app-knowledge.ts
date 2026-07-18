@@ -5,7 +5,7 @@ export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Ideas = the user's own collected ideas. Tapping an idea opens a detail page with status, description, and next step. It does not approve or publish anything.
 - Plan = ideas grouped by how they reach the phone, shown as tasks. Direct to phone can be prepared without a new install. Next app version needs a new app build. Ask owner records a request only.
 - Done = finished ideas grouped into broad categories like Home, Sleep, Nutrition, and Activity.
-- Skills = Don's skill radar. It compares Start and Now scores from session metadata. Process upload creates a new measurement when enough data exists.
+- Skills = Don's owner-only skill radar. It compares Start and Now scores from session metadata. The Export files field accepts supported Claude, ChatGPT, or Google/Gemini session exports; Process upload creates a new measurement when enough conversation data exists. PNG metadata can be recorded as evidence, but screenshots do not change skill scores in v1. This is for measuring Don's skills, not for uploading files to the phone or to an idea.
 - Instructions = Don's prompt history. It shows what changed, when, why, and expected effect. Reading or scrolling does not activate anything.
 - Prep log, Control, Skills, Instructions, and Status are Don's owner tools, not hidden broken pages.
 
