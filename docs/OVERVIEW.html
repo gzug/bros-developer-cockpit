@@ -32,6 +32,9 @@
   .logo span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .date-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.9rem; font-size: 0.78rem; color: var(--text2); }
   .tagline { margin-top: 0.5rem; color: var(--text2); font-size: 0.9rem; }
+  .historical-notice { background: rgba(245,197,66,0.1); border: 1px solid rgba(245,197,66,0.35); border-radius: 8px; padding: 0.8rem 1rem; margin-top: 1rem; color: var(--text2); font-size: 0.8rem; line-height: 1.5; }
+  .historical-notice strong { color: var(--yellow); }
+  .historical-notice a { color: var(--accent); }
 
   /* STATUS ROW */
   .status-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
@@ -105,6 +108,14 @@
       <div class="date-badge">Stand: 13. Juli 2026</div>
     </div>
     <div class="tagline">Project Overview — Live-Status · Nächste Schritte · Learnings · Historie</div>
+    <div class="historical-notice" role="note">
+      <strong>Historische Momentaufnahme vom 13. Juli 2026.</strong>
+      Diese Seite ist keine aktuelle Aussage zu Release oder Produktion. Für den aktuellen Repo-Stand bitte
+      <a href="https://github.com/gzug/bros-developer-cockpit/blob/main/CHECKPOINT.md">CHECKPOINT.md</a>
+      sowie die aktuellen
+      <a href="https://github.com/gzug/bros-developer-cockpit/issues">Issues</a> und
+      <a href="https://github.com/gzug/bros-developer-cockpit/pulls">PRs</a> prüfen. Preview und grüne CI sind kein Produktions- oder Gerätebeweis.
+    </div>
   </div>
 
   <!-- STATUS ROW -->
