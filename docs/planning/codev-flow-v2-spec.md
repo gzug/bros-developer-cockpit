@@ -1,6 +1,7 @@
 # Co-Dev Flow v2 — one screen, PIN-gated, OTA/APK split
 
-Status: owner-confirmed 2026-07-17 (this file is the single source for the build)
+Status: owner-confirmed 2026-07-17; implemented on `origin/main` by #35 (`058a94e`)
+and visually aligned by #36 (`cfb2de7`) on 2026-07-18.
 Supersedes: the light/heavy weight classes (pipeline-v2 point 4) and the
 owner-approval-on-every-ship rule for OTA-scope surface changes. Both replaced by the
 owner decisions recorded here (2026-07-17).
@@ -68,8 +69,9 @@ feeds each task into the existing pipeline (issue → scoped engine → held PR)
 
 ## Build order and gate
 
-1. Foundation: merge the #21 role/security base with current main (keeps the #32
-   hardening; the security layer merges conflict-free — verified 2026-07-17).
-2. This screen model on top (one screen, categories, lists, chat-ship).
+1. Historical build path: #35 replaced the stale #20/#21 readiness integration story and
+   landed this screen model on `main`.
+2. Current follow-up path: make the merged cockpit easier for a non-technical brother to
+   understand without opening any paused shipping lane.
 Gate: `bun install --frozen-lockfile` → `bun run build:dev` → `bun run typecheck` →
 `bun test` → `NITRO_PRESET=node-server bun run build`.

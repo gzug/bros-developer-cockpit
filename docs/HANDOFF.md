@@ -9,8 +9,9 @@ format, batch gate, and ops facts live there; do not re-derive them.
 
 Operating mode:
 - Plan → announce batch to Don (per AGENTS.md batch gate) → branch → implement or
-  delegate → verify → merge → deploy (`npx vercel --prod --yes`) → verify prod →
-  one short outcome-first report + next batch proposal.
+  delegate → verify → open/review PR. Deploy only if the owner explicitly re-opens
+  the paused BDC lane; then use `npx vercel --prod --yes`, verify prod, and report
+  the real evidence.
 - Don is never a relay. Self-author every worker prompt as a task brief in
   `docs/tasks/`, committed on the work branch; workers are pointed at the file,
   never at pasted prose.
@@ -26,8 +27,9 @@ Operating mode:
   spend. If a task is small, do it yourself — delegation overhead must pay for itself.
 
 Current truth: fetch `origin`, read `CHECKPOINT.md`, and check the open PRs
-before planning. BDC is paused in the current readiness lane. Never call a
-preview or a green check a production or device confirmation.
+before planning. As of 2026-07-18, #35 and #36 are merged into `origin/main`.
+BDC remains paused. Never call a preview or a green check a production or
+device confirmation.
 
 Cross-repo state: treat the mobile repo `CHECKPOINT.md` and its current
 readiness PR as the sibling truth surfaces for One L1fe state.

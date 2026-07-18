@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last verified: 2026-07-17 CEST against `origin/main` `f94ac79` and GitHub._
+_Last verified: 2026-07-18 CEST against `origin/main` `cfb2de7` and GitHub._
 
 ## Operating truth
 
@@ -21,14 +21,13 @@ _Last verified: 2026-07-17 CEST against `origin/main` `f94ac79` and GitHub._
 | #27 | current PL prompt pointer | `488d4c0` | 2026-07-16 |
 | #32 | ZIP limits + pipeline mutation guards (closed #29/#30) | `83fee83` | 2026-07-17 |
 | #33 | sync CHECKPOINT to post-#32 truth | `2e3b080` | 2026-07-17 |
+| #35 | Co-Dev Flow v2: one screen, OTA/APK pipeline, chat-ship | `058a94e` | 2026-07-18 |
+| #36 | One L1fe brand alignment, light default, clearer copy, ideas naming | `cfb2de7` | 2026-07-18 |
 
 ## Open pull requests
 
 | PR | Scope | Status | Rule |
 |---|---|---|---|
-| #35 | Co-Dev Flow v2 draft on the #21 foundation; includes honest shipping semantics, prompt/help cleanup, prompt versions, import checks, and timeline tracking | Draft, clean | owner-gated; current integration path, do not merge before owner go |
-| #20 | readiness pipeline hardening | Draft, conflict | owner-gated; do not merge or repair by assumption |
-| #21 | role and security readiness | Draft, conflict | owner-gated; do not merge or repair by assumption |
 | #28 | product-generalization handoff | Draft, clean | documentation draft; keep separate from readiness integration |
 | #31 | Paxel Builder Profile self-reflection | Draft, based on the readiness branch (#21) | separate BDC draft, not mobile main; do not merge before #21 |
 
@@ -40,19 +39,21 @@ _Last verified: 2026-07-17 CEST against `origin/main` `f94ac79` and GitHub._
 
 _Closed 2026-07-17:_ **#29** (ZIP size limits) and **#30** (close guard + context shadowing) — both fixed and verified in #32 (`83fee83`).
 
+_Closed 2026-07-18:_ stale readiness drafts **#20** and **#21** were closed without merge after #35 superseded their integration story.
+
 ## Next safe sequence
 
-1. `origin/main` now includes the post-#32 checkpoint sync (#33) and the owner-confirmed Co-Dev Flow v2 spec commit `f94ac79`.
-2. PR #35 is the active draft implementation path. It supersedes the old integration story of #20/#21 but remains owner-gated until explicitly approved.
-3. After PR #35 is reviewed and merged, close or rewrite the superseded readiness drafts (#20/#21) deliberately instead of letting them drift.
-4. Then integrate #31 Builder Profile if still wanted; it depends on the readiness/roles foundation.
-5. Only then deploy with `BDC_PAUSED=true`, test the PIN flow with the owner, and record a real result.
+1. `origin/main` now includes #35 (`058a94e`) and #36 (`cfb2de7`). Treat `cfb2de7` as the current BDC baseline.
+2. Keep BDC paused. Do not weaken `BDC_PAUSED`, `BDC_SHIP_ENABLED`, or the external `bdc-ship` gate; preview and green CI are still not production/device proof.
+3. Leave #28 and #31 separate unless the owner explicitly re-scopes them. #31 still targets the old readiness branch and must not be merged by assumption.
+4. Next BDC work should improve non-technical comprehension and trust on top of the One L1fe-themed #36 baseline, then resolve issues #13 and #34 in scoped PRs.
+5. Before any brother handoff, run the full fresh-worktree validation chain, test both PIN roles, and record real owner/browser/device evidence.
 
-## Known follow-ups after PR #35
+## Known follow-ups after #35/#36
 
 - GitHub issue #289 may still need a manual record cleanup because the old test run mixed cockpit actions with direct GitHub clicks. Do not automate a repair by assumption.
 - Prompt-effect remains a small-sample GitHub signal, not real runtime telemetry for the actually served prompts.
-- The help/chat layer knows BDC workflow facts, but it still lacks a live One L1fe product-context packet. That is the next high-value truth upgrade after the current draft lands.
+- The help/chat layer knows BDC workflow facts, but it still lacks a live One L1fe product-context packet. Add that only through an explicit BDC-owned scope; do not edit the One L1fe app repo from this checkpoint.
 
 ## Validation and cleanup rules
 
