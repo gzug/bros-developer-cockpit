@@ -126,6 +126,7 @@ const STATUS_PREFIX = "dc:status:";
 const INTENT_PREFIX = "dc:";
 const META_RE = /<!--\s*dc:(\{[\s\S]*?\})\s*-->/;
 const TEXT_META_KEYS = ["parked-at", "context"] as const;
+const TEXT_META_SENTINEL = "<!-- bdc:text-meta -->";
 const ENGINE_RE =
   /🤖\s*Model:\s*(.+?)\s*\|\s*Tokens:\s*(\d+)\+(\d+)\s*\|\s*\$([0-9.]+)(?:\s*\|\s*PR\s+#(\d+))?/;
 
@@ -137,12 +138,53 @@ function cleanDescription(body: string): string {
   return body.replace(META_RE, "").trim();
 }
 
+function isTextMetaBoundary(line: string): boolean {
+  const trimmed = line.trim();
+  return /^##\s+/.test(trimmed) || trimmed === "---" || trimmed.startsWith("<!--");
+}
+
+function hasStructuredContextLines(lines: string[], heading: number): boolean {
+  for (let index = heading + 1; index < lines.length; index += 1) {
+    const trimmed = lines[index].trim();
+    if (isTextMetaBoundary(trimmed)) return false;
+    const lower = trimmed.toLowerCase();
+    if (
+      TEXT_META_KEYS.some((key) => lower.startsWith(`${key}:`)) ||
+      lower.startsWith("screen:") ||
+      lower.startsWith("type:")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function contextHeadingIndex(lines: string[]): number {
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (
+      lines[index].trim() === TEXT_META_SENTINEL &&
+      lines[index + 1]?.trim().toLowerCase() === "## context"
+    ) {
+      return index + 1;
+    }
+  }
+  for (let index = lines.length - 1; index >= 0; index -= 1) {
+    if (
+      lines[index].trim().toLowerCase() === "## context" &&
+      hasStructuredContextLines(lines, index)
+    ) {
+      return index;
+    }
+  }
+  return -1;
+}
+
 function contextMetaLineIndex(lines: string[], key: (typeof TEXT_META_KEYS)[number]): number {
-  const heading = lines.findIndex((entry) => entry.trim().toLowerCase() === "## context");
+  const heading = contextHeadingIndex(lines);
   if (heading < 0) return -1;
   for (let index = heading + 1; index < lines.length; index += 1) {
     const trimmed = lines[index].trim();
-    if (/^##\s+/.test(trimmed) || trimmed === "---" || trimmed.startsWith("<!--")) return -1;
+    if (isTextMetaBoundary(trimmed)) return -1;
     if (trimmed.toLowerCase().startsWith(`${key}:`)) return index;
   }
   return -1;
@@ -169,12 +211,12 @@ export function replaceTextMeta(body: string, key: (typeof TEXT_META_KEYS)[numbe
     lines[index] = nextLine;
     return lines.join("\n");
   }
-  const contextIndex = lines.findIndex((entry) => entry.trim() === "## Context");
+  const contextIndex = contextHeadingIndex(lines);
   if (contextIndex >= 0) {
     lines.splice(contextIndex + 1, 0, nextLine);
     return lines.join("\n");
   }
-  return [body.trimEnd(), "", "## Context", nextLine].join("\n");
+  return [body.trimEnd(), "", TEXT_META_SENTINEL, "## Context", nextLine].join("\n");
 }
 
 function normalizeDateOnly(input: Date = new Date()): string {
@@ -536,6 +578,7 @@ function issueBody(input: {
     "## Description",
     input.description.trim(),
     "",
+    TEXT_META_SENTINEL,
     "## Context",
     input.parkedAt ? `parked-at: ${input.parkedAt}` : null,
     input.context?.trim() ? `context: ${input.context.trim()}` : null,
