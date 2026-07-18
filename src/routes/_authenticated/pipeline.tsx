@@ -184,34 +184,29 @@ function PipelinePage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Pipeline</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your tasks are split by how they reach the phone: over the air now, or bundled into the next
-            app version. Shipping stays visible as requests, review, publication, and phone confirmation.
+            Your tasks, sorted by how they reach the phone: over the air now, or bundled into the next
+            app version.
           </p>
         </div>
 
-        <section className="mt-5 rounded-xl border border-border bg-card p-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <h2 className="text-sm font-semibold">OTA Queue</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Changes here can go out without a new install after Don reviews and approves them.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">Next APK</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                These changes wait for the next full app version, so they will not appear on the phone yet.
-              </p>
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">Request vs Shipped vs Live</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Request ship means "please start". Shipped means published. Live means confirmed on the
-                phone after reopening One L1fe.
-              </p>
-            </div>
+        <details className="mt-5 rounded-xl border border-border bg-card px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold">How this works</summary>
+          <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+            <p>
+              <span className="font-medium text-foreground">OTA Queue:</span> can go out without a new
+              install, once Don reviews and approves.
+            </p>
+            <p>
+              <span className="font-medium text-foreground">Next APK:</span> waits for the next full app
+              version, so it will not appear on the phone yet.
+            </p>
+            <p>
+              <span className="font-medium text-foreground">Request, Shipped, Live:</span> request asks
+              Don to start, shipped means published, live means confirmed on the phone after reopening
+              One L1fe.
+            </p>
           </div>
-        </section>
+        </details>
 
         <section className="mt-5 rounded-md border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">Add an idea</h2>
@@ -245,7 +240,7 @@ function PipelinePage() {
         <section className="mt-6">
           <h2 className="text-sm font-semibold">Suggestions</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Ideas Don prepared for this app. Tap one to talk it through in the chat — nothing happens
+            Ideas Don prepared for this app. Tap one to talk it through in the chat. Nothing happens
             until you approve it there.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -289,7 +284,7 @@ function PipelinePage() {
 
         <div className="mt-8 text-right">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/done">Done retro</Link>
+            <Link to="/done">Completed</Link>
           </Button>
         </div>
       </main>

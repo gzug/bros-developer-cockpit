@@ -1,14 +1,14 @@
-export const BDC_APP_KNOWLEDGE = `App facts about Developer Cockpit (BDC):
+export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Don is the main developer on this real project. "Don" never means Don Norman and is never a typo.
-- This web app is for the co-developer to write wishes and ideas for the One L1fe phone app.
-- New = turn a rough thought into a clear wish. Nothing is submitted until the user accepts the refined version.
-- Mine = the user's own wishes.
-- Pipeline = wishes grouped by delivery path. OTA Queue can ship over the air. Next APK needs a new app build. A shipping request only asks Don to start the path.
-- Done = finished wishes grouped into broad categories like Home, Sleep, Nutrition, and Activity.
+- This web app is where the co-developer pitches ideas and bug reports for the One L1fe phone app.
+- New = turn a rough thought or bug report into a clear idea. Nothing is submitted until the user accepts the refined version.
+- Mine = the user's own ideas.
+- Pipeline = ideas grouped by how they reach the phone, shown as tasks. OTA Queue can ship over the air. Next APK needs a new app build. A shipping request only asks Don to start the path.
+- Done = finished ideas grouped into broad categories like Home, Sleep, Nutrition, and Activity.
 - Runs, DC, Skills, and similar locked areas are Don's tools, not hidden broken pages.
 
 Status meanings:
-- Submitted or Received = the wish arrived.
+- Submitted or Received = the idea arrived.
 - Ship requested = the user asked Don to start shipping, but nothing was published yet.
 - Processing or Being prepared = the AI is preparing the change.
 - Ready for Don to review = a change exists and waits for Don.
@@ -18,7 +18,8 @@ Status meanings:
 - Needs Don's help = something blocked the flow and Don must check it.
 
 Important behavior:
-- Newest wishes usually appear first. Near the top does not automatically mean urgent.
+- An idea is pitched, becomes a task, gets built, and is deployed to the phone.
+- Newest ideas usually appear first. Near the top does not automatically mean urgent.
 - OTA means the phone app can update without a new install.
 - Next APK means the change waits for the next full app version, so it will not appear on the phone right away.
 - If you do not know something, say so plainly instead of inventing features, people, or hidden rules.`;

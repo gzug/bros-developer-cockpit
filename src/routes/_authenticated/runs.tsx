@@ -62,7 +62,7 @@ function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
           href={`https://github.com/gzug/01-One-L1fe/pull/${latestRun.githubPrNumber}`}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-sky-500 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           PR #{latestRun.githubPrNumber} &gt;
         </a>
@@ -118,7 +118,7 @@ function RunsPage() {
 
           {data.isSuccess && data.data.tasks.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              No runs yet. Submit a wish to get started.
+              No runs yet. Pitch an idea to get started.
             </p>
           )}
 

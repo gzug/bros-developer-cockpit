@@ -59,14 +59,14 @@ function SubmitPage() {
     submit.mutate();
   }
 
-  const submitLabel = "Send wish";
+  const submitLabel = "Pitch idea";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
       <main className="mx-auto max-w-2xl px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Send a wish</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Pitch an idea</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Write what should change in One L1fe. Short and plain is enough.
           </p>
@@ -74,12 +74,12 @@ function SubmitPage() {
 
         {submitted ? (
           <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 p-5">
-            <h2 className="text-lg font-semibold">Your wish reached Don.</h2>
+            <h2 className="text-lg font-semibold">Your idea reached Don.</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              You can follow its status with your other wishes.
+              You can follow its status with your other ideas.
             </p>
             <Button asChild className="mt-4">
-              <a href="/dashboard">View my wishes</a>
+              <a href="/dashboard">View my ideas</a>
             </Button>
           </div>
         ) : (
@@ -153,7 +153,7 @@ function SubmitPage() {
             <Button
               type="submit"
               disabled={submit.isPending}
-              className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+              className="w-full"
             >
               {submit.isPending ? "Submitting..." : submitLabel}
             </Button>

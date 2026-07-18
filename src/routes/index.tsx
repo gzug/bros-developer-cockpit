@@ -16,14 +16,13 @@ function Landing() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
-        <h1 className="text-3xl font-semibold tracking-tight">Wishes for the app</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Ideas for the app</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          What bugs you, what's missing, what should be different? Write it in your own words, and I'll
-          help turn it into a clear update for Don.
+          What is missing, what feels off, what should be different? Write it in your own words and I
+          turn it into a clear update for Don.
         </p>
         <p className="mt-3 text-xs text-muted-foreground">
-          Please don't include health data. Your message goes through Don's private project tools so
-          it can be reviewed and turned into an update.
+          Please leave out health data. Your note goes straight to Don to review.
         </p>
         <div className="mt-8">
           <Button asChild size="lg" className="w-full">

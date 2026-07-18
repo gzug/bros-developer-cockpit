@@ -29,7 +29,7 @@ function IdeaPage() {
         {idea.isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading…</p>}
         {idea.isError && (
           <div className="mt-4 rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
-            This wish could not be loaded. Please try again.
+            This idea could not be loaded. Please try again.
           </div>
         )}
         {idea.data && (

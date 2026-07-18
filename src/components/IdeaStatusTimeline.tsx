@@ -16,7 +16,7 @@ export function IdeaStatusTimeline({ status }: IdeaStatusTimelineProps) {
         <div>
           <h2 className="text-sm font-semibold">Timeline</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            The path stays explicit from request to phone confirmation.
+            Follow your idea from request to phone.
           </p>
         </div>
         <span className="rounded-full border border-border px-2 py-1 text-[11px] text-muted-foreground">

@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
               An unexpected error occurred. Try reloading the page.
             </p>
                       {this.state.error && (
-            <pre className="mt-3 text-left overflow-x-auto rounded bg-gray-100 dark:bg-gray-800 p-2 text-xs">
+            <pre className="mt-3 text-left overflow-x-auto rounded bg-muted p-2 text-xs">
               {this.state.error.message}
             </pre>
           )}

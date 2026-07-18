@@ -302,7 +302,7 @@ function DcOperationalDashboard() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">Developer Cockpit</h1>
               <Badge variant="outline" className="text-xs">
-                BDC
+                DC
               </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -338,10 +338,10 @@ function DcOperationalDashboard() {
                 <div className="flex gap-3">
                   <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
                   <div>
-                    <h2 className="text-sm font-semibold text-amber-600">BDC shipping is paused</h2>
+                    <h2 className="text-sm font-semibold text-amber-600">Shipping is paused</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Set BDC_PAUSED=false only after the production baseline and harmless
-                      end-to-end proof are ready.
+                      Set BDC_PAUSED=false only after the production baseline and a harmless full
+                      run are proven.
                     </p>
                   </div>
                 </div>
@@ -357,8 +357,8 @@ function DcOperationalDashboard() {
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
                       OPENROUTER_API_KEY is missing. Every chat model on the New/help screens and the
-                      engine itself uses this same OpenRouter key, so BDC can collect ideas but cannot
-                      refine them or create held PRs.
+                      engine itself uses this same OpenRouter key, so the Developer Cockpit can collect
+                      ideas but cannot refine them or create held PRs.
                     </p>
                   </div>
                 </div>
@@ -384,8 +384,8 @@ function DcOperationalDashboard() {
                   <div>
                     <h2 className="text-sm font-semibold text-amber-600">DB not connected</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      DATABASE_URL is missing or unavailable. Run data uses in-memory fallback for
-                      this server process.
+                      DATABASE_URL is missing or unavailable. Run data uses a temporary memory
+                      fallback for this server process.
                     </p>
                   </div>
                 </div>
@@ -417,7 +417,7 @@ function DcOperationalDashboard() {
               <CardContent className="flex-1 overflow-auto p-0">
                 {queue.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    No BDC submissions.
+                    No submissions yet.
                   </div>
                 ) : (
                   <Table>

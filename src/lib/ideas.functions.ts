@@ -93,7 +93,7 @@ async function enforceBrotherSubmissionQuota(role: "brother" | "owner"): Promise
   await consumeDurableActionQuota(`submit:${getRequestIP()?.trim() || "unknown"}`);
   if ((await recentIdeaCount()) >= 5) {
     throw new Error(
-      "Five wishes were already sent in the last five hours. Please try again later.",
+      "Five ideas were already sent in the last five hours. Please try again later.",
     );
   }
 }

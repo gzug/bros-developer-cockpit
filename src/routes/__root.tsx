@@ -81,21 +81,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Submit wishes and bug reports for the One L1fe app. No health data, no jargon.",
+          "Submit ideas and bug reports for the One L1fe app. No health data, no jargon.",
       },
       { property: "og:title", content: "One L1fe Developer Cockpit" },
       {
         property: "og:description",
         content:
-          "Private channel for wishes and bugs for the One L1fe app.",
+          "Private channel for ideas and bugs for the One L1fe app.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex, nofollow" },
-      { name: "theme-color", content: "#09090b" },
+      { name: "theme-color", content: "#31796D" },
       { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "manifest", href: "/manifest.json" },
@@ -111,6 +121,14 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Apply dark mode before paint, but only if the user explicitly chose
+            it. Light is the default; the OS preference is intentionally ignored. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})();",
+          }}
+        />
         <HeadContent />
       </head>
       <body>

@@ -29,9 +29,9 @@ export function AppHeader() {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const nextDark = saved ? saved === "dark" : prefersDark;
+    // Light is the default; dark applies only when the user has explicitly
+    // chosen it (persisted in localStorage). The OS preference is not used.
+    const nextDark = window.localStorage.getItem("theme") === "dark";
     document.documentElement.classList.toggle("dark", nextDark);
     setIsDark(nextDark);
   }, []);
@@ -55,7 +55,7 @@ export function AppHeader() {
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-3 py-3 sm:max-w-5xl sm:px-4">
         <Link to="/dashboard" className="shrink-0 text-sm font-semibold">
-          {owner ? "OL1 · Owner" : "One L1fe · Wishes"}
+          {owner ? "OL1 · Owner" : "One L1fe · Ideas"}
         </Link>
         <nav className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm">
           <Link
@@ -102,7 +102,7 @@ export function AppHeader() {
                 <span
                   key={item.to}
                   className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
-                  title="Owner area — unlocks with more experience"
+                  title="Owner area, unlocks with more experience"
                   aria-disabled="true"
                 >
                   <Lock className="h-3 w-3" />

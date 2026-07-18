@@ -189,7 +189,7 @@ export function isBdcPipelineIssue(issue: Pick<RepoIssue, "labels" | "pull_reque
 
 async function requireBdcPipelineIssue(issueNumber: number): Promise<RepoIssue> {
   const issue = await getIssue(issueNumber);
-  if (!isBdcPipelineIssue(issue)) throw new Error("BDC wish not found.");
+  if (!isBdcPipelineIssue(issue)) throw new Error("Idea not found.");
   return issue;
 }
 
@@ -428,7 +428,7 @@ export function describeIdeaStatus(status: DCIdeaStatus): string {
     case "blocked":
       return "This needs Don's help before it can continue.";
     case "closed":
-      return "This wish was closed.";
+      return "This idea was closed.";
   }
 }
 
@@ -633,7 +633,7 @@ export async function getIdea(issueNumber: number): Promise<DCIdea> {
   const [issue, pulls] = await Promise.all([getIssue(issueNumber), listPullRequests("all")]);
   const labels = new Set(issue.labels.map((label) => label.name));
   if (issue.pull_request || !labels.has(FROM_BROTHER_LABEL) || !labels.has(BDC_SUBMITTED_LABEL)) {
-    throw new Error("BDC wish not found.");
+    throw new Error("Idea not found.");
   }
   return deriveIdea(issue, pulls);
 }

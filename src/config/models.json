@@ -24,7 +24,7 @@
     "id": "qwen/qwen3-coder:free",
     "label": "Qwen3 Coder Free",
     "provider": "Qwen",
-    "strength": "Budget coding and routing checks. Free tier is often busy — if it fails, retry later or pick another model.",
+    "strength": "Budget coding and routing checks. Free tier is often busy. If it fails, retry later or pick another model.",
     "costClass": "free"
   }
 ]

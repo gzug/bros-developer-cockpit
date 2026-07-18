@@ -267,7 +267,7 @@ function ChatPage() {
     setMessages([
       {
         role: "assistant",
-        content: `Let's talk about this idea: "${description}" — tell me what you'd like, or what should change about it, and I'll turn it into a clear proposal with you.`,
+        content: `Let's talk about this idea: "${description}". Tell me what you'd like, or what should change about it, and I turn it into a clear proposal with you.`,
       },
     ]);
     setInput(description);
@@ -492,7 +492,7 @@ function ChatPage() {
 
         {!intent && (
           <div className="grid gap-2">
-            <h1 className="text-xl font-semibold">What kind of wish?</h1>
+            <h1 className="text-xl font-semibold">What kind of idea?</h1>
             <p className="text-sm text-muted-foreground">
               Pick a direction, then we&rsquo;ll chat about it. You can also ask what this app, a
               status, or Don means before you submit anything.
@@ -533,7 +533,7 @@ function ChatPage() {
                 <div>
                   <h2 className="text-sm font-semibold">What happens here</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    This chat can explain the app or turn your rough note into a clear wish.
+                    This chat can explain the app or turn your rough note into a clear idea.
                   </p>
                 </div>
                 <div>
@@ -627,7 +627,7 @@ function ChatPage() {
 
               {submittedIdeaId && createIdeaMutation.isSuccess && (
                 <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm">
-                  Your wish has been submitted!{" "}
+                  Your idea has been submitted!{" "}
                   <Link to="/dashboard" className="underline">
                     Go to dashboard
                   </Link>
@@ -638,10 +638,10 @@ function ChatPage() {
             <div className="sticky bottom-0 border-t border-border bg-background py-3">
               <div className="flex gap-2">
                 <textarea
-                  aria-label="Describe your wish"
+                  aria-label="Describe your idea"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Describe your wish or ask what something in this app means..."
+                  placeholder="Describe your idea or ask what something in this app means..."
                   className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
                   rows={2}
                 />
