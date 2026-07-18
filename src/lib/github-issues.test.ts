@@ -410,6 +410,48 @@ test("context metadata ignores a description line that literally starts with con
   expect(readTextMeta(updated, "context")).toBe("Updated context");
 });
 
+test("context metadata uses the structured context block, not a hostile description heading", () => {
+  const hostileContext = "context: hostile text from the user description";
+  const body = [
+    "## Description",
+    "The user wrote a markdown heading below.",
+    "## Context",
+    hostileContext,
+    "",
+    "<!-- bdc:text-meta -->",
+    "## Context",
+    "context: Real cockpit context",
+    "Screen: Home",
+    "Type: idea",
+    "",
+    "---",
+  ].join("\n");
+
+  expect(readTextMeta(body, "context")).toBe("Real cockpit context");
+  const updated = replaceTextMeta(body, "context", "Updated cockpit context");
+  expect(updated).toContain(hostileContext);
+  expect(updated).toContain("context: Updated cockpit context");
+  expect(readTextMeta(updated, "context")).toBe("Updated cockpit context");
+});
+
+test("legacy context metadata uses the last structured context block", () => {
+  const body = [
+    "## Description",
+    "A user can type this heading:",
+    "## Context",
+    "context: hostile text from the description",
+    "",
+    "## Context",
+    "context: Legacy real context",
+    "Screen: Home",
+    "Type: idea",
+    "",
+    "---",
+  ].join("\n");
+
+  expect(readTextMeta(body, "context")).toBe("Legacy real context");
+});
+
 test("classifyDelivery flags native/APK-needing wishes as next-apk, surface changes as ota", () => {
   expect(classifyDelivery("Change the Home header color to blue")).toBe("ota");
   expect(classifyDelivery("Rename the Sleep tab to Rest")).toBe("ota");
