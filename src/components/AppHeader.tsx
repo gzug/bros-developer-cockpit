@@ -29,9 +29,9 @@ export function AppHeader() {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const nextDark = saved ? saved === "dark" : prefersDark;
+    // Light is the default; dark applies only when the user has explicitly
+    // chosen it (persisted in localStorage). The OS preference is not used.
+    const nextDark = window.localStorage.getItem("theme") === "dark";
     document.documentElement.classList.toggle("dark", nextDark);
     setIsDark(nextDark);
   }, []);

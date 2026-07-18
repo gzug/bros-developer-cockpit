@@ -127,42 +127,11 @@
   --sidebar-ring: oklch(0.687 0.092 176);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --background: oklch(0.168 0.003 248);
-    --foreground: oklch(0.960 0.007 133);
-    --card: oklch(0.195 0.004 264);
-    --card-foreground: oklch(0.960 0.007 133);
-    --popover: oklch(0.195 0.004 264);
-    --popover-foreground: oklch(0.960 0.007 133);
-    --primary: oklch(0.687 0.092 176);
-    --primary-foreground: oklch(0.168 0.003 248);
-    --secondary: oklch(0.255 0.006 248);
-    --secondary-foreground: oklch(0.960 0.007 133);
-    --muted: oklch(0.255 0.006 248);
-    --muted-foreground: oklch(0.613 0.016 149);
-    --accent: oklch(0.255 0.006 248);
-    --accent-foreground: oklch(0.960 0.007 133);
-    --destructive: oklch(0.704 0.191 22);
-    --destructive-foreground: oklch(0.960 0.007 133);
-    --border: oklch(0.295 0.006 237);
-    --input: oklch(0.320 0.007 237);
-    --ring: oklch(0.687 0.092 176);
-    --chart-1: oklch(0.687 0.092 176);
-    --chart-2: oklch(0.780 0.120 85);
-    --chart-3: oklch(0.700 0.150 25);
-    --chart-4: oklch(0.650 0.100 200);
-    --chart-5: oklch(0.750 0.060 150);
-    --sidebar: oklch(0.195 0.004 264);
-    --sidebar-foreground: oklch(0.960 0.007 133);
-    --sidebar-primary: oklch(0.687 0.092 176);
-    --sidebar-primary-foreground: oklch(0.960 0.007 133);
-    --sidebar-accent: oklch(0.255 0.006 248);
-    --sidebar-accent-foreground: oklch(0.960 0.007 133);
-    --sidebar-border: oklch(0.295 0.006 237);
-    --sidebar-ring: oklch(0.687 0.092 176);
-  }
-}
+/*
+ * Dark mode is opt-in only: it applies when the `.dark` class is present on
+ * <html> (set by the theme toggle / early theme script). Light is the default;
+ * the OS `prefers-color-scheme` is intentionally NOT auto-applied.
+ */
 
 @layer base {
   * {

@@ -121,6 +121,14 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Apply dark mode before paint, but only if the user explicitly chose
+            it. Light is the default; the OS preference is intentionally ignored. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})();",
+          }}
+        />
         <HeadContent />
       </head>
       <body>
