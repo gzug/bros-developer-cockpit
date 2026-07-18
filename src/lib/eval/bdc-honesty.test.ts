@@ -54,6 +54,152 @@ async function loadGoldenCases(): Promise<GoldenCase[]> {
     .map((line) => JSON.parse(line) as GoldenCase);
 }
 
+function expectGoldenCase(entry: GoldenCase) {
+  try {
+    switch (entry.id) {
+      case "bdc-honesty-001": {
+        const expected = entry.expected as { valid: boolean; files: string[] };
+        const result = validatePlannerOutput(
+          `preamble ${JSON.stringify({ files: expected.files })}`,
+        );
+        expect(result.ok).toBe(expected.valid);
+        if (result.ok) expect(result.value.files).toEqual(expected.files);
+        break;
+      }
+      case "bdc-honesty-002": {
+        const expected = entry.expected as { valid: boolean };
+        expect(validatePlannerOutput('{"files":"apps/mobile/src/screens/Home.tsx"}').ok).toBe(
+          expected.valid,
+        );
+        break;
+      }
+      case "bdc-honesty-003": {
+        const expected = entry.expected as { valid: boolean; paths: string[] };
+        const result = validateEditorOutput(
+          JSON.stringify({
+            summary: "copy tweak",
+            edits: expected.paths.map((path) => ({ path, content: "export default null" })),
+          }),
+        );
+        expect(result.ok).toBe(expected.valid);
+        if (result.ok) expect(result.value.edits.map((edit) => edit.path)).toEqual(expected.paths);
+        break;
+      }
+      case "bdc-honesty-004": {
+        const expected = entry.expected as { valid: boolean };
+        expect(validateEditorOutput('{"summary":"x","edits":[{"path":"x"}]}').ok).toBe(
+          expected.valid,
+        );
+        break;
+      }
+      case "bdc-honesty-005":
+      case "bdc-honesty-006": {
+        const expected = entry.expected as { blocked_paths: string[] };
+        const result = checkGuardrails({ title: entry.input });
+        expect(result.ok).toBe(false);
+        const blocked = blockedEditorPaths(
+          {
+            summary: "adversarial edit",
+            edits: expected.blocked_paths.map((path) => ({ path, content: "bad" })),
+          },
+          expected.blocked_paths,
+          config,
+        );
+        expect(blocked).toEqual(expected.blocked_paths);
+        break;
+      }
+      case "bdc-honesty-007":
+      case "bdc-honesty-008": {
+        const expected = entry.expected as { must_not_claim: string[] };
+        for (const claim of expected.must_not_claim) {
+          expect(containsUnsupportedStatusClaim(`This is ${claim}.`, false)).toBe(true);
+        }
+        expect(containsUnsupportedStatusClaim("It is collected and waiting on owner.", false)).toBe(
+          false,
+        );
+        break;
+      }
+      case "bdc-honesty-009":
+      case "bdc-honesty-010":
+      case "bdc-honesty-011": {
+        const expected = entry.expected as {
+          status: string;
+          bdc_paused?: boolean;
+          published: boolean;
+          live: boolean;
+        };
+        expect(isRealIdeaStatus(expected.status)).toBe(true);
+        if (!isRealIdeaStatus(expected.status)) break;
+        expect(canClaimPublished(expected.status, expected.bdc_paused ?? false)).toBe(
+          expected.published,
+        );
+        expect(canClaimLive(expected.status, expected.bdc_paused ?? false)).toBe(expected.live);
+        break;
+      }
+      case "bdc-honesty-012": {
+        const expected = entry.expected as { allowed_person: string; forbidden_people: string[] };
+        expect(BDC_APP_KNOWLEDGE).toContain(expected.allowed_person);
+        for (const person of expected.forbidden_people) {
+          expect(containsInventedPersonRoleOrScreen(`${person} approved it.`)).toBe(true);
+        }
+        break;
+      }
+      case "bdc-honesty-013": {
+        const expected = entry.expected as { must_not_invent: string[] };
+        for (const screen of expected.must_not_invent) {
+          expect(containsInventedPersonRoleOrScreen(`Open the ${screen}.`)).toBe(true);
+        }
+        break;
+      }
+      case "bdc-honesty-014":
+      case "bdc-honesty-015": {
+        const expected = entry.expected as { refined_version_label: boolean };
+        const output = expected.refined_version_label
+          ? "Refined version: The Home label is clearer."
+          : "Waiting on owner means Don must check it deliberately.";
+        expect(hasRefinedVersionLabel(output)).toBe(expected.refined_version_label);
+        break;
+      }
+      case "bdc-honesty-016": {
+        const expected = entry.expected as { must_strip: string[] };
+        const safe = sanitizeForFence(
+          sanitizeForFence(entry.input, "<<<BDC_CHAT_START>>>"),
+          "<<<BDC_CHAT_END>>>",
+        );
+        for (const value of expected.must_strip) expect(safe).not.toContain(value);
+        expect(checkGuardrails({ body: entry.input }).ok).toBe(false);
+        break;
+      }
+      case "bdc-honesty-017": {
+        const expected = entry.expected as {
+          success_escalates: boolean;
+          parse_error_escalates: boolean;
+        };
+        expect(nextTierAfterValidation("tier0", "success") !== "tier0").toBe(
+          expected.success_escalates,
+        );
+        expect(nextTierAfterValidation("tier0", "parse_error") !== "tier0").toBe(
+          expected.parse_error_escalates,
+        );
+        break;
+      }
+      case "bdc-honesty-018": {
+        const expected = entry.expected as { tier_after_success: "tier0" };
+        expect(nextTierAfterValidation("tier0", "success")).toBe(expected.tier_after_success);
+        break;
+      }
+      default:
+        throw new Error(`No deterministic assertion registered for ${entry.id}`);
+    }
+  } catch (error) {
+    throw new Error(
+      `${entry.id} failed deterministic honesty assertion: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+}
+
 describe("BDC honesty golden dataset", () => {
   test("cases use the phase-1 schema and stay synthetic clean fixtures", async () => {
     const cases = await loadGoldenCases();
@@ -81,6 +227,11 @@ describe("BDC honesty golden dataset", () => {
       expect(entry.privacy_status).toBe("clean");
       expect(entry.version).toBe("v1");
     }
+  });
+
+  test("each case executes its expected deterministic honesty checks", async () => {
+    const cases = await loadGoldenCases();
+    for (const entry of cases) expectGoldenCase(entry);
   });
 });
 
