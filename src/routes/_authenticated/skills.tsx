@@ -5,6 +5,12 @@ import { UploadCloud } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/AppHeader";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -188,127 +194,143 @@ function Skills() {
           </div>
         )}
 
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Upload AI sessions</CardTitle>
-            <CardDescription>
-              Raw text is read only on the server and then discarded. Scores, counts, providers,
-              dates, and PNG metadata are stored.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Clicking Process upload creates a new measurement. The radar changes from sample data
-              to real measurement when enough data exists.
-            </p>
-            <form className="grid gap-3" onSubmit={submitUpload}>
-              <label className="grid gap-1 text-sm font-medium">
-                Export files
-                <input
-                  name="files"
-                  type="file"
-                  multiple
-                  accept=".zip,.json,.html,.htm,.png,application/zip,application/json,text/html,image/png"
-                  onChange={(event) => setSelectedFileCount(event.currentTarget.files?.length ?? 0)}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {selectedFileCount > 0
-                    ? `${selectedFileCount} file${selectedFileCount === 1 ? "" : "s"} selected`
-                    : "Choose a supported export or PNG first."}
+        <Accordion
+          type="single"
+          collapsible
+          defaultValue="upload"
+          className="mt-6 overflow-hidden rounded-md border border-border bg-card px-4"
+        >
+          <AccordionItem value="upload">
+            <AccordionTrigger className="items-start gap-3 py-4 hover:no-underline [&>svg]:mt-1">
+              <span className="grid gap-1 text-left">
+                <span className="text-base font-semibold">Upload AI sessions</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  Process supported exports when you want a new measurement.
                 </span>
-              </label>
-              <label className="grid gap-1 text-sm font-medium">
-                Optional PNG note
-                <Textarea
-                  name="note"
-                  placeholder="Short context for a screenshot. Screenshots are not stored as files."
-                  className="min-h-20"
-                />
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="submit"
-                  disabled={uploadMutation.isPending || selectedFileCount === 0}
-                >
-                  <UploadCloud className="h-4 w-4" aria-hidden="true" />
-                  {uploadMutation.isPending ? "Processing" : "Process upload"}
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Supports Claude ZIP, ChatGPT ZIP, Google/Gemini JSON or HTML, and PNG metadata.
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Clicking Process upload creates a new measurement. The radar changes from sample
+                data to real measurement when enough data exists.
+              </p>
+              <form className="grid gap-3" onSubmit={submitUpload}>
+                <label className="grid gap-1 text-sm font-medium">
+                  Export files
+                  <input
+                    name="files"
+                    type="file"
+                    multiple
+                    accept=".zip,.json,.html,.htm,.png,application/zip,application/json,text/html,image/png"
+                    onChange={(event) =>
+                      setSelectedFileCount(event.currentTarget.files?.length ?? 0)
+                    }
+                    className="rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {selectedFileCount > 0
+                      ? `${selectedFileCount} file${selectedFileCount === 1 ? "" : "s"} selected`
+                      : "Choose a supported export or PNG first."}
+                  </span>
+                </label>
+                <label className="grid gap-1 text-sm font-medium">
+                  Optional PNG note
+                  <Textarea
+                    name="note"
+                    placeholder="Short context for a screenshot. Screenshots are not stored as files."
+                    className="min-h-20"
+                  />
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="submit"
+                    disabled={uploadMutation.isPending || selectedFileCount === 0}
+                  >
+                    <UploadCloud className="h-4 w-4" aria-hidden="true" />
+                    {uploadMutation.isPending ? "Processing" : "Process upload"}
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Supports Claude ZIP, ChatGPT ZIP, Google/Gemini JSON or HTML, and PNG metadata.
+                  </span>
+                </div>
+                {uploadMutation.data?.warnings.length ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
+                    {uploadMutation.data.warnings.map((warning) => (
+                      <div key={warning}>{warning}</div>
+                    ))}
+                  </div>
+                ) : null}
+                <p className="text-xs text-muted-foreground">
+                  Raw text is read only on the server and then discarded. Scores, counts, providers,
+                  dates, and PNG metadata are stored.
+                </p>
+              </form>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="measurement" className="border-b-0">
+            <AccordionTrigger className="items-start gap-3 py-4 hover:no-underline [&>svg]:mt-1">
+              <span className="grid gap-1 text-left">
+                <span className="text-base font-semibold">How it is measured</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  Countable metadata, signal definitions, and formulas.
                 </span>
-              </div>
-              {uploadMutation.data?.warnings.length ? (
-                <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
-                  {uploadMutation.data.warnings.map((warning) => (
-                    <div key={warning}>{warning}</div>
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="grid gap-4 text-sm">
+              <p className="text-xs text-muted-foreground">
+                Expandable formulas explain which signals feed a score. Clicking a formula shows
+                details, but does not change a measurement.
+              </p>
+              <div>
+                <h2 className="mb-2 text-sm font-semibold">Signals</h2>
+                <div className="grid gap-2">
+                  {measurement?.signals.map((signal) => (
+                    <div key={signal.key} className="rounded-md border border-border p-3">
+                      <div className="font-medium">{signal.label}</div>
+                      <div className="text-xs text-muted-foreground">{signal.description}</div>
+                    </div>
                   ))}
                 </div>
-              ) : null}
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>How it is measured</CardTitle>
-            <CardDescription>
-              Every score is based on countable metadata from normalized conversations.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 text-sm">
-            <p className="text-xs text-muted-foreground">
-              Expandable formulas explain which signals feed a score. Clicking a formula shows
-              details, but does not change a measurement.
-            </p>
-            <div>
-              <h2 className="mb-2 text-sm font-semibold">Signals</h2>
-              <div className="grid gap-2">
-                {measurement?.signals.map((signal) => (
-                  <div key={signal.key} className="rounded-md border border-border p-3">
-                    <div className="font-medium">{signal.label}</div>
-                    <div className="text-xs text-muted-foreground">{signal.description}</div>
-                  </div>
-                ))}
               </div>
-            </div>
-            <div>
-              <h2 className="mb-2 text-sm font-semibold">Formulas</h2>
-              <div className="grid gap-2">
-                {measurement?.dimensions.map((dimension) => (
-                  <details key={dimension.key} className="rounded-md border border-border p-3">
-                    <summary className="cursor-pointer rounded font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
-                      {dimension.key}
-                    </summary>
-                    <code className="mt-2 block whitespace-pre-wrap text-xs text-muted-foreground">
-                      {dimension.formula}
-                    </code>
-                    <div className="mt-2 text-xs text-muted-foreground">
-                      Inputs: {dimension.inputs.join(", ")}
-                    </div>
-                    {latest?.dimensionDetails?.[
-                      dimension.key as keyof typeof latest.dimensionDetails
-                    ] && (
-                      <div className="mt-2 grid gap-1 text-xs">
-                        {latest.dimensionDetails[
-                          dimension.key as keyof typeof latest.dimensionDetails
-                        ].inputs.map((input) => (
-                          <div
-                            key={`${dimension.key}-${input.key}`}
-                            className="flex justify-between gap-3"
-                          >
-                            <span className="text-muted-foreground">{input.label}</span>
-                            <span className="tabular-nums">{input.value}</span>
-                          </div>
-                        ))}
+              <div>
+                <h2 className="mb-2 text-sm font-semibold">Formulas</h2>
+                <div className="grid gap-2">
+                  {measurement?.dimensions.map((dimension) => (
+                    <details key={dimension.key} className="rounded-md border border-border p-3">
+                      <summary className="cursor-pointer rounded font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
+                        {dimension.key}
+                      </summary>
+                      <code className="mt-2 block whitespace-pre-wrap text-xs text-muted-foreground">
+                        {dimension.formula}
+                      </code>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Inputs: {dimension.inputs.join(", ")}
                       </div>
-                    )}
-                  </details>
-                ))}
+                      {latest?.dimensionDetails?.[
+                        dimension.key as keyof typeof latest.dimensionDetails
+                      ] && (
+                        <div className="mt-2 grid gap-1 text-xs">
+                          {latest.dimensionDetails[
+                            dimension.key as keyof typeof latest.dimensionDetails
+                          ].inputs.map((input) => (
+                            <div
+                              key={`${dimension.key}-${input.key}`}
+                              className="flex justify-between gap-3"
+                            >
+                              <span className="text-muted-foreground">{input.label}</span>
+                              <span className="tabular-nums">{input.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </details>
+                  ))}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </main>
     </div>
   );
