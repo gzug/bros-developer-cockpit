@@ -75,7 +75,14 @@ export function HelpBubble() {
           <X className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+      <div
+        className="flex-1 space-y-2 overflow-y-auto p-3"
+        role="log"
+        aria-label="Help conversation"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-busy={ask.isPending}
+      >
         {messages.length === 1 && (
           <div className="flex flex-wrap gap-2">
             {BDC_HELP_QUICK_QUESTIONS.map((question) => (

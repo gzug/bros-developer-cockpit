@@ -32,6 +32,8 @@ import { formatDcCost } from "@/lib/dc-display";
 import type { DCIdea } from "@/lib/github-issues.server";
 import type { RunRow } from "@/lib/runs.functions";
 import { desc } from "drizzle-orm";
+import { DataStateMessage } from "@/components/DataStateMessage";
+import { getUiDataState } from "@/lib/ui-data-state";
 
 type DcDashboardData = {
   envStatus: {
@@ -214,6 +216,17 @@ function DcOperationalDashboard() {
   const dbConnected = data?.dbConnected ?? false;
   const githubConnected = data?.githubConnected ?? false;
   const envStatus = data?.envStatus;
+  const dashboardState = getUiDataState({
+    status: dashboard.status,
+    hasData: data != null,
+    isFetching: dashboard.isFetching,
+  });
+  const showDashboard = dashboardState === "success" || dashboardState === "stale";
+  const showConnectionWarnings =
+    !dbConnected ||
+    !githubConnected ||
+    envStatus?.openrouterKeySet === false ||
+    envStatus?.bdcPaused;
   const totalCost = runsList.reduce((sum, run) => sum + parseFloat(run.costUsd || "0"), 0);
 
   return (
@@ -252,10 +265,7 @@ function DcOperationalDashboard() {
           </div>
         </div>
 
-        {(!dbConnected ||
-          !githubConnected ||
-          envStatus?.openrouterKeySet === false ||
-          envStatus?.bdcPaused) && (
+        {showDashboard && showConnectionWarnings && (
           <div className="mb-6 grid gap-3">
             {envStatus?.bdcPaused && <PublishingTrustNotice />}
             {envStatus?.openrouterKeySet === false && (
@@ -305,9 +315,14 @@ function DcOperationalDashboard() {
           </div>
         )}
 
-        {dashboard.isLoading ? (
-          <div className="flex h-64 items-center justify-center text-muted-foreground">
-            <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Loading cockpit data...
+        {!showDashboard ? (
+          <div className="mt-6">
+            <DataStateMessage
+              state={dashboardState}
+              loading="Loading cockpit data..."
+              error="The owner control data could not be loaded. Try again."
+              onRetry={() => void dashboard.refetch()}
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

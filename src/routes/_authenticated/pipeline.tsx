@@ -16,6 +16,8 @@ import {
 } from "@/lib/ideas.functions";
 import type { DCIdea, IdeaDelivery } from "@/lib/github-issues.server";
 import { getIdeaDisplay } from "@/lib/idea-status";
+import { DataStateMessage } from "@/components/DataStateMessage";
+import { getUiDataState } from "@/lib/ui-data-state";
 
 export const Route = createFileRoute("/_authenticated/pipeline")({
   component: PipelinePage,
@@ -58,14 +60,20 @@ function QueueRow({ idea }: { idea: DCIdea }) {
 
   const remove = useMutation({
     mutationFn: () => deleteIdeaEntry({ data: { id: idea.id } }),
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Task deleted.");
+    },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not delete task."),
   });
   const setDelivery = useMutation({
     mutationFn: (delivery: IdeaDelivery) =>
       updateIdeaDeliveryEntry({ data: { id: idea.id, delivery } }),
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      await invalidate();
+      toast.success("Task category updated.");
+    },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not change category."),
   });
@@ -76,6 +84,7 @@ function QueueRow({ idea }: { idea: DCIdea }) {
     statusSummary: idea.statusSummary,
     doneCategory: idea.doneCategory,
   });
+  const mutationPending = remove.isPending || setDelivery.isPending;
 
   return (
     <div className="rounded-md border border-border bg-card p-3">
@@ -108,7 +117,7 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           size="sm"
           variant="outline"
           onClick={() => remove.mutate()}
-          disabled={remove.isPending}
+          disabled={mutationPending}
           aria-label={`Delete ${idea.title}`}
         >
           <Trash2 className="mr-1 h-3 w-3" aria-hidden="true" /> Delete
@@ -141,6 +150,7 @@ function QueueRow({ idea }: { idea: DCIdea }) {
             value={idea.delivery}
             onChange={(event) => setDelivery.mutate(event.target.value as IdeaDelivery)}
             aria-label={`Reroute ${idea.title}`}
+            disabled={mutationPending}
             className="ml-2 h-8 rounded-md border border-input bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <option value="ota">OTA</option>
@@ -148,6 +158,11 @@ function QueueRow({ idea }: { idea: DCIdea }) {
           </select>
         </label>
       </div>
+      {mutationPending && (
+        <p role="status" className="mt-2 text-xs text-muted-foreground">
+          Updating task...
+        </p>
+      )}
       <p className="mt-2 text-xs text-muted-foreground">
         Clicks here only change the cockpit status: Discuss opens chat, Ask owner marks the task as
         waiting on owner, Reroute changes the category, and Delete closes the entry. None of these
@@ -231,6 +246,12 @@ function PipelinePage() {
   const open = all.filter((idea) => !isShipped(idea));
   const otaQueue = open.filter((idea) => idea.delivery === "ota");
   const nextApk = open.filter((idea) => idea.delivery === "next-apk");
+  const pipelineState = getUiDataState({
+    status: pipeline.status,
+    hasData: pipeline.data != null,
+    hasItems: all.length > 0,
+    isFetching: pipeline.isFetching,
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -330,33 +351,43 @@ function PipelinePage() {
           </div>
         </section>
 
-        {pipeline.isLoading && (
-          <p className="mt-6 text-sm text-muted-foreground">Loading plan...</p>
+        <div className="mt-6">
+          <DataStateMessage
+            state={pipelineState}
+            loading="Loading plan..."
+            error="The plan could not be loaded. Try again."
+            empty="No ideas have been collected yet."
+            onRetry={() => void pipeline.refetch()}
+          />
+        </div>
+
+        {(pipelineState === "success" || pipelineState === "stale") && (
+          <>
+            <List
+              title="Direct to phone"
+              hint="Small changes that can be prepared. Clicking Ask owner moves them to waiting on owner."
+              ideas={otaQueue}
+              empty="No directly preparable ideas collected."
+              render={(idea) => <QueueRow key={idea.id} idea={idea} />}
+            />
+
+            <List
+              title="Next app version"
+              hint="Larger changes that need a new install. They stay collected and are not published directly."
+              ideas={nextApk}
+              empty="Nothing is waiting for the next app version."
+              render={(idea) => <QueueRow key={idea.id} idea={idea} />}
+            />
+
+            <List
+              title="Published"
+              hint="Entries that were published or confirmed live on the phone. This list is history, not a start button."
+              ideas={shipped}
+              empty="Nothing published yet."
+              render={(idea) => <ShippedRow key={idea.id} idea={idea} />}
+            />
+          </>
         )}
-
-        <List
-          title="Direct to phone"
-          hint="Small changes that can be prepared. Clicking Ask owner moves them to waiting on owner."
-          ideas={otaQueue}
-          empty="No directly preparable ideas collected."
-          render={(idea) => <QueueRow key={idea.id} idea={idea} />}
-        />
-
-        <List
-          title="Next app version"
-          hint="Larger changes that need a new install. They stay collected and are not published directly."
-          ideas={nextApk}
-          empty="Nothing is waiting for the next app version."
-          render={(idea) => <QueueRow key={idea.id} idea={idea} />}
-        />
-
-        <List
-          title="Published"
-          hint="Entries that were published or confirmed live on the phone. This list is history, not a start button."
-          ideas={shipped}
-          empty="Nothing published yet."
-          render={(idea) => <ShippedRow key={idea.id} idea={idea} />}
-        />
 
         <div className="mt-8 text-right">
           <Button asChild variant="ghost" size="sm">

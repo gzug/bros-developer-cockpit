@@ -592,7 +592,14 @@ function ChatPage() {
               </div>
             </section>
 
-            <div className="flex-1 space-y-3 overflow-y-auto pb-4">
+            <div
+              className="flex-1 space-y-3 overflow-y-auto pb-4"
+              role="log"
+              aria-label="Chat conversation"
+              aria-live="polite"
+              aria-relevant="additions text"
+              aria-busy={refine.isPending}
+            >
               {messages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
