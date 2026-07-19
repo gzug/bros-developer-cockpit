@@ -117,6 +117,15 @@ export function AppHeader() {
               ),
             )}
           <RoleSwitch />
+          <a
+            href="https://claude.ai/code/artifact/31a7c189-c39d-4a66-a46b-bc0844b622ef"
+            target="_blank"
+            rel="noreferrer"
+            className={navLinkClass}
+            aria-label="About this project (opens in a new tab)"
+          >
+            About
+          </a>
           <Button
             variant="ghost"
             className="h-8 w-8 p-0"
