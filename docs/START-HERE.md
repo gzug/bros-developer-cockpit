@@ -21,7 +21,7 @@ _Canonical documentation index. Last checked: 2026-07-19 against `origin/main`_
 | --- | --- | --- | --- |
 | Runtime behavior and access | `src/` plus colocated tests | `docs/MIGRATION.md`, route docs | Code and tests win; update docs in the same scoped PR. |
 | Current BDC pause, baseline, PR/issue posture | `CHECKPOINT.md` plus live GitHub | `docs/HANDOFF.md`, archived task briefs | Refresh after a merge, lane change, or readiness decision. |
-| Route names and role access | `src/components/AppHeader.tsx`, route `beforeLoad`, `src/routes/README.md` | `docs/OVERVIEW.html` | Route code wins; route matrix is maintained with route changes. |
+| Route names and role access | `src/lib/nav-model.ts`, route `beforeLoad`, `src/routes/README.md` | `docs/OVERVIEW.html` | Route code wins; route matrix is maintained with route changes. |
 | Environment inventory and setup | `.env.example`, `docs/setup-guide.md`, `AGENTS.md` | `docs/MIGRATION.md` | `.env.example` lists app-config keys; setup explains required/optional/deployment policy. |
 | Skill upload limits and parsing | `src/lib/skill-export-parser.server.ts` plus tests | `docs/skill-measurement.md` | Numeric limits must match code and parser tests. |
 | Skill score/eval behavior | `src/lib/skills-scoring.ts`, `src/lib/eval/`, tests | `docs/EVAL_FRAMEWORK.md`, learnings | Synthetic evals are evidence, not production telemetry. |
