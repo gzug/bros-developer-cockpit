@@ -41,6 +41,18 @@ test("idea timeline marks current progress without inventing extra progress", ()
       index < live.length - 1 ? step.state === "complete" : step.state === "current",
     ),
   ).toBe(true);
+
+  const blocked = getIdeaTimeline("blocked");
+  expect(blocked.map((step) => step.state)).toEqual([
+    "complete",
+    "complete",
+    "complete",
+    "current",
+  ]);
+  expect(blocked[blocked.length - 1]).toMatchObject({
+    key: "blocked",
+    title: "Blocked",
+  });
 });
 
 test("closed ideas distinguish completed Done history from closed history", () => {
