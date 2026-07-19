@@ -398,10 +398,17 @@ export function isPullRequestForIdea(issueNumber: number, pull: PullState): bool
   );
 }
 
-function matchPullRequest(issueNumber: number, pulls: PullState[]): PullState | undefined {
+export function selectPullRequestForIdea(
+  issueNumber: number,
+  pulls: PullState[],
+): PullState | undefined {
   return pulls.find((pull) => {
     return isPullRequestForIdea(issueNumber, pull);
   });
+}
+
+function matchPullRequest(issueNumber: number, pulls: PullState[]): PullState | undefined {
+  return selectPullRequestForIdea(issueNumber, pulls);
 }
 
 function blockReasonComment(reason: string): string {

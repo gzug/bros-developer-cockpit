@@ -13,6 +13,7 @@ import {
   isParkedOlderThanDays,
   isBdcPipelineIssue,
   isPullRequestForIdea,
+  selectPullRequestForIdea,
   parseBlockReason,
   readTextMeta,
   replaceTextMeta,
@@ -46,6 +47,13 @@ test("pull binding requires exact branch, base, author, and source marker", () =
   expect(isPullRequestForIdea(7, pull({ author: "attacker" }))).toBe(false);
   expect(isPullRequestForIdea(7, pull({ body: "Mentions #7 only" }))).toBe(false);
   expect(isPullRequestForIdea(7, pull({ body: "Resolves: gzug/01-One-L1fe#70" }))).toBe(false);
+});
+
+test("held PR selection is first exact match, including closed or duplicate matches", () => {
+  const closed = pull({ number: 40, state: "closed", merged: false });
+  const duplicateOpen = pull({ number: 41 });
+  expect(selectPullRequestForIdea(7, [closed, duplicateOpen])?.number).toBe(40);
+  expect(selectPullRequestForIdea(7, [pull({ headRef: "feature/not-held" })])).toBeUndefined();
 });
 
 test("open pull request derives sent status", () => {
