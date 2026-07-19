@@ -4,8 +4,9 @@ import { Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginWithPin } from "@/lib/auth.server";
+import { getCockpitRoleLabel } from "@/lib/dc-display";
 
-// In-app permission switch: enter a four-digit code to move between the Main Dev and Co-Dev
+// In-app permission switch: enter a four-digit code to move between the Owner and Co-dev
 // setups without logging out. It reuses the exact login path (loginWithPin), so it grants no
 // access a plain login wouldn't — you still need to know the code. A full page reload lets the
 // route guards re-evaluate under the new role.
@@ -23,7 +24,7 @@ export function RoleSwitch() {
     setBusy(true);
     try {
       const result = await loginWithPin({ data: { secret: pin } });
-      toast.success(`Switched to ${result.role === "owner" ? "Main Dev" : "Co-Dev"} view.`);
+      toast.success(`Switched to ${getCockpitRoleLabel(result.role)} view.`);
       window.location.reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wrong code");
@@ -37,8 +38,8 @@ export function RoleSwitch() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        title="Switch between Main Dev and Co-Dev view"
-        aria-label="Switch between Main Dev and Co-Dev view"
+        title="Switch between Owner and Co-dev view"
+        aria-label="Switch between Owner and Co-dev view"
       >
         <Repeat className="mr-1 h-3 w-3" aria-hidden="true" /> Switch view
       </Button>

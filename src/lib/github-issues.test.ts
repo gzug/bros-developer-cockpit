@@ -175,7 +175,7 @@ test("other statuses cannot enter the owner lane directly", () => {
 test("status descriptions explain the next operator step", () => {
   expect(describeIdeaStatus("requested")).toContain("waiting for Don");
   expect(describeIdeaStatus("sent")).toContain("Don to review");
-  expect(describeIdeaStatus("approved")).toContain("safety checks");
+  expect(describeIdeaStatus("approved")).toContain("owner-controlled path");
   expect(describeIdeaStatus("blocked")).toContain("Don's help");
 });
 

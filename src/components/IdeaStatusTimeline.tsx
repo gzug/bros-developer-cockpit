@@ -4,11 +4,12 @@ import { getIdeaTimeline, getIdeaNextStep, type IdeaStatus } from "@/lib/idea-st
 
 type IdeaStatusTimelineProps = {
   status: IdeaStatus;
+  doneCategory?: string | null;
 };
 
-export function IdeaStatusTimeline({ status }: IdeaStatusTimelineProps) {
-  const steps = getIdeaTimeline(status);
-  const nextStep = getIdeaNextStep(status);
+export function IdeaStatusTimeline({ status, doneCategory }: IdeaStatusTimelineProps) {
+  const steps = getIdeaTimeline(status, doneCategory);
+  const nextStep = getIdeaNextStep(status, doneCategory);
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">

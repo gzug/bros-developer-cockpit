@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listDoneIdeaEntries } from "@/lib/ideas.functions";
+import { getIdeaDisplay } from "@/lib/idea-status";
 
 export const Route = createFileRoute("/_authenticated/done")({
   component: DonePage,
@@ -52,21 +53,27 @@ function DonePage() {
                 <Badge variant="secondary">{group.count}</Badge>
               </summary>
               <div className="mt-3 space-y-2">
-                {group.ideas.map((idea) => (
-                  <a
-                    key={idea.id}
-                    href={idea.issueUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`Open done idea ${idea.title}`}
-                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/20 p-3 text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-                  >
-                    <span className="min-w-0 truncate font-medium">{idea.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {dateOnly(idea.closedAt)}
-                    </span>
-                  </a>
-                ))}
+                {group.ideas.map((idea) => {
+                  const display = getIdeaDisplay({
+                    status: idea.status,
+                    statusSummary: idea.statusSummary,
+                    doneCategory: idea.doneCategory,
+                  });
+                  return (
+                    <Link
+                      key={idea.id}
+                      to="/idea/$id"
+                      params={{ id: String(idea.id) }}
+                      aria-label={`Open done idea ${idea.title}. Status: ${display.label}`}
+                      className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/20 p-3 text-sm hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                    >
+                      <span className="min-w-0 truncate font-medium">{idea.title}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {display.label} · {dateOnly(idea.closedAt)}
+                      </span>
+                    </Link>
+                  );
+                })}
               </div>
             </details>
           ))}

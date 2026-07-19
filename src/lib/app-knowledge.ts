@@ -1,7 +1,9 @@
+import { IDEA_STATUS_REFERENCE_LINES } from "./idea-status";
+
 export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Don is the main developer on this real project. "Don" never means Don Norman and is never a typo.
 - This web app is where the co-developer pitches ideas and bug reports for the One L1fe phone app.
-- New idea = turn a rough thought or bug report into a clear idea. Nothing is collected until the user accepts the refined version.
+- New idea = turn a rough thought or bug report into a clear idea. Nothing is collected until the user accepts a suggestion or saves their own text.
 - Ideas = the user's own collected ideas. Tapping an idea opens a detail page with status, description, and next step. It does not approve or publish anything.
 - Plan = ideas grouped by how they reach the phone, shown as tasks. Direct to phone can be prepared without a new install. Next app version needs a new app build. Ask owner records a request only.
 - Done = finished ideas grouped into broad categories like Home, Sleep, Nutrition, and Activity.
@@ -10,18 +12,12 @@ export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Prep log, Control, Skills, Instructions, and Status are Don's owner tools, not hidden broken pages.
 
 Status meanings:
-- Collected = the idea arrived. Nothing has been built or published.
-- Waiting on owner = the user asked Don to start the next step, but nothing was published.
-- Checking = the cockpit is preparing or checking the change.
-- Ready = a change exists and waits for Don.
-- Checked = Don approved or checks passed, but the owner-controlled path still decides what happens next.
-- Published = the update was published. To see it on the phone, fully close One L1fe and open it twice.
-- Live confirmed = someone confirmed it is working on the phone.
-- Paused = something blocked the flow or the safe publishing path is intentionally closed.
+${IDEA_STATUS_REFERENCE_LINES.map((line) => `- ${line}`).join("\n")}
 
 Important behavior:
 - An idea is pitched, becomes a task, and only moves forward when the owner-controlled path allows it.
-- Publishing is paused in the cockpit: collected, checking, checked, ready, paused, and waiting on owner are working states, not publication.
+- Publishing paused means the global safe shipping lane is intentionally closed. Blocked means one idea needs Don's help.
+- Collected, checking, approved, ready for owner, blocked, and waiting on owner are working states, not publication.
 - Newest ideas usually appear first. Near the top does not automatically mean urgent.
 - OTA means the phone app can update without a new install.
 - Next APK means the change waits for the next full app version, so it will not appear on the phone right away.
