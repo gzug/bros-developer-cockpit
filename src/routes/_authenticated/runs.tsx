@@ -1,15 +1,10 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listRunsData, type RunRow, type TaskRow } from "@/lib/runs.functions";
 
 export const Route = createFileRoute("/_authenticated/runs")({
-  beforeLoad: async () => {
-    const { checkAuth } = await import("@/lib/auth.server");
-    const auth = await checkAuth();
-    if (auth.role !== "owner") throw redirect({ to: "/dashboard" });
-  },
   component: RunsPage,
 });
 
@@ -116,7 +111,7 @@ function RunsPage() {
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight">Preparation log</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Visible for Don: each preparation attempt, its result, and the recorded cost.
+          Everyone logged in can read this log. Only Don can start or change preparations.
         </p>
 
         <div className="mt-6 space-y-3">

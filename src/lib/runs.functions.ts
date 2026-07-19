@@ -34,8 +34,8 @@ export type RunsData = {
 
 export const listRunsData = createServerFn({ method: "GET" }).handler(
   async (): Promise<RunsData> => {
-    const { requireOwner } = await import("./auth-session.server");
-    requireOwner();
+    const { requireAuth } = await import("./auth-session.server");
+    requireAuth();
 
     const db = getDb();
     if (!db) {
