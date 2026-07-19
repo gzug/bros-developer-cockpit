@@ -317,8 +317,8 @@ function DcOperationalDashboard() {
                   <div>
                     <CardTitle className="text-base font-semibold">Ideas and tasks</CardTitle>
                     <CardDescription className="text-xs">
-                      Collected, checking, ready, and waiting on owner are working states, not
-                      publication.
+                      Collected, checking, ready for owner, approved, blocked, and waiting on owner
+                      are working states, not publication.
                     </CardDescription>
                   </div>
                   <Badge variant="secondary" className="text-xs">

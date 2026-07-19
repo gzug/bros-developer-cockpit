@@ -303,7 +303,9 @@ describe("status and publication honesty", () => {
     ).toBe(true);
     expect(containsUnsupportedStatusClaim("This task is done.", false)).toBe(true);
     expect(containsUnsupportedStatusClaim("Open Done to see completed ideas.", false)).toBe(false);
-    expect(containsUnsupportedOwnIdeaStatusClaim("Your idea has been published.", false)).toBe(true);
+    expect(containsUnsupportedOwnIdeaStatusClaim("Your idea has been published.", false)).toBe(
+      true,
+    );
     expect(
       containsUnsupportedOwnIdeaStatusClaim(
         "Published explains the documented status label, not this idea's current state.",
@@ -427,7 +429,9 @@ describe("offline prompt-surface checks", () => {
       new Response(
         JSON.stringify({
           model: "openai/gpt-5-mini",
-          choices: [{ message: { content: "Refined version: Add a live heart-rate ring for Alex." } }],
+          choices: [
+            { message: { content: "Refined version: Add a live heart-rate ring for Alex." } },
+          ],
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       )) as typeof fetch;
@@ -519,7 +523,8 @@ describe("offline prompt-surface checks", () => {
           choices: [
             {
               message: {
-                content: "Published means the owner approved the idea. Live confirmed means phone proof exists.",
+                content:
+                  "Published means the owner approved the idea. Live confirmed means phone proof exists.",
               },
             },
           ],
@@ -547,7 +552,7 @@ describe("offline prompt-surface checks", () => {
       { role: "user", content: "What is the status of my idea?" },
     ]);
     expect(ownIdeaClaim.message).toBe(
-      "I cannot verify that from this chat. In the cockpit, collected, ready, and waiting on owner are working states, not proof that a change reached the phone.",
+      "I cannot verify that from this chat. In the cockpit, collected, ready for owner, approved, blocked, and waiting on owner are working states, not proof that a change reached the phone.",
     );
   });
 

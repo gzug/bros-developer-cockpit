@@ -1,8 +1,10 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
+import { DcStatusBadge } from "@/components/DcStatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getOwnerKpis } from "@/lib/ideas.functions";
+import { getIdeaStatusLabel } from "@/lib/idea-status";
 
 export const Route = createFileRoute("/_authenticated/owner-kpi")({
   beforeLoad: async () => {
@@ -40,8 +42,7 @@ function OwnerKpiPage() {
         </Link>
         <h1 className="mt-3 text-xl font-semibold">Status</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Quick overview of what is collected, checking, checked, ready, paused, published, or live
-          confirmed.
+          Quick overview using the same status vocabulary as Ideas, Plan, Done, and Control.
         </p>
 
         {query.isLoading && (
@@ -63,22 +64,22 @@ function OwnerKpiPage() {
           <>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <Stat label="All ideas" value={query.data.totalIdeas} />
-              <Stat label="Live confirmed" value={query.data.liveCount} />
-              <Stat label="Checked" value={query.data.approvedCount} />
-              <Stat label="Published" value={query.data.shippedCount} />
-              <Stat label="Paused" value={query.data.blockedCount} />
-              <Stat label="Ready" value={query.data.sentCount} />
-              <Stat label="Waiting on owner" value={query.data.requestedCount} />
-              <Stat label="Collected" value={query.data.submittedCount} />
-              <Stat label="Done" value={query.data.closedCount} />
+              <Stat label={getIdeaStatusLabel("live")} value={query.data.liveCount} />
+              <Stat label={getIdeaStatusLabel("approved")} value={query.data.approvedCount} />
+              <Stat label={getIdeaStatusLabel("shipped")} value={query.data.shippedCount} />
+              <Stat label={getIdeaStatusLabel("blocked")} value={query.data.blockedCount} />
+              <Stat label={getIdeaStatusLabel("sent")} value={query.data.sentCount} />
+              <Stat label={getIdeaStatusLabel("requested")} value={query.data.requestedCount} />
+              <Stat label={getIdeaStatusLabel("submitted")} value={query.data.submittedCount} />
+              <Stat label="Closed or done" value={query.data.closedCount} />
               <Stat label="Total cost" value={`$${query.data.totalCostUsd.toFixed(4)}`} />
             </div>
 
             <section className="mt-6 rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">Needs owner</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Published entries need a phone check. Ready and waiting entries need a deliberate
-                decision. Paused entries need a manual check.
+                Published entries need a phone check. Ready for owner and waiting entries need a
+                deliberate decision. Blocked entries need a manual check.
               </p>
 
               {query.data.actionQueue.length === 0 ? (
@@ -103,9 +104,7 @@ function OwnerKpiPage() {
                           </Link>
                           <p className="mt-1 text-xs text-muted-foreground">{idea.statusSummary}</p>
                         </div>
-                        <span className="shrink-0 rounded-full border border-border px-2 py-1 text-[11px] uppercase text-muted-foreground">
-                          {idea.status}
-                        </span>
+                        <DcStatusBadge status={idea.status} />
                       </div>
                       <div className="mt-3 flex flex-wrap gap-3 text-xs">
                         <a

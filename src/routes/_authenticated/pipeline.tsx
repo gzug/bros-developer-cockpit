@@ -15,6 +15,7 @@ import {
   updateIdeaDeliveryEntry,
 } from "@/lib/ideas.functions";
 import type { DCIdea, IdeaDelivery } from "@/lib/github-issues.server";
+import { getIdeaDisplay } from "@/lib/idea-status";
 
 export const Route = createFileRoute("/_authenticated/pipeline")({
   component: PipelinePage,
@@ -70,6 +71,11 @@ function QueueRow({ idea }: { idea: DCIdea }) {
   });
 
   const nextApk = idea.delivery === "next-apk";
+  const display = getIdeaDisplay({
+    status: idea.status,
+    statusSummary: idea.statusSummary,
+    doneCategory: idea.doneCategory,
+  });
 
   return (
     <div className="rounded-md border border-border bg-card p-3">
@@ -80,9 +86,8 @@ function QueueRow({ idea }: { idea: DCIdea }) {
             <DeliveryBadge delivery={idea.delivery} />
           </div>
           <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {idea.statusSummary || "Collected, but not published yet."}
-          </p>
+          <p className="mt-2 text-xs font-medium">{display.label}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{display.summary}</p>
           {idea.status === "requested" && (
             <p className="mt-2 rounded border border-indigo-500/30 bg-indigo-500/5 p-2 text-xs text-indigo-700 dark:text-indigo-300">
               Waiting on owner means the request is recorded. It is not published and does not move
@@ -153,13 +158,19 @@ function QueueRow({ idea }: { idea: DCIdea }) {
 }
 
 function ShippedRow({ idea }: { idea: DCIdea }) {
+  const display = getIdeaDisplay({
+    status: idea.status,
+    statusSummary: idea.statusSummary,
+    doneCategory: idea.doneCategory,
+  });
+
   return (
     <div className="rounded-md border border-border bg-card p-3">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-semibold">{idea.title}</h3>
-        <Badge variant="secondary">{idea.status === "live" ? "Live confirmed" : "Published"}</Badge>
+        <Badge variant="secondary">{display.label}</Badge>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{idea.statusSummary}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{display.summary}</p>
     </div>
   );
 }
@@ -255,8 +266,8 @@ function PipelinePage() {
               It does not publish anything. Don keeps final control.
             </p>
             <p>
-              Statuses like collected, checked, ready, paused, and waiting on owner always show
-              where the next deliberate step sits.
+              Statuses like collected, ready for owner, approved, blocked, and waiting on owner
+              always show where the next deliberate step sits.
             </p>
           </div>
         </details>

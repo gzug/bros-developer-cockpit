@@ -16,7 +16,7 @@ import {
   type RepoIssue,
   type RepoIssueComment,
 } from "./github.server";
-import type { IdeaStatus } from "./idea-status";
+import { getIdeaStatusSummary, type IdeaStatus } from "./idea-status";
 
 export type DCIdeaIntent = "wording" | "look" | "wrong" | "idea" | "change";
 export type DCIdeaStatus = IdeaStatus;
@@ -67,7 +67,15 @@ export interface DCIdeaActivity {
 
 export type BrotherIdea = Pick<
   DCIdea,
-  "id" | "title" | "description" | "intent" | "status" | "statusSummary" | "createdAt"
+  | "id"
+  | "title"
+  | "description"
+  | "intent"
+  | "status"
+  | "statusSummary"
+  | "createdAt"
+  | "doneCategory"
+  | "closedAt"
 > & { needsHelp: boolean };
 
 export type OwnerActionIdea = Pick<
@@ -472,26 +480,7 @@ export function canConfirmIdeaLive(pr?: Pick<PullState, "merged"> | null): boole
 }
 
 export function describeIdeaStatus(status: DCIdeaStatus): string {
-  switch (status) {
-    case "submitted":
-      return "Received. Don can start preparing it.";
-    case "requested":
-      return "Shipping was requested. It is waiting for Don to start the checks.";
-    case "processing":
-      return "The change is being prepared safely.";
-    case "sent":
-      return "The change is ready for Don to review.";
-    case "approved":
-      return "Don approved it. Automatic safety checks are running.";
-    case "shipped":
-      return "Update published. Reopen One L1fe twice, check the change, then confirm it here.";
-    case "live":
-      return "The update was checked on the phone.";
-    case "blocked":
-      return "This needs Don's help before it can continue.";
-    case "closed":
-      return "This idea was closed.";
-  }
+  return getIdeaStatusSummary(status);
 }
 
 export function toIdeaActivity(comments: RepoComment[]): DCIdeaActivity[] {
@@ -710,6 +699,8 @@ export function toBrotherIdea(idea: DCIdea): BrotherIdea {
     status: idea.status,
     statusSummary: idea.statusSummary,
     createdAt: idea.createdAt,
+    doneCategory: idea.doneCategory,
+    closedAt: idea.closedAt,
     needsHelp: idea.status === "blocked",
   };
 }

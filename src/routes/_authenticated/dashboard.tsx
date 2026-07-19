@@ -4,7 +4,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getIdeaStatusDotClass, getIdeaStatusLabel } from "@/lib/idea-status";
+import {
+  IDEA_STATUS_REFERENCE_LINES,
+  getIdeaDisplay,
+  getIdeaStatusDotClass,
+} from "@/lib/idea-status";
 import { listIdeaEntries, recentIdeaUsage } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -61,8 +65,8 @@ function Dashboard() {
           <div className="rounded-md border border-border bg-card p-3">
             <h2 className="text-sm font-semibold">What is happening?</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Each entry shows its status: collected, checking, ready, paused, published, or live
-              confirmed.
+              Each entry shows one shared status vocabulary across Ideas, Plan, Done, and owner
+              Control.
             </p>
           </div>
           <div className="rounded-md border border-border bg-card p-3">
@@ -83,23 +87,16 @@ function Dashboard() {
               Tapping an idea opens the detail view with description, current status, and the next
               safe step. It does not approve or publish anything.
             </p>
-            <p>
-              The terms are intentionally simple: collected, checking, checked, ready, paused,
-              waiting on owner, published, and live confirmed.
-            </p>
+            <p>These same terms are used in every idea list and detail view.</p>
             <ul className="space-y-1.5">
-              <li>
-                <span className="font-medium text-foreground">Collected</span> means the idea is
-                here, but nothing has been built or published.
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Waiting on owner</span> means Don must
-                deliberately check, start, or approve it.
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Live confirmed</span> means the change
-                was seen and checked on the phone.
-              </li>
+              {IDEA_STATUS_REFERENCE_LINES.slice(0, 8).map((line) => {
+                const [label, detail] = line.split(" = ");
+                return (
+                  <li key={line}>
+                    <span className="font-medium text-foreground">{label}</span> means {detail}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </details>
@@ -141,36 +138,44 @@ function Dashboard() {
               .
             </div>
           )}
-          {list.data?.map((idea) => (
-            <button
-              key={idea.id}
-              type="button"
-              onClick={() => router.navigate({ to: "/idea/$id", params: { id: String(idea.id) } })}
-              aria-label={`Open idea ${idea.title}. Status: ${
-                idea.statusSummary || getIdeaStatusLabel(idea.status)
-              }`}
-              className="flex w-full flex-col rounded-md border border-border bg-card p-3 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${getIdeaStatusDotClass(idea.status)}`}
-                    aria-hidden
-                  />
-                  <span className="truncate text-sm font-medium">{idea.title}</span>
+          {list.data?.map((idea) => {
+            const display = getIdeaDisplay({
+              status: idea.status,
+              statusSummary: idea.statusSummary,
+              doneCategory: idea.doneCategory,
+            });
+            return (
+              <button
+                key={idea.id}
+                type="button"
+                onClick={() =>
+                  router.navigate({ to: "/idea/$id", params: { id: String(idea.id) } })
+                }
+                aria-label={`Open idea ${idea.title}. Status: ${display.label}. ${display.summary}`}
+                className="flex w-full flex-col rounded-md border border-border bg-card p-3 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${getIdeaStatusDotClass(idea.status)}`}
+                      aria-hidden
+                    />
+                    <span className="truncate text-sm font-medium">{idea.title}</span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {new Date(idea.createdAt).toLocaleDateString("en-AU", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <span className="mt-1 pl-[18px] text-xs font-medium">{display.label}</span>
+                <span className="mt-0.5 pl-[18px] text-xs text-muted-foreground">
+                  {display.summary}
                 </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {new Date(idea.createdAt).toLocaleDateString("en-AU", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  })}
-                </span>
-              </div>
-              <span className="mt-1 pl-[18px] text-xs text-muted-foreground">
-                {idea.statusSummary || getIdeaStatusLabel(idea.status)}
-              </span>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </main>
     </div>

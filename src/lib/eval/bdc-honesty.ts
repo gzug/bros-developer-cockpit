@@ -131,7 +131,7 @@ export function filterAssistantHonestyReply(
         ? containsUnsupportedOwnIdeaStatusClaim(trimmed, options.hasRealStatusData)
         : containsUnsupportedStatusClaim(trimmed, options.hasRealStatusData);
     if (hasUnsupportedStatusClaim) {
-      return "I cannot verify that from this chat. In the cockpit, collected, ready, and waiting on owner are working states, not proof that a change reached the phone.";
+      return "I cannot verify that from this chat. In the cockpit, collected, ready for owner, approved, blocked, and waiting on owner are working states, not proof that a change reached the phone.";
     }
 
     if (containsInventedPersonRoleOrScreen(trimmed)) {

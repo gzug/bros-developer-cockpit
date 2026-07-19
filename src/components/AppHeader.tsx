@@ -3,6 +3,7 @@ import { Lock, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkAuth, logout } from "@/lib/auth.server";
+import { getCockpitRoleLabel } from "@/lib/dc-display";
 import { RoleSwitch } from "@/components/RoleSwitch";
 import { useEffect, useState } from "react";
 
@@ -28,6 +29,7 @@ export function AppHeader() {
   const auth = useQuery({ queryKey: ["auth-role"], queryFn: () => checkAuth(), staleTime: 60_000 });
   const role = auth.data?.role ?? null;
   const owner = role === "owner";
+  const roleLabel = role ? getCockpitRoleLabel(role) : null;
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -63,7 +65,7 @@ export function AppHeader() {
           to="/dashboard"
           className="shrink-0 rounded text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          {owner ? "One L1fe · Control" : "One L1fe · Ideas"}
+          {roleLabel ? `One L1fe · ${roleLabel}` : "One L1fe"}
         </Link>
         <nav
           aria-label="Cockpit sections"
