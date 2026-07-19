@@ -354,6 +354,15 @@ describe("roles, labels, and injection honesty", () => {
     expect(containsInventedPersonRoleOrScreen("Open the admin panel to publish it.")).toBe(true);
   });
 
+  test("help knowledge explains the real Skills upload flow", () => {
+    expect(BDC_APP_KNOWLEDGE).toContain("owner-only skill radar");
+    expect(BDC_APP_KNOWLEDGE).toContain("Export files");
+    expect(BDC_APP_KNOWLEDGE).toContain("Process upload creates a new measurement");
+    expect(BDC_APP_KNOWLEDGE).toContain("screenshots do not change skill scores in v1");
+    expect(APP_HELP_SYSTEM_PROMPT).toContain("do not say that the app has no upload feature");
+    expect(APP_HELP_SYSTEM_PROMPT).toContain("PNG metadata is accepted as evidence only");
+  });
+
   test("Refined version label is allowed for rewrites but fails for pure Q&A", () => {
     const qaAnswer = "Don is the main developer on this project.";
     const rewriteAnswer = "Refined version: The Home screen label is hard to read.";
