@@ -1,5 +1,11 @@
 # Setup Guide
 
+# BDC setup
+
+The app-config inventory is `.env.example`. `NODE_ENV` and `VERCEL` are platform/runtime
+values, not values to copy into `.env`. `BDC_SHIP_ENABLED`, `EXPO_TOKEN`, and
+`BDC_PRODUCTION_BASE_SHA` belong to the trusted `gzug/01-One-L1fe` ship workflow, not BDC.
+
 ## 1. GitHub Fine-grained PAT
 
 - Token name: `dc-engine`
@@ -23,12 +29,13 @@ Diese Variablen setzen:
 | -------------------- | ------------------------------------------------------------------------------------------ |
 | `APP_PIN`            | eigener vierstelliger Owner-Code (Main-Dev); muss von `BROTHER_PIN` verschieden sein; niemals mit dem Bruder teilen |
 | `BROTHER_PIN`        | eigener vierstelliger Bruder-Code; muss von `APP_PIN` verschieden sein                     |
-| `APP_SECRET`         | zufälliger String, z. B. `openssl rand -hex 32`                                            |
-| `OPENROUTER_API_KEY` | OpenRouter-Key                                                                             |
-| `BDC_CHAT_MODEL`     | aktuelles OpenRouter-Modell für die kurze Wunsch-Hilfe; Standard `google/gemini-2.5-flash` |
+| `APP_SECRET`         | Pflicht; `openssl rand -hex 32`, exakt 64 Hex-Zeichen                                     |
+| `OPENROUTER_API_KEY` | Pflicht für Chat/Help/Engine; OpenRouter-Key                                               |
+| `BDC_CHAT_MODEL`     | Optional; Modell für kurze Wunsch-Hilfe, Standard `google/gemini-2.5-flash`                |
 | `GITHUB_TOKEN`       | PAT aus Schritt 1                                                                          |
-| `DATABASE_URL`       | Neon Postgres URL für Run-/Task-Log                                                        |
-| `BDC_PAUSED`         | bis zur Abnahme `true`; erst danach bewusst auf `false` setzen                             |
+| `DATABASE_URL`       | Auf Vercel Pflicht für dauerhafte Login-Bremse; lokal optional für Neon Run-/Task-Log       |
+| `BDC_PAUSED`         | bis zur Abnahme `true`; fail-closed, erst danach bewusst auf `false` setzen                 |
+| `BDC_TASK_DEADLINE_MS` | Optional; Engine-Limit, zwischen 5.000 und 55.000 ms, Standard 45.000                  |
 
 `APP_PIN` und `BROTHER_PIN` in **Production und Preview** setzen; beide sind vierstellig und müssen
 verschieden sein. Der Owner-Code (`APP_PIN`) kann Freigaben und GitHub-Mutationen auslösen — getrennt
@@ -36,7 +43,7 @@ vom Bruder-Code halten. Vor der Übergabe beide Rollen im Browser prüfen: Der B
 senden/lesen; `/dc`, `/runs`, `/owner-kpi`, Verarbeitung, Freigabe und Live-Bestätigung müssen für ihn
 gesperrt sein. Den Bruder-Code getrennt vom Link schicken und nie in Git, Logs oder Dokumentation schreiben.
 
-`DATABASE_URL` ist zusätzlich die dauerhafte Login-Bremse für den öffentlichen Login (beide
+`DATABASE_URL` ist auf Vercel zusätzlich die dauerhafte Login-Bremse für den öffentlichen Login (beide
 vierstelligen Codes). In Vercel verweigert der Login ohne Datenbank bewusst den Zugriff; eine lokale
 prozessgebundene Sperre allein ist kein Sicherheitsrand.
 

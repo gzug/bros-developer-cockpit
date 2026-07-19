@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last verified: 2026-07-18 CEST against `origin/main` `cfb2de7` and GitHub._
+_Last verified: 2026-07-19 CEST against `origin/main` `35780ae4c39099b7b46e6552ec92adb3137a2444` and GitHub._
 
 ## Operating truth
 
@@ -23,6 +23,7 @@ _Last verified: 2026-07-18 CEST against `origin/main` `cfb2de7` and GitHub._
 | #33 | sync CHECKPOINT to post-#32 truth | `2e3b080` | 2026-07-17 |
 | #35 | Co-Dev Flow v2: one screen, OTA/APK pipeline, chat-ship | `058a94e` | 2026-07-18 |
 | #36 | One L1fe brand alignment, light default, clearer copy, ideas naming | `cfb2de7` | 2026-07-18 |
+| #71 | canonical BDC idea display projection | `35780ae` | 2026-07-19 |
 
 ## Open pull requests
 
@@ -30,12 +31,17 @@ _Last verified: 2026-07-18 CEST against `origin/main` `cfb2de7` and GitHub._
 |---|---|---|---|
 | #28 | product-generalization handoff | Draft, clean | documentation draft; keep separate from readiness integration |
 | #31 | Paxel Builder Profile self-reflection | Draft, based on the readiness branch (#21) | separate BDC draft, not mobile main; do not merge before #21 |
+| #72 | cockpit idea pipeline cleanup | Draft, current `origin/main` base | Ober-PL review; do not merge here |
+| #73 | unknown-first UI data states (#67) | Draft, current `origin/main` base | Ober-PL review; do not merge here |
+| #74 | executable boundary matrix (#68) | Draft, current `origin/main` base | Ober-PL review; do not merge here |
 
 ## Open issues
 
-- **#34** extend ownership guard to PR-lifecycle label paths + robust `## Context` anchoring: the two lower-severity residuals left after #32; low exposure, gated, resolve before brother handoff.
-- **#13** typed `dc.tsx` cleanup: real technical backlog; retain until a scoped fix is reviewed.
-- **#8** original engine goal: probably stale as an owner topic because its old task list describes superseded work. Do not close automatically; owner must close it or rewrite it into current scope.
+- **#34** remains the separate security-hardening backlog: extend ownership guard to PR-lifecycle label paths + robust `## Context` anchoring. Do not silently absorb it into a docs/test slice.
+
+_Closed 2026-07-19 after live Ideas/Pipeline verification:_ **#8** stale goal (`not_planned`),
+**#13** completed typed cleanup (`completed`), and **#58/#59** skill-evidence metadata noise
+(`not_planned`). They are not current product tasks.
 
 _Closed 2026-07-17:_ **#29** (ZIP size limits) and **#30** (close guard + context shadowing) — both fixed and verified in #32 (`83fee83`).
 
@@ -43,10 +49,10 @@ _Closed 2026-07-18:_ stale readiness drafts **#20** and **#21** were closed with
 
 ## Next safe sequence
 
-1. `origin/main` now includes #35 (`058a94e`) and #36 (`cfb2de7`). Treat `cfb2de7` as the current BDC baseline.
+1. `origin/main` now includes #71 (`35780ae`). Treat `35780ae4c39099b7b46e6552ec92adb3137a2444` as the current BDC baseline.
 2. Keep BDC paused. Do not weaken `BDC_PAUSED`, `BDC_SHIP_ENABLED`, or the external `bdc-ship` gate; preview and green CI are still not production/device proof.
 3. Leave #28 and #31 separate unless the owner explicitly re-scopes them. #31 still targets the old readiness branch and must not be merged by assumption.
-4. Next BDC work should improve non-technical comprehension and trust on top of the One L1fe-themed #36 baseline, then resolve issues #13 and #34 in scoped PRs.
+4. The oldest-first BDC-64 lane is #67, #68, #69, #70. Resolve #34 separately with its own security brief.
 5. Before any brother handoff, run the full fresh-worktree validation chain, test both PIN roles, and record real owner/browser/device evidence.
 
 ## Known follow-ups after #35/#36
