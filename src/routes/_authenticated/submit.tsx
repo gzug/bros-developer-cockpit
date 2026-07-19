@@ -66,7 +66,7 @@ function SubmitPage() {
       <AppHeader />
       <main className="mx-auto max-w-2xl px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Pitch an idea</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Quick idea form</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Write what should change in One L1fe. Short and plain is enough.
           </p>
@@ -150,11 +150,7 @@ function SubmitPage() {
               />
             </div>
 
-            <Button
-              type="submit"
-              disabled={submit.isPending}
-              className="w-full"
-            >
+            <Button type="submit" disabled={submit.isPending} className="w-full">
               {submit.isPending ? "Submitting..." : submitLabel}
             </Button>
           </form>
