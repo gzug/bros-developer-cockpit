@@ -12,6 +12,19 @@ Each snapshot stores only derived scores, countable inputs, provider names, expo
 
 Unknown formats return a friendly unsupported-format message and do not crash.
 
+## Enforced upload limits
+
+The parser rejects or warns before processing beyond these limits:
+
+- Upload: 30 MB maximum per file
+- ZIP entries: 2,000 maximum
+- One decompressed ZIP entry: 20 MB maximum
+- Total decompressed ZIP data: 50 MB maximum
+
+The source of truth is `src/lib/skill-export-parser.server.ts`; the limits are covered by
+`src/lib/skill-export-parser.test.ts`. PNG files contribute metadata evidence only and do not
+create a real skill snapshot by themselves.
+
 ## Counted signals
 
 - Provider: export source detected from the file shape or filename

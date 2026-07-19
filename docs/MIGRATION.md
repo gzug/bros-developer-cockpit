@@ -1,6 +1,6 @@
 # BDC current architecture
 
-_Replaces the historical Lovable-import plan. Verified against live code on 2026-07-15._
+_Replaces the historical Lovable-import plan. Verified against `origin/main` `35780ae` on 2026-07-19._
 
 ## Purpose
 

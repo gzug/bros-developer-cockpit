@@ -54,7 +54,7 @@
 - Cookie/request helpers: import from `@tanstack/react-start/server`, NEVER `vinxi/http`
   (crashes under the Vercel/Nitro runtime → 500 on server fns → client error boundary).
 - `curl` against `/_serverFn/*` GET endpoints is not representative; verify server fns in a real browser.
-- All 6 env vars (see `docs/setup-guide.md`) are set in Production + Preview. Secrets are Don's job only.
+- App configuration is listed in `.env.example` and classified in `docs/setup-guide.md`; secrets are Don's job only.
 
 ## Fresh-truth and worker rule
 
