@@ -24,6 +24,8 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { getSkillDashboardData, uploadSkillExports } from "@/lib/skills.functions";
+import { DataStateMessage } from "@/components/DataStateMessage";
+import { getUiDataState } from "@/lib/ui-data-state";
 
 export const Route = createFileRoute("/_authenticated/skills")({
   beforeLoad: async () => {
@@ -77,6 +79,23 @@ function Skills() {
   const latest = data?.latest ?? null;
   const hasSnapshots = data?.hasSnapshots ?? false;
   const measurement = data?.measurement;
+  const skillIsSample = data != null && !hasSnapshots;
+  const skillState = getUiDataState({
+    status: dashboard.status,
+    hasData: data != null,
+    hasItems: skillData.length > 0,
+    isFetching: dashboard.isFetching,
+    isSample: skillIsSample,
+    hasError: Boolean(data?.githubError),
+  });
+  const showRadar = skillState === "success" || skillState === "sample" || skillState === "stale";
+  const skillBadge = skillIsSample
+    ? "Sample data"
+    : skillState === "success" || skillState === "stale"
+      ? "Real measurement"
+      : skillState === "loading"
+        ? "Loading"
+        : "Unavailable";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -85,7 +104,7 @@ function Skills() {
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">Skills</h1>
-            <Badge variant="outline">{hasSnapshots ? "Real measurement" : "Sample data"}</Badge>
+            <Badge variant="outline">{skillBadge}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             The radar shows how work patterns develop. Without an upload, it only shows a sample.
@@ -96,7 +115,18 @@ function Skills() {
           </p>
         </div>
 
-        <Card>
+        <div className="mt-4">
+          <DataStateMessage
+            state={skillState}
+            loading="Loading skill measurements..."
+            error="Skill measurements are unavailable right now. Try again."
+            empty="No skill measurement is available yet. Upload an export to create one."
+            sample="No real measurement is available yet. The sample radar below is clearly marked as sample data."
+            onRetry={() => void dashboard.refetch()}
+          />
+        </div>
+
+        <Card className={showRadar ? undefined : "hidden"}>
           <CardHeader className="items-center pb-2">
             <CardTitle>Skills radar</CardTitle>
             <CardDescription>
@@ -138,7 +168,7 @@ function Skills() {
         </Card>
 
         {/* Text/table view so values are never color-only (accessibility). */}
-        <div className="mt-4 space-y-1">
+        <div className={showRadar ? "mt-4 space-y-1" : "hidden"}>
           <p className="pb-1 text-xs text-muted-foreground">
             Each row shows the same value as the radar in text: Start is the first known state, Now
             is the latest state, and the number on the right is the change.
@@ -173,14 +203,14 @@ function Skills() {
           })}
         </div>
 
-        {!hasSnapshots && (
+        {skillIsSample && (
           <p className="mt-4 text-xs text-muted-foreground">
             These are sample values. They stay marked as sample data until GitHub has at least one
             real skill-snapshot. Sample values are orientation, not a real rating.
           </p>
         )}
 
-        {data?.githubError && (
+        {data?.githubError && skillState !== "error" && (
           <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
             GitHub measurements are unavailable right now: {data.githubError}
           </div>

@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listDoneIdeaEntries } from "@/lib/ideas.functions";
 import { getIdeaDisplay } from "@/lib/idea-status";
+import { DataStateMessage } from "@/components/DataStateMessage";
+import { getUiDataState } from "@/lib/ui-data-state";
 
 export const Route = createFileRoute("/_authenticated/done")({
   component: DonePage,
@@ -22,6 +24,13 @@ function DonePage() {
   });
   const groups = done.data ?? [];
   const total = groups.reduce((sum, group) => sum + group.count, 0);
+  const doneState = getUiDataState({
+    status: done.status,
+    hasData: done.data != null,
+    hasItems: groups.length > 0,
+    isFetching: done.isFetching,
+  });
+  const visibleGroups = doneState === "success" || doneState === "stale" ? groups : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -40,13 +49,14 @@ function DonePage() {
         </div>
 
         <div className="mt-6 space-y-3">
-          {done.isLoading && <p className="text-sm text-muted-foreground">Loading done ideas...</p>}
-          {!done.isLoading && groups.length === 0 && (
-            <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              No done ideas yet. Once something is completed, it stays visible here as history.
-            </div>
-          )}
-          {groups.map((group) => (
+          <DataStateMessage
+            state={doneState}
+            loading="Loading done ideas..."
+            error="Done ideas could not be loaded. Try again."
+            empty="No done ideas yet. Once something is completed, it stays visible here as history."
+            onRetry={() => void done.refetch()}
+          />
+          {visibleGroups.map((group) => (
             <details key={group.category} className="rounded-md border border-border bg-card p-4">
               <summary className="flex cursor-pointer items-center justify-between gap-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card">
                 <span className="text-sm font-semibold">{group.label}</span>
