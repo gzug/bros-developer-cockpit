@@ -275,7 +275,7 @@ function PipelinePage() {
         <PublishingTrustNotice className="mt-4" />
 
         <section className="mt-5 rounded-md border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Collect an idea</h2>
+          <h2 className="text-sm font-semibold">Direct plan capture</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             New ideas are collected and sorted. Clicking Collect idea creates an entry in the plan,
             but does not check, approve, or publish anything.

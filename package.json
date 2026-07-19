@@ -8,6 +8,7 @@
     "build": "vite build",
     "typecheck": "bun -e 'import { Generator, getConfig } from \"@tanstack/router-generator\"; const config = getConfig({ routesDirectory: \"./src/routes\", generatedRouteTree: \"./src/routeTree.gen.ts\", target: \"react\" }, process.cwd()); await new Generator({ config, root: process.cwd() }).run();' && tsc --noEmit",
     "build:dev": "vite build --mode development",
+    "build:health": "bun scripts/build-health.ts",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."

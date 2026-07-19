@@ -106,7 +106,7 @@ export function AppHeader() {
               ) : (
                 <span
                   key={item.to}
-                  className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground/40"
+                  className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground opacity-80"
                   title="Owner area. Don checks and approves here."
                   aria-disabled="true"
                   aria-label={`${item.label}, owner-only area`}
@@ -121,7 +121,9 @@ export function AppHeader() {
             variant="ghost"
             className="h-8 w-8 p-0"
             onClick={toggleTheme}
-            aria-label="Toggle appearance"
+            aria-label={isDark ? "Switch to light appearance" : "Switch to dark appearance"}
+            aria-pressed={isDark}
+            title={isDark ? "Switch to light appearance" : "Switch to dark appearance"}
           >
             {isDark ? (
               <Sun className="h-4 w-4" aria-hidden="true" />

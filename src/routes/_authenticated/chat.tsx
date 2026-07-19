@@ -521,7 +521,7 @@ function ChatPage() {
 
         {!intent && (
           <div className="grid gap-2">
-            <h1 className="text-xl font-semibold">What do you want to capture?</h1>
+            <h1 className="text-xl font-semibold">Guided idea chat</h1>
             <p className="text-sm text-muted-foreground">
               Choose a direction. Then the chat helps turn a rough thought into a clear idea. It is
               only collected when you confirm it.
@@ -592,7 +592,14 @@ function ChatPage() {
               </div>
             </section>
 
-            <div className="flex-1 space-y-3 overflow-y-auto pb-4">
+            <div
+              className="flex-1 space-y-3 overflow-y-auto pb-4"
+              role="log"
+              aria-label="Chat conversation"
+              aria-live="polite"
+              aria-relevant="additions text"
+              aria-busy={refine.isPending}
+            >
               {messages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
@@ -666,7 +673,7 @@ function ChatPage() {
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="Describe your idea or ask what something in the cockpit means..."
-                  className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none"
+                  className="min-h-12 flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   rows={2}
                 />
                 <Button onClick={sendMessage} disabled={refine.isPending || !input.trim()}>
