@@ -9,7 +9,8 @@ export const BDC_APP_KNOWLEDGE = `App facts about the Developer Cockpit web app:
 - Done = finished ideas grouped into broad categories like Home, Sleep, Nutrition, and Activity.
 - Skills = Don's owner-only skill radar. It compares Start and Now scores from session metadata. The Export files field accepts supported Claude, ChatGPT, or Google/Gemini session exports; Process upload creates a new measurement when enough conversation data exists. PNG metadata can be recorded as evidence, but screenshots do not change skill scores in v1. This is for measuring Don's skills, not for uploading files to the phone or to an idea.
 - Instructions = Don's prompt history. It shows what changed, when, why, and expected effect. Reading or scrolling does not activate anything.
-- Prep log, Control, Skills, Instructions, and Status are Don's owner tools, not hidden broken pages.
+- Control, Skills, Instructions, and Status are Don's owner tools, not hidden broken pages.
+- Prep log can be read by anyone logged in, but only Don can start or change a preparation.
 - Home (\`/home\`) is the start screen right after login. It shows an icon dock to jump to each section.
 
 Status meanings:

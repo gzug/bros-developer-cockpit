@@ -1,4 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { upsertTask, listMemoryTasks } from "./db/runs.server";
 import { isBdcPipelineIssue } from "./github-issues.server";
 import { gh, type RepoIssue } from "./github.server";
@@ -81,4 +83,30 @@ test("GitHub and DB boundaries expose errors without losing the local fallback",
   const issueNumber = 900_000 + Math.floor(Math.random() * 10_000);
   await upsertTask({ issueNumber, title: "boundary test", intent: "idea", status: "submitted" });
   expect(listMemoryTasks().some((task) => task.issueNumber === issueNumber)).toBe(true);
+});
+
+// Source-shape contract tests: createServerFn handlers can't be invoked directly outside a
+// request context in bun's test runner, so we assert on the source text of the gated files
+// instead of calling the server fns. This still catches an accidental widening/narrowing of
+// the auth gate on /runs, and a regression on the still-owner-only screens around it.
+test("runs read gate relaxed to requireAuth while mutating/owner screens stay requireOwner-gated", () => {
+  const read = (relativePath: string) => readFileSync(join(import.meta.dir, relativePath), "utf8");
+
+  const runsFunctions = read("runs.functions.ts");
+  expect(runsFunctions).toContain("requireAuth(");
+  expect(runsFunctions).not.toContain("requireOwner(");
+
+  // ideas.functions.ts triggers/mutates preparation runs (processContribution et al.) and
+  // must stay owner-gated even though the read-only /runs page was relaxed. (Deviation from
+  // the brief: engine.server.ts itself holds no auth check — it's an internal helper invoked
+  // from ideas.functions.ts, which is the actual server-fn boundary that gates mutation.)
+  const ideasFunctions = read("ideas.functions.ts");
+  expect(ideasFunctions).toContain("requireOwner");
+
+  const runsRoute = read(join("..", "routes", "_authenticated", "runs.tsx"));
+  expect(runsRoute).not.toContain('redirect({ to: "/dashboard" })');
+
+  // Regression guard: other owner-only screens are unaffected by this relaxation.
+  const dcRoute = read(join("..", "routes", "_authenticated", "dc.tsx"));
+  expect(dcRoute).toContain('redirect({ to: "/dashboard" })');
 });

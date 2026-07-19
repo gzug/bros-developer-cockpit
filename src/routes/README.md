@@ -22,9 +22,9 @@ is `src/routes/__root.tsx`.
 
 ## Maintained route / role / access matrix
 
-All rows below are behind the `/_authenticated` session guard. Owner-only rows also have a
-server-side `requireOwner()` check and redirect non-owners to `/dashboard`; hidden or locked
-header labels are only a UX aid.
+All rows below are behind the `/_authenticated` session guard. Owner-only rows (except `/runs`)
+also have a server-side `requireOwner()` check and redirect non-owners to `/dashboard`; hidden or
+locked header labels are only a UX aid.
 
 | URL | Header label | Brother | Owner | Server authority |
 | --- | --- | --- | --- | --- |
@@ -33,7 +33,7 @@ header labels are only a UX aid.
 | `/chat` | New idea | yes | yes | `requireAuth()` on refine/submit |
 | `/pipeline` | Plan | yes | yes | `requireAuth()` |
 | `/done` | Done | yes | yes | `requireAuth()` |
-| `/runs` | Prep log | no | yes | route guard + owner server reads |
+| `/runs` | Prep log | read-only | yes | `requireAuth()` read / `requireOwner()` mutations |
 | `/dc` | Control | no | yes | route guard + `requireOwner()` |
 | `/skills` | Skills | no | yes | route guard + `requireOwner()` |
 | `/prompts` | Instructions | no | yes | route guard + `requireOwner()` |

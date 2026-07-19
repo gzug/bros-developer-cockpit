@@ -36,8 +36,7 @@ export const NAV_DOCK: NavEntry[] = [
     kind: "menu",
     items: [
       { label: "Plan", to: "/pipeline", access: "all" },
-      // Prep log stays owner-locked in PR-A; a later PR relaxes it.
-      { label: "Prep log", to: "/runs", access: "owner" },
+      { label: "Prep log", to: "/runs", access: "all" },
     ],
   },
   { id: "skills", label: "Skills", icon: Award, access: "owner", kind: "link", to: "/skills" },
