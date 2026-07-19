@@ -119,7 +119,7 @@ function Skills() {
           <DataStateMessage
             state={skillState}
             loading="Loading skill measurements..."
-            error="Skill measurements are unavailable right now. Try again."
+            error={data?.githubError ? `GitHub measurements are unavailable right now: ${data.githubError}` : "Skill measurements are unavailable right now. Try again."}
             empty="No skill measurement is available yet. Upload an export to create one."
             sample="No real measurement is available yet. The sample radar below is clearly marked as sample data."
             onRetry={() => void dashboard.refetch()}
@@ -208,12 +208,6 @@ function Skills() {
             These are sample values. They stay marked as sample data until GitHub has at least one
             real skill-snapshot. Sample values are orientation, not a real rating.
           </p>
-        )}
-
-        {data?.githubError && skillState !== "error" && (
-          <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200">
-            GitHub measurements are unavailable right now: {data.githubError}
-          </div>
         )}
 
         {latest?.smallData && (
