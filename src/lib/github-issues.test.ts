@@ -414,6 +414,8 @@ test("destructive mutations only accept real BDC wish issues, never pull request
   expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] })).toBe(true);
   expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(false);
   expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }], pull_request: {} })).toBe(false);
+  expect(isBdcPipelineIssue({ labels: [{ name: "skill-evidence" }], pull_request: undefined })).toBe(false);
+  expect(isBdcPipelineIssue({ labels: [{ name: "bdc-submitted" }], pull_request: undefined })).toBe(false);
 });
 
 test("context metadata ignores a description line that literally starts with context:", () => {
