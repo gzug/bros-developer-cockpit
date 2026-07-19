@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { Lock, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkAuth, logout } from "@/lib/auth.server";
@@ -7,28 +7,14 @@ import { getCockpitRoleLabel } from "@/lib/dc-display";
 import { RoleSwitch } from "@/components/RoleSwitch";
 import { useEffect, useState } from "react";
 
-// Owner-only nav entries render for BOTH roles: active links for the owner, and greyed-out
-// locked labels for the co-dev — so the brother can see what more experience will unlock.
-// Access is enforced server-side (requireOwner); this is UI affordance only.
-const OWNER_LINKS = [
-  { to: "/runs", label: "Prep log" },
-  { to: "/dc", label: "Control" },
-  { to: "/skills", label: "Skills" },
-  { to: "/prompts", label: "Instructions" },
-  { to: "/owner-kpi", label: "Status" },
-] as const;
-
 const navLinkClass =
   "rounded px-2 py-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-const navActiveClass =
-  "rounded px-2 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 export function AppHeader() {
-  // The header resolves the role itself (signed cookie via checkAuth) so every page shows the
-  // right nav — pages used to pass an `owner` prop and most forgot it, hiding the owner's links.
+  // The header resolves the role itself (signed cookie via checkAuth) so the brand label always
+  // shows the right role suffix, regardless of which page renders it.
   const auth = useQuery({ queryKey: ["auth-role"], queryFn: () => checkAuth(), staleTime: 60_000 });
   const role = auth.data?.role ?? null;
-  const owner = role === "owner";
   const roleLabel = role ? getCockpitRoleLabel(role) : null;
   const navigate = useNavigate();
   const router = useRouter();
@@ -62,60 +48,15 @@ export function AppHeader() {
     <header className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-md items-center justify-between gap-3 px-3 py-3 sm:max-w-5xl sm:px-4">
         <Link
-          to="/dashboard"
+          to="/home"
           className="shrink-0 rounded text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {roleLabel ? `One L1fe · ${roleLabel}` : "One L1fe"}
         </Link>
         <nav
-          aria-label="Cockpit sections"
+          aria-label="Account and appearance"
           className="flex min-w-0 items-center gap-1 overflow-x-auto text-xs sm:gap-2 sm:text-sm"
         >
-          <Link
-            to="/dashboard"
-            className={navLinkClass}
-            activeProps={{ className: navActiveClass }}
-          >
-            Ideas
-          </Link>
-          <Link
-            to="/chat"
-            search={{}}
-            className={navLinkClass}
-            activeProps={{ className: navActiveClass }}
-          >
-            New idea
-          </Link>
-          <Link to="/pipeline" className={navLinkClass} activeProps={{ className: navActiveClass }}>
-            Plan
-          </Link>
-          <Link to="/done" className={navLinkClass} activeProps={{ className: navActiveClass }}>
-            Done
-          </Link>
-          {role !== null &&
-            OWNER_LINKS.map((item) =>
-              owner ? (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={navLinkClass}
-                  activeProps={{ className: navActiveClass }}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <span
-                  key={item.to}
-                  className="flex cursor-not-allowed items-center gap-1 rounded px-2 py-1 text-muted-foreground opacity-80"
-                  title="Owner area. Don checks and approves here."
-                  aria-disabled="true"
-                  aria-label={`${item.label}, owner-only area`}
-                >
-                  <Lock className="h-3 w-3" aria-hidden="true" />
-                  {item.label}
-                </span>
-              ),
-            )}
           <RoleSwitch />
           <a
             href="https://claude.ai/code/artifact/31a7c189-c39d-4a66-a46b-bc0844b622ef"

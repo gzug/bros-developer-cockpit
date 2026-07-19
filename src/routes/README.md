@@ -28,6 +28,7 @@ header labels are only a UX aid.
 
 | URL | Header label | Brother | Owner | Server authority |
 | --- | --- | --- | --- | --- |
+| `/home` | Home | yes | yes | `requireAuth()` via layout guard |
 | `/dashboard` | Ideas | yes | yes | `requireAuth()` |
 | `/chat` | New idea | yes | yes | `requireAuth()` on refine/submit |
 | `/pipeline` | Plan | yes | yes | `requireAuth()` |
@@ -40,4 +41,5 @@ header labels are only a UX aid.
 
 `/submit` remains a direct route used by the shared idea form, but the primary brother-facing
 entry is `/chat` (`New idea`). `/auth` is public and accepts one four-digit PIN field; the server
-resolves the role. Keep this matrix aligned with `AppHeader.tsx` and each route's `beforeLoad`.
+resolves the role. Keep this matrix aligned with `src/lib/nav-model.ts` + `HomeDock` and each
+route's `beforeLoad`.

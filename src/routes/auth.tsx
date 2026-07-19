@@ -31,9 +31,9 @@ function AuthPage() {
     }
     setBusy(true);
     try {
-      const result = await loginWithPin({ data: { secret: secret.trim() } });
+      await loginWithPin({ data: { secret: secret.trim() } });
       if (nextSafe) window.location.replace(nextSafe);
-      else navigate({ to: result.role === "owner" ? "/dc" : "/dashboard", replace: true });
+      else navigate({ to: "/home", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wrong code");
     } finally {
