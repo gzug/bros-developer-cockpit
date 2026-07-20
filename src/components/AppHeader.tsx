@@ -59,7 +59,7 @@ export function AppHeader() {
         >
           <RoleSwitch />
           <a
-            href="https://claude.ai/code/artifact/31a7c189-c39d-4a66-a46b-bc0844b622ef"
+            href="https://claude.ai/code/artifact/be95efc4-96b4-4a22-9134-8e910546b0ea"
             target="_blank"
             rel="noreferrer"
             className={navLinkClass}
