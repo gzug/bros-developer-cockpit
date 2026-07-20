@@ -41,5 +41,5 @@ locked header labels are only a UX aid.
 
 `/submit` remains a direct route used by the shared idea form, but the primary brother-facing
 entry is `/chat` (`New idea`). `/auth` is public and accepts one four-digit PIN field; the server
-resolves the role. Keep this matrix aligned with `src/lib/nav-model.ts` + `HomeDock` and each
-route's `beforeLoad`.
+resolves the role. Keep this matrix aligned with `src/lib/nav-model.ts` (the section list rendered
+on `/home`) and each route's `beforeLoad`.
