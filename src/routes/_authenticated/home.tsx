@@ -64,7 +64,13 @@ function SectionCard({ entry }: { entry: Extract<NavEntry, { kind: "link" }> }) 
   );
 }
 
-function MenuSectionCard({ entry }: { entry: Extract<NavEntry, { kind: "menu" }> }) {
+function MenuSectionCard({
+  entry,
+  role,
+}: {
+  entry: Extract<NavEntry, { kind: "menu" }>;
+  role: NavRole | null;
+}) {
   const Icon = entry.icon;
   return (
     <Card>
@@ -77,17 +83,34 @@ function MenuSectionCard({ entry }: { entry: Extract<NavEntry, { kind: "menu" }>
       <CardContent className="p-4 pt-0">
         <p className="text-sm text-muted-foreground">{entry.description}</p>
         <div className="mt-3 flex flex-col gap-2">
-          {entry.items.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              search={item.search}
-              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-            >
-              <span className="font-medium">{item.label}</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">{item.description}</span>
-            </Link>
-          ))}
+          {entry.items.map((item) =>
+            isAllowed(item.access, role) ? (
+              <Link
+                key={item.to}
+                to={item.to}
+                search={item.search}
+                className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+              >
+                <span className="font-medium">{item.label}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  {item.description}
+                </span>
+              </Link>
+            ) : (
+              <span
+                key={item.to}
+                className="flex cursor-not-allowed items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground opacity-80"
+                title={OWNER_LOCKED_TITLE}
+                aria-disabled="true"
+              >
+                <Lock className="h-3 w-3 flex-none" aria-hidden />
+                <span>
+                  <span className="font-medium">{item.label}</span>
+                  <span className="mt-0.5 block text-xs">{OWNER_LOCKED_TITLE}</span>
+                </span>
+              </span>
+            ),
+          )}
         </div>
       </CardContent>
     </Card>
@@ -115,7 +138,7 @@ function HomePage() {
               return <LockedSectionCard key={entry.id} entry={entry} />;
             }
             if (entry.kind === "menu") {
-              return <MenuSectionCard key={entry.id} entry={entry} />;
+              return <MenuSectionCard key={entry.id} entry={entry} role={role} />;
             }
             return <SectionCard key={entry.id} entry={entry} />;
           })}
