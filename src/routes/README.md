@@ -29,9 +29,9 @@ locked header labels are only a UX aid.
 | URL | Header label | Brother | Owner | Server authority |
 | --- | --- | --- | --- | --- |
 | `/home` | Home | yes | yes | `requireAuth()` via layout guard |
-| `/dashboard` | Ideas | yes | yes | `requireAuth()` |
-| `/chat` | New idea | yes | yes | `requireAuth()` on refine/submit |
-| `/pipeline` | Plan | yes | yes | `requireAuth()` |
+| `/dashboard` | Browse ideas | yes | yes | `requireAuth()` |
+| `/chat` | Submit a new idea | yes | yes | `requireAuth()` on refine/submit |
+| `/pipeline` | View plan | yes | yes | `requireAuth()` |
 | `/done` | Done | yes | yes | `requireAuth()` |
 | `/runs` | Prep log | read-only | yes | `requireAuth()` read / `requireOwner()` mutations |
 | `/dc` | Control | no | yes | route guard + `requireOwner()` |
