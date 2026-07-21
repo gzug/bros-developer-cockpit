@@ -482,7 +482,7 @@ function DcOperationalDashboard() {
               <CardHeader className="border-b border-border py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-base font-semibold">Preparation log</CardTitle>
+                    <CardTitle className="text-base font-semibold">Prep log</CardTitle>
                     <CardDescription className="text-xs">
                       What the cockpit prepared and whether errors happened.
                     </CardDescription>
