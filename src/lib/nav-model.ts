@@ -21,7 +21,10 @@ export type NavAccess = "all" | "owner"; // "owner" renders locked for the broth
 export type NavLeaf = {
   label: string;
   to: string;
-  search?: Record<string, never>;
+  // URL search params passed straight to <Link search={...}>. Primitive values only
+  // (they serialize into the query string). Was `Record<string, never>`, which only
+  // permitted `{}` and would reject any real param a future leaf might need.
+  search?: Record<string, string | number | boolean>;
   access: NavAccess;
   description: string;
 };
