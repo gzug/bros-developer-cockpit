@@ -130,6 +130,7 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(
 );
 
 export const Route = createFileRoute("/_authenticated/dc")({
+  head: () => ({ meta: [{ title: "Owner control · One L1fe Cockpit" }] }),
   beforeLoad: async () => {
     const { checkAuth } = await import("@/lib/auth.server");
     const auth = await checkAuth();

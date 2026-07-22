@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listRunsData, type RunRow, type TaskRow } from "@/lib/runs.functions";
 
 export const Route = createFileRoute("/_authenticated/runs")({
+  head: () => ({ meta: [{ title: "Prep log · One L1fe Cockpit" }] }),
   component: RunsPage,
 });
 

@@ -9,6 +9,7 @@ import { safeNext } from "@/lib/safe-next";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  head: () => ({ meta: [{ title: "Sign in · One L1fe Cockpit" }] }),
   validateSearch: (s: Record<string, unknown>): { next?: string } => {
     const next = typeof s.next === "string" ? s.next : undefined;
     return next ? { next } : {};

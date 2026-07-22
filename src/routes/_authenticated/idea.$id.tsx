@@ -7,6 +7,7 @@ import { getIdeaDisplay } from "@/lib/idea-status";
 import { getIdeaEntry } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/idea/$id")({
+  head: ({ params }) => ({ meta: [{ title: `Idea #${params.id} · One L1fe Cockpit` }] }),
   component: IdeaPage,
 });
 

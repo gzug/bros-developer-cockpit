@@ -28,6 +28,7 @@ import { DataStateMessage } from "@/components/DataStateMessage";
 import { getUiDataState } from "@/lib/ui-data-state";
 
 export const Route = createFileRoute("/_authenticated/skills")({
+  head: () => ({ meta: [{ title: "Skills · One L1fe Cockpit" }] }),
   beforeLoad: async () => {
     const { checkAuth } = await import("@/lib/auth.server");
     const auth = await checkAuth();

@@ -65,6 +65,7 @@ const INTENTS: Array<{ id: Intent; title: string; hint: string; emoji: string; o
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
+  head: () => ({ meta: [{ title: "Submit an idea · One L1fe Cockpit" }] }),
   validateSearch: (
     search: Record<string, unknown>,
   ): { idea?: string; description?: string; ship?: number } => {
