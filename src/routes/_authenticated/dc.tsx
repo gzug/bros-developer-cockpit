@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AlertCircle, Copy, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
@@ -10,6 +10,15 @@ import { PublishingTrustNotice } from "@/components/PublishingTrustNotice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -129,17 +138,18 @@ export const Route = createFileRoute("/_authenticated/dc")({
   component: DcOperationalDashboard,
 });
 
-function generateSubmissionLink() {
-  const context = window.prompt("Screen context (optional)", "")?.trim() ?? "";
+function buildSubmissionLink(context: string): string {
   const url = new URL("/submit", window.location.origin);
   url.searchParams.set("type", "idea");
-  if (context) url.searchParams.set("context", context);
-  void navigator.clipboard.writeText(url.toString());
-  toast.success("Link copied");
+  const trimmed = context.trim();
+  if (trimmed) url.searchParams.set("context", trimmed);
+  return url.toString();
 }
 
 function DcOperationalDashboard() {
   const queryClient = useQueryClient();
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkContext, setLinkContext] = useState("");
   const dashboard = useQuery({
     queryKey: ["dc-dashboard"],
     queryFn: () => getDcDashboardData(),
@@ -210,6 +220,13 @@ function DcOperationalDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const copySubmissionLink = () => {
+    void navigator.clipboard.writeText(buildSubmissionLink(linkContext));
+    toast.success("Link copied");
+    setLinkDialogOpen(false);
+    setLinkContext("");
+  };
+
   const data = dashboard.data;
   const queue = data?.queue ?? [];
   const runsList = data?.runs ?? [];
@@ -232,6 +249,42 @@ function DcOperationalDashboard() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background pb-12 text-foreground">
       <AppHeader />
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Copy idea link</DialogTitle>
+            <DialogDescription>
+              Optionally add the screen this idea is about, then copy a prefilled submission link.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              copySubmissionLink();
+            }}
+          >
+            <label htmlFor="submission-context" className="text-sm font-medium">
+              Screen context (optional)
+            </label>
+            <Input
+              id="submission-context"
+              value={linkContext}
+              onChange={(event) => setLinkContext(event.target.value)}
+              placeholder="e.g. Home, Sleep, Nutrition"
+              className="mt-2"
+              autoFocus
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setLinkDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                <Copy className="mr-2 h-4 w-4" /> Copy link
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       <main className="mx-auto min-w-0 max-w-7xl px-4 py-6">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -247,7 +300,7 @@ function DcOperationalDashboard() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={generateSubmissionLink}>
+            <Button variant="outline" size="sm" onClick={() => setLinkDialogOpen(true)}>
               <Copy className="mr-2 h-4 w-4" /> Copy idea link
             </Button>
             <Button
