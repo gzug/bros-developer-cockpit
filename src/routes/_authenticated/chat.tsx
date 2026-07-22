@@ -492,8 +492,9 @@ function ChatPage() {
                   variant="outline"
                   onClick={savePreset}
                   title="Save preset"
+                  aria-label="Save preset"
                 >
-                  <Save className="h-4 w-4" />
+                  <Save className="h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
@@ -501,8 +502,9 @@ function ChatPage() {
                   variant="outline"
                   onClick={deletePreset}
                   title="Delete preset"
+                  aria-label="Delete preset"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
