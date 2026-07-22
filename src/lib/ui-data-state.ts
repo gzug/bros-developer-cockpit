@@ -12,8 +12,11 @@ export function getUiDataState(input: {
 }): UiDataState {
   if (input.status === "pending") return "loading";
   if (input.status === "error" || !input.hasData || input.hasError) return "error";
-  if (input.isFetching) return "stale";
+  // Sample data stays labelled "sample" even during a background refetch — checking
+  // isFetching first made it briefly flash "stale"/"Refreshing" over the sample notice.
+  // "stale" is only for real resolved data being refreshed.
   if (input.isSample) return "sample";
+  if (input.isFetching) return "stale";
   if (input.hasItems === false) return "empty";
   return "success";
 }
