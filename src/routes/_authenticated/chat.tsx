@@ -377,7 +377,7 @@ function ChatPage() {
                   {search.idea ? (
                     <span className="font-medium text-foreground">&ldquo;{search.idea}&rdquo;</span>
                   ) : (
-                    "Diese Aufgabe"
+                    "This task"
                   )}{" "}
                   is only marked as a request. Owner control and all safe gates still stand before
                   it.
