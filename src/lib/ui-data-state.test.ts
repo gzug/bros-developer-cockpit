@@ -19,4 +19,10 @@ describe("unknown-first UI data states", () => {
       getUiDataState({ status: "success", hasData: true, hasItems: false, isFetching: true }),
     ).toBe("stale");
   });
+
+  test("sample data being fetched again stays sample, not stale", () => {
+    expect(
+      getUiDataState({ status: "success", hasData: true, isSample: true, isFetching: true }),
+    ).toBe("sample");
+  });
 });
