@@ -29,10 +29,6 @@ function isShipped(idea: DCIdea): boolean {
   return SHIPPED_STATUSES.has(idea.status);
 }
 
-function chatUrl(params: Record<string, string>) {
-  return `/chat?${new URLSearchParams(params).toString()}`;
-}
-
 function DeliveryBadge({ delivery }: { delivery: IdeaDelivery }) {
   return delivery === "next-apk" ? (
     <Badge
@@ -124,25 +120,23 @@ function QueueRow({ idea }: { idea: DCIdea }) {
         </Button>
         {!nextApk && (
           <Button size="sm" asChild>
-            <a
+            <Link
               aria-label={`Ask owner about ${idea.title}`}
-              href={chatUrl({
-                ship: String(idea.id),
-                idea: idea.title,
-                description: idea.description,
-              })}
+              to="/chat"
+              search={{ ship: idea.id, idea: idea.title, description: idea.description }}
             >
               <Rocket className="mr-1 h-3 w-3" aria-hidden="true" /> Ask owner
-            </a>
+            </Link>
           </Button>
         )}
         <Button size="sm" variant="outline" asChild>
-          <a
-            href={chatUrl({ idea: idea.title, description: idea.description })}
+          <Link
+            to="/chat"
+            search={{ idea: idea.title, description: idea.description }}
             aria-label={`Discuss ${idea.title}`}
           >
             <MessageCircle className="mr-1 h-3 w-3" aria-hidden="true" /> Discuss
-          </a>
+          </Link>
         </Button>
         <label className="ml-auto text-xs text-muted-foreground">
           Reroute
@@ -339,14 +333,15 @@ function PipelinePage() {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {chips.map((chip) => (
-              <a
+              <Link
                 key={chip.id}
-                href={chatUrl({ idea: chip.title, description: chip.sentence })}
+                to="/chat"
+                search={{ idea: chip.title, description: chip.sentence }}
                 aria-label={`Discuss suggestion ${chip.title}`}
                 className="rounded-full border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {chip.title}
-              </a>
+              </Link>
             ))}
           </div>
         </section>
