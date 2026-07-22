@@ -47,7 +47,14 @@ _Last verified: 2026-07-22 CEST against `origin/main` `2cee3a5603748d4f43cb4d443
 
 ## Open issues
 
-- **#34** remains the separate security-hardening backlog: extend ownership guard to PR-lifecycle label paths + robust `## Context` anchoring. Do not silently absorb it into a docs/test slice.
+- **#34** security-hardening backlog — **brief filed 2026-07-22 as `[PL-BRIEF]` issue #89**, ready for
+  Codex (autonomous lane, no owner relay). Re-verified against current code first: one of #34's two
+  items was stale (`markIdeaApproved` is dead code, never called), but both real gaps are confirmed —
+  (1) `markIdeaLive`/`requestIdeaChanges`/`markIdeaApproved` skip the `requireBdcPipelineIssue` guard
+  the other 7 sibling mutators use; (2) `replaceTextMeta` doesn't strip embedded newlines from its
+  `value` param, so a `context` value can smuggle a fake sentinel+heading that a later reverse-scan
+  read would prefer over the real metadata — defeating the #32 anchoring fix. #89 is a `*server*`/
+  pipeline-mutation change: tiered merge authority applies, Codex stops at PR, PL reviews + merges.
 
 _Closed 2026-07-19 after live Ideas/Pipeline verification:_ **#8** stale goal (`not_planned`),
 **#13** completed typed cleanup (`completed`), and **#58/#59** skill-evidence metadata noise
@@ -62,7 +69,8 @@ _Closed 2026-07-18:_ stale readiness drafts **#20** and **#21** were closed with
 1. `origin/main` now includes #87 (`2cee3a5`). Treat `2cee3a5603748d4f43cb4d443db04774edba7f5d` as the current BDC baseline (2026-07-22).
 2. Keep BDC paused. Do not weaken `BDC_PAUSED`, `BDC_SHIP_ENABLED`, or the external `bdc-ship` gate; preview and green CI are still not production/device proof.
 3. Leave #28 and #31 separate unless the owner explicitly re-scopes them. #31 still targets the old readiness branch and must not be merged by assumption.
-4. The oldest-first BDC-64 lane is #67, #68, #69, #70. Resolve #34 separately with its own security brief.
+4. The oldest-first BDC-64 lane is #67, #68, #69, #70 (all closed). #34's security brief is filed as
+   `[PL-BRIEF]` issue #89 — Codex works it next; PL reviews + merges (independent gate, not auto-merge).
 5. Before any brother handoff, run the full fresh-worktree validation chain, test both PIN roles, and record real owner/browser/device evidence.
 
 ## Known follow-ups after #35/#36
