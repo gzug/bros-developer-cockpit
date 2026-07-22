@@ -1,6 +1,6 @@
 # BDC CHECKPOINT
 
-_Last verified: 2026-07-19 CEST against `origin/main` `35780ae4c39099b7b46e6552ec92adb3137a2444` and GitHub._
+_Last verified: 2026-07-22 CEST against `origin/main` `2cee3a5603748d4f43cb4d443db04774edba7f5d` and GitHub._
 
 ## Operating truth
 
@@ -24,16 +24,26 @@ _Last verified: 2026-07-19 CEST against `origin/main` `35780ae4c39099b7b46e6552e
 | #35 | Co-Dev Flow v2: one screen, OTA/APK pipeline, chat-ship | `058a94e` | 2026-07-18 |
 | #36 | One L1fe brand alignment, light default, clearer copy, ideas naming | `cfb2de7` | 2026-07-18 |
 | #71 | canonical BDC idea display projection | `35780ae` | 2026-07-19 |
+| #72 | clean stale idea pipeline entries | `53291ca` | 2026-07-19 |
+| #73 | cockpit data states explicit (#67) | `c6d00da` | 2026-07-19 |
+| #74 | executable BDC boundary matrix (#68) | `2df6262` | 2026-07-19 |
+| #75 | canonical BDC truth index (#69) | `52667dc` | 2026-07-19 |
+| #79 | thin cockpit shell + measure build budget (#70) | `058efee` | 2026-07-20 |
+| #80 | surface concrete GitHub error to owner (closes #78) | `67a61d9` | 2026-07-20 |
+| #81 | add showcase link (closes #77) | `2917939` | 2026-07-20 |
+| #82 | home landing with icon dock, slim header | `e6e7de4` | 2026-07-20 |
+| #83 | co-dev can read prep log; owner keeps all actions | `5eefa94` | 2026-07-20 |
+| #84 | fix header showcase About link | `626576f` | 2026-07-21 |
+| #85 | replace icon dock with labelled section landing page | `058d751` | 2026-07-21 |
+| #86 | fix stale nav copy labels after #85 | `d8a19f6` | 2026-07-21 |
+| #87 | remove unused shadcn scaffolding + dead deps | `2cee3a5` | 2026-07-21 |
 
 ## Open pull requests
 
 | PR | Scope | Status | Rule |
 |---|---|---|---|
-| #28 | product-generalization handoff | Draft, clean | documentation draft; keep separate from readiness integration |
-| #31 | Paxel Builder Profile self-reflection | Draft, based on the readiness branch (#21) | separate BDC draft, not mobile main; do not merge before #21 |
-| #72 | cockpit idea pipeline cleanup | Draft, current `origin/main` base | Ober-PL review; do not merge here |
-| #73 | unknown-first UI data states (#67) | Draft, current `origin/main` base | Ober-PL review; do not merge here |
-| #74 | executable boundary matrix (#68) | Draft, current `origin/main` base | Ober-PL review; do not merge here |
+| #28 | product-generalization handoff | Draft, stale base | docs draft; keep separate, not blocking |
+| #31 | Paxel Builder Profile self-reflection | Draft, stale base (readiness branch) | do not merge; retarget to main if wanted |
 
 ## Open issues
 
@@ -49,7 +59,7 @@ _Closed 2026-07-18:_ stale readiness drafts **#20** and **#21** were closed with
 
 ## Next safe sequence
 
-1. `origin/main` now includes #71 (`35780ae`). Treat `35780ae4c39099b7b46e6552ec92adb3137a2444` as the current BDC baseline.
+1. `origin/main` now includes #87 (`2cee3a5`). Treat `2cee3a5603748d4f43cb4d443db04774edba7f5d` as the current BDC baseline (2026-07-22).
 2. Keep BDC paused. Do not weaken `BDC_PAUSED`, `BDC_SHIP_ENABLED`, or the external `bdc-ship` gate; preview and green CI are still not production/device proof.
 3. Leave #28 and #31 separate unless the owner explicitly re-scopes them. #31 still targets the old readiness branch and must not be merged by assumption.
 4. The oldest-first BDC-64 lane is #67, #68, #69, #70. Resolve #34 separately with its own security brief.
