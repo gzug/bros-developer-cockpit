@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getPromptVersionDashboard } from "@/lib/prompt-versions.server";
 
 export const Route = createFileRoute("/_authenticated/prompts")({
+  head: () => ({ meta: [{ title: "Instructions · One L1fe Cockpit" }] }),
   beforeLoad: async () => {
     const { checkAuth } = await import("@/lib/auth.server");
     const auth = await checkAuth();

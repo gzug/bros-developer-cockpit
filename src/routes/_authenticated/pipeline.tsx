@@ -20,6 +20,7 @@ import { DataStateMessage } from "@/components/DataStateMessage";
 import { getUiDataState } from "@/lib/ui-data-state";
 
 export const Route = createFileRoute("/_authenticated/pipeline")({
+  head: () => ({ meta: [{ title: "Plan · One L1fe Cockpit" }] }),
   component: PipelinePage,
 });
 

@@ -12,6 +12,7 @@ import {
 import { listIdeaEntries, recentIdeaUsage } from "@/lib/ideas.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: () => ({ meta: [{ title: "Your ideas · One L1fe Cockpit" }] }),
   component: Dashboard,
 });
 

@@ -9,6 +9,7 @@ import { DataStateMessage } from "@/components/DataStateMessage";
 import { getUiDataState } from "@/lib/ui-data-state";
 
 export const Route = createFileRoute("/_authenticated/done")({
+  head: () => ({ meta: [{ title: "Done · One L1fe Cockpit" }] }),
   component: DonePage,
 });
 

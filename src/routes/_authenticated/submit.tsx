@@ -12,6 +12,7 @@ import { submitIdeaFn } from "@/lib/ideas.functions";
 type SubmissionType = "idea" | "change";
 
 export const Route = createFileRoute("/_authenticated/submit")({
+  head: () => ({ meta: [{ title: "Quick idea form · One L1fe Cockpit" }] }),
   validateSearch: (
     search: Record<string, unknown>,
   ): { context?: string; type?: SubmissionType } => {

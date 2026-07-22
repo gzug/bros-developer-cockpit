@@ -7,6 +7,7 @@ import { getOwnerKpis } from "@/lib/ideas.functions";
 import { getIdeaStatusLabel } from "@/lib/idea-status";
 
 export const Route = createFileRoute("/_authenticated/owner-kpi")({
+  head: () => ({ meta: [{ title: "Status · One L1fe Cockpit" }] }),
   beforeLoad: async () => {
     const { checkAuth } = await import("@/lib/auth.server");
     const auth = await checkAuth();
