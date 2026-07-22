@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
@@ -38,8 +39,7 @@ function usd(val: string | null) {
   return n < 0.0001 ? "<$0.0001" : `$${n.toFixed(4)}`;
 }
 
-function TaskCard({ task, runs }: { task: TaskRow; runs: RunRow[] }) {
-  const taskRuns = runs.filter((r) => r.issueNumber === task.issueNumber);
+function TaskCard({ task, taskRuns }: { task: TaskRow; taskRuns: RunRow[] }) {
   const totalCost = taskRuns.reduce((s, r) => s + (r.costUsd ? parseFloat(r.costUsd) : 0), 0);
   const latestRun = taskRuns[0];
 
@@ -105,6 +105,18 @@ function RunsPage() {
     queryFn: () => listRunsData(),
   });
 
+  // Group runs by issue once, instead of re-filtering the full runs array inside every
+  // TaskCard on every render (was O(tasks × runs) per render).
+  const runsByIssue = useMemo(() => {
+    const map = new Map<number, RunRow[]>();
+    for (const run of data.data?.runs ?? []) {
+      const bucket = map.get(run.issueNumber);
+      if (bucket) bucket.push(run);
+      else map.set(run.issueNumber, [run]);
+    }
+    return map;
+  }, [data.data?.runs]);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
@@ -122,6 +134,20 @@ function RunsPage() {
             </>
           )}
 
+          {data.isError && (
+            <div className="rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
+              The preparation log could not be loaded.{" "}
+              <button
+                type="button"
+                className="rounded underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                onClick={() => data.refetch()}
+              >
+                Try again
+              </button>
+              .
+            </div>
+          )}
+
           {data.isSuccess && data.data.tasks.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">
               No preparation log yet. Entries appear once Don prepares a collected idea.
@@ -130,7 +156,11 @@ function RunsPage() {
 
           {data.isSuccess &&
             data.data.tasks.map((task) => (
-              <TaskCard key={task.issueNumber} task={task} runs={data.data.runs} />
+              <TaskCard
+                key={task.issueNumber}
+                task={task}
+                taskRuns={runsByIssue.get(task.issueNumber) ?? []}
+              />
             ))}
         </div>
       </main>

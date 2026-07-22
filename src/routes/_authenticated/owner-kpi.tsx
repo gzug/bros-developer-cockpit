@@ -60,6 +60,20 @@ function OwnerKpiPage() {
           </div>
         )}
 
+        {query.isError && (
+          <div className="mt-6 rounded-md border border-rose-500/30 bg-rose-500/5 p-4 text-sm">
+            The status overview could not be loaded.{" "}
+            <button
+              type="button"
+              className="rounded underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={() => query.refetch()}
+            >
+              Try again
+            </button>
+            .
+          </div>
+        )}
+
         {query.data && (
           <>
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
