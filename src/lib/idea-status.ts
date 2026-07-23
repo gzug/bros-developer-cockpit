@@ -255,6 +255,74 @@ export function getIdeaTimeline(
   });
 }
 
+// Coarse, friendly progress track for the Co-Dev tracker. This is intentionally simpler than the
+// 7-step timeline above: it collapses the 9 real statuses into a handful of calm phases a
+// non-technical reader can scan at a glance. A `Record<IdeaStatus, IdeaPhase>` gives compile-time
+// exhaustiveness — add a new IdeaStatus and the build fails here until it is mapped. That is the
+// deliberate opposite of a fragile status regex (AGENTS.md #46 lesson: no fragile string filters
+// over statuses). `getIdeaDisplay` stays the single source of truth for per-status labels/summaries;
+// this only drives the coarse track and any phase grouping.
+export type IdeaPhase =
+  | "queued"
+  | "understanding"
+  | "building"
+  | "checking"
+  | "live"
+  | "needsAnotherLook";
+
+export const IDEA_STATUS_PHASE: Record<IdeaStatus, IdeaPhase> = {
+  // Collected / requested but no work started yet.
+  submitted: "queued",
+  requested: "queued",
+  // "The change is being prepared safely" (see IDEA_STATUS_DISPLAY.processing) — that is real
+  // build work, so processing maps to `building` rather than `understanding`. `understanding`
+  // stays a declared phase for the coarse track's ordering (the clarify-the-wish stage a chat
+  // expresses) but no real backend status currently sits there.
+  processing: "building",
+  // Prepared → waiting for / passing owner review, not yet on the phone.
+  sent: "checking",
+  approved: "checking",
+  shipped: "checking",
+  // Confirmed working on the phone.
+  live: "live",
+  // Off the happy path — needs Don to look again.
+  blocked: "needsAnotherLook",
+  closed: "needsAnotherLook",
+};
+
+export function getIdeaPhase(status: IdeaStatus): IdeaPhase {
+  return IDEA_STATUS_PHASE[status];
+}
+
+// The on-track phases in order, used to render the coarse progress rail. `needsAnotherLook` is
+// intentionally NOT on this rail — like `blocked` in the detailed timeline, it is an off-track
+// state shown separately, never as a step reached along the way to live.
+export const IDEA_PHASE_TRACK: IdeaPhase[] = [
+  "queued",
+  "understanding",
+  "building",
+  "checking",
+  "live",
+];
+
+export const IDEA_PHASE_LABEL: Record<IdeaPhase, string> = {
+  queued: "Queued",
+  understanding: "Understanding",
+  building: "Building",
+  checking: "Checking",
+  live: "Live on your phone",
+  needsAnotherLook: "Needs another look",
+};
+
+// Honesty gate for the tracker's celebratory copy. Celebrating "it's live on your phone" is only
+// truthful when the idea's REAL status is shipped/live AND the engine is not paused. While the BDC
+// engine is paused, nothing reaches the phone, so this returns false for every status — the tracker
+// must not assert live/shipped for any idea. Mirrors canClaimPublished in eval/bdc-honesty.ts but
+// stays client-safe here (no server-only imports) so the Co-Dev route can use it directly.
+export function canCelebrateLive(status: IdeaStatus, paused: boolean): boolean {
+  return !paused && (status === "shipped" || status === "live");
+}
+
 export const IDEA_STATUS_REFERENCE_LINES = [
   "Collected = the idea arrived. Nothing has been built or published.",
   "Waiting on owner = the user asked Don to start the next step, but nothing was published.",

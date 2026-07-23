@@ -189,6 +189,15 @@ export const getUndoLastChangeEntry = createServerFn({ method: "GET" }).handler(
   return getUndoLastChangeStatus();
 });
 
+// Read the BDC engine pause flag SERVER-SIDE (fail-closed: paused unless env is exactly "false").
+// The Co-Dev page consumes this boolean so the component never re-implements the env parse.
+export const getBdcPausedEntry = createServerFn({ method: "GET" }).handler(async () => {
+  const { requireAuth } = await import("./auth-session.server");
+  requireAuth();
+  const { isBdcPaused } = await import("./engine.server");
+  return { paused: isBdcPaused() };
+});
+
 export const createPipelineIdeaEntry = createServerFn({ method: "POST" })
   .validator((input: unknown) => ParkedIdeaInput.parse(input))
   .handler(async ({ data }) => {

@@ -6,7 +6,11 @@ export const Route = createFileRoute("/")({
   ssr: false,
   beforeLoad: async () => {
     const result = await checkAuth();
-    if (result.authenticated) throw redirect({ to: "/home" });
+    // The brother's single home is the consolidated Co-Dev page; the owner lands on the full
+    // /home nav. `redirect` performs a history-replace so neither role gets stuck on "/".
+    if (result.authenticated) {
+      throw redirect({ to: result.role === "owner" ? "/home" : "/co-dev" });
+    }
   },
   component: Landing,
 });

@@ -3,7 +3,16 @@ import {
   canBrotherShip,
   canConfirmIdeaLive,
   canTransitionIdeaStatus,
+  claimIdeaForEngine,
   classifyDelivery,
+  closeIdeaAsDeleted,
+  completeIdea,
+  requestBrotherShip,
+  setIdeaContext,
+  setIdeaDelivery,
+  setIdeaPipelineState,
+  setIdeaStatus,
+  setIdeaWeight,
   createSubmittedIdea,
   deriveIdeaStatus,
   parseDelivery,
@@ -15,6 +24,7 @@ import {
   isBdcPipelineIssue,
   isPullRequestForIdea,
   markIdeaApproved,
+  markIdeaGuardrailBlocked,
   markIdeaLive,
   selectPullRequestForIdea,
   parseBlockReason,
@@ -452,7 +462,7 @@ test("destructive mutations only accept real BDC wish issues, never pull request
   );
 });
 
-test("approval, live, and changes mutations reject non-BDC issues before any write", async () => {
+test("every exported lifecycle mutator rejects non-BDC issues before any write", async () => {
   process.env.GITHUB_TOKEN = "test-token";
   const calls: Array<{ method: string; url: string }> = [];
   globalThis.fetch = (async (input, init) => {
@@ -472,9 +482,32 @@ test("approval, live, and changes mutations reject non-BDC issues before any wri
     );
   }) as typeof fetch;
 
-  for (const mutation of [markIdeaApproved, markIdeaLive, requestIdeaChanges]) {
+  // Ownership matrix: EVERY exported mutator that writes issue state (labels / body / close) by
+  // number must run requireBdcPipelineIssue FIRST (a single GET) and reject a non-BDC issue before
+  // any write. This list is maintained BY HAND — when you add a lifecycle mutator, add it here; a
+  // mutator that skips the guard is only caught once it is listed (there is no reflection-based
+  // discovery). Comment-only telemetry helpers (addIdeaComment / addEngineRunComment) are excluded
+  // by design: they change no lifecycle state and every caller validates the issue first (see the
+  // note at their definition in github-issues.server.ts).
+  const lifecycleMutators: Array<{ name: string; run: (issueNumber: number) => Promise<unknown> }> = [
+    { name: "setIdeaStatus", run: (n) => setIdeaStatus(n, "processing") },
+    { name: "setIdeaPipelineState", run: (n) => setIdeaPipelineState(n, "parked") },
+    { name: "setIdeaWeight", run: (n) => setIdeaWeight(n, "light") },
+    { name: "setIdeaDelivery", run: (n) => setIdeaDelivery(n, "ota") },
+    { name: "setIdeaContext", run: (n) => setIdeaContext(n, "context") },
+    { name: "requestBrotherShip", run: (n) => requestBrotherShip(n) },
+    { name: "closeIdeaAsDeleted", run: (n) => closeIdeaAsDeleted(n) },
+    { name: "completeIdea", run: (n) => completeIdea(n, "general") },
+    { name: "claimIdeaForEngine", run: (n) => claimIdeaForEngine(n) },
+    { name: "markIdeaGuardrailBlocked", run: (n) => markIdeaGuardrailBlocked(n, "guardrail reason") },
+    { name: "markIdeaApproved", run: (n) => markIdeaApproved(n) },
+    { name: "markIdeaLive", run: (n) => markIdeaLive(n) },
+    { name: "requestIdeaChanges", run: (n) => requestIdeaChanges(n) },
+  ];
+
+  for (const mutator of lifecycleMutators) {
     calls.length = 0;
-    await expect(mutation(89)).rejects.toThrow("Idea not found.");
+    await expect(mutator.run(89)).rejects.toThrow("Idea not found.");
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe("GET");
   }
@@ -527,6 +560,65 @@ test("valid BDC mutations pass the exact label allowlist and issue writes", asyn
       url: expect.stringContaining("/issues/89/comments"),
     });
   }
+});
+
+test("claim and guardrail-block mutations pass the BDC allowlist before writing", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string; body?: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input), body: init?.body?.toString() });
+    const url = String(input);
+    if (url.endsWith("/issues/89")) {
+      return new Response(
+        JSON.stringify({
+          number: 89,
+          title: "Valid BDC issue",
+          body: "",
+          html_url: "https://github.com/gzug/bros-developer-cockpit/issues/89",
+          state: "open",
+          created_at: "2026-07-23T00:00:00Z",
+          updated_at: "2026-07-23T00:00:00Z",
+          labels: [{ name: "from-brother" }, { name: "bdc-submitted" }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  // claimIdeaForEngine: guard GET first, then a single engine-started label write (no comment).
+  calls.length = 0;
+  await claimIdeaForEngine(89);
+  const claimCalls = calls.filter((call) => call.url.includes("/issues/89"));
+  expect(claimCalls).toHaveLength(2);
+  expect(claimCalls[0]).toMatchObject({
+    method: "GET",
+    url: expect.stringContaining("/issues/89"),
+  });
+  expect(claimCalls[1]).toMatchObject({
+    method: "POST",
+    url: expect.stringContaining("/issues/89/labels"),
+    body: expect.stringContaining("bdc-engine-started"),
+  });
+
+  // markIdeaGuardrailBlocked: guard GET first, then the block label write, then the reason comment.
+  calls.length = 0;
+  await markIdeaGuardrailBlocked(89, "Auth changes are out of scope.");
+  const blockCalls = calls.filter((call) => call.url.includes("/issues/89"));
+  expect(blockCalls).toHaveLength(3);
+  expect(blockCalls[0]).toMatchObject({
+    method: "GET",
+    url: expect.stringContaining("/issues/89"),
+  });
+  expect(blockCalls[1]).toMatchObject({
+    method: "POST",
+    url: expect.stringContaining("/issues/89/labels"),
+    body: expect.stringContaining("bdc-blocked-guardrails"),
+  });
+  expect(blockCalls[2]).toMatchObject({
+    method: "POST",
+    url: expect.stringContaining("/issues/89/comments"),
+  });
 });
 
 test("createSubmittedIdea collapses CR/LF metadata before posting an issue", async () => {

@@ -7,6 +7,7 @@ import {
   Lightbulb,
   LineChart,
   ListChecks,
+  Sparkles,
 } from "lucide-react";
 
 // Single source of truth for the /home landing page (and any future header nav that needs the
@@ -39,24 +40,36 @@ export type NavEntry = {
 
 export const NAV_DOCK: NavEntry[] = [
   {
+    id: "co-dev",
+    label: "Co-Dev",
+    icon: Sparkles,
+    access: "all",
+    description: "Talk an idea through, then watch it get built — chat and tracker on one page.",
+    kind: "link",
+    to: "/co-dev",
+  },
+  // The scattered idea/plan/done screens are REPLACED by Co-Dev for the brother, but stay available
+  // to the owner (and reachable by URL for anyone). Marking them owner-access surfaces them only in
+  // the owner's /home nav; the routes themselves keep their own `requireAuth()` and are unchanged.
+  {
     id: "ideas",
     label: "Ideas",
     icon: Lightbulb,
-    access: "all",
+    access: "owner",
     description: "Browse submitted ideas, or submit a new one.",
     kind: "menu",
     items: [
       {
         label: "Browse ideas",
         to: "/dashboard",
-        access: "all",
+        access: "owner",
         description: "See every idea and its current status.",
       },
       {
         label: "Submit a new idea",
         to: "/chat",
         search: {},
-        access: "all",
+        access: "owner",
         description: "Report wording, appearance, or something broken.",
       },
     ],
@@ -65,21 +78,21 @@ export const NAV_DOCK: NavEntry[] = [
     id: "plan",
     label: "Plan",
     icon: ListChecks,
-    access: "all",
+    access: "owner",
     description: "See the build plan for ideas in progress, and a log of recent runs.",
     kind: "menu",
     items: [
       {
         label: "View plan",
         to: "/pipeline",
-        access: "all",
+        access: "owner",
         description: "Ideas queued, in review, or already published.",
       },
       {
         label: "Prep log",
         to: "/runs",
-        access: "all",
-        description: "Recent runs. Read-only for the co-dev.",
+        access: "owner",
+        description: "Recent runs.",
       },
     ],
   },
@@ -87,7 +100,7 @@ export const NAV_DOCK: NavEntry[] = [
     id: "done",
     label: "Done",
     icon: CheckCircle2,
-    access: "all",
+    access: "owner",
     description: "Ideas that have already shipped.",
     kind: "link",
     to: "/done",

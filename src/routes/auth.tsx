@@ -33,8 +33,10 @@ function AuthPage() {
     setBusy(true);
     try {
       await loginWithPin({ data: { secret: secret.trim() } });
+      // Route through "/" so the role-based landing (brother -> /co-dev, owner -> /home) lives in a
+      // single place (the index beforeLoad), instead of being duplicated here.
       if (nextSafe) window.location.replace(nextSafe);
-      else navigate({ to: "/home", replace: true });
+      else navigate({ to: "/", replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Wrong code");
     } finally {
