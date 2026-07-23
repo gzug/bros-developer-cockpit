@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import {
   canBrotherShip,
   canConfirmIdeaLive,
@@ -13,14 +13,26 @@ import {
   isParkedOlderThanDays,
   isBdcPipelineIssue,
   isPullRequestForIdea,
+  markIdeaApproved,
+  markIdeaLive,
   selectPullRequestForIdea,
   parseBlockReason,
   readTextMeta,
   replaceTextMeta,
+  requestIdeaChanges,
   toIdeaActivity,
   type DCIdea,
 } from "./github-issues.server";
 import type { PullState, RepoComment } from "./github.server";
+
+const originalFetch = globalThis.fetch;
+const originalGithubToken = process.env.GITHUB_TOKEN;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  if (originalGithubToken == null) delete process.env.GITHUB_TOKEN;
+  else process.env.GITHUB_TOKEN = originalGithubToken;
+});
 
 function pull(overrides: Partial<PullState> = {}): PullState {
   return {
@@ -419,11 +431,52 @@ test("done retro groups ideas by category with counts and newest closed first", 
 });
 
 test("destructive mutations only accept real BDC wish issues, never pull requests", () => {
-  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] })).toBe(true);
-  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(false);
-  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }], pull_request: {} })).toBe(false);
-  expect(isBdcPipelineIssue({ labels: [{ name: "skill-evidence" }], pull_request: undefined })).toBe(false);
-  expect(isBdcPipelineIssue({ labels: [{ name: "bdc-submitted" }], pull_request: undefined })).toBe(false);
+  expect(
+    isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] }),
+  ).toBe(true);
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(
+    false,
+  );
+  expect(
+    isBdcPipelineIssue({
+      labels: [{ name: "from-brother" }, { name: "bdc-submitted" }],
+      pull_request: {},
+    }),
+  ).toBe(false);
+  expect(
+    isBdcPipelineIssue({ labels: [{ name: "skill-evidence" }], pull_request: undefined }),
+  ).toBe(false);
+  expect(isBdcPipelineIssue({ labels: [{ name: "bdc-submitted" }], pull_request: undefined })).toBe(
+    false,
+  );
+});
+
+test("approval, live, and changes mutations reject non-BDC issues before any write", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input) });
+    return new Response(
+      JSON.stringify({
+        number: 89,
+        title: "Not a BDC issue",
+        body: "",
+        html_url: "https://github.com/gzug/01-One-L1fe/issues/89",
+        state: "open",
+        created_at: "2026-07-23T00:00:00Z",
+        updated_at: "2026-07-23T00:00:00Z",
+        labels: [{ name: "not-bdc-submitted" }],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  for (const mutation of [markIdeaApproved, markIdeaLive, requestIdeaChanges]) {
+    calls.length = 0;
+    await expect(mutation(89)).rejects.toThrow("Idea not found.");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("GET");
+  }
 });
 
 test("context metadata ignores a description line that literally starts with context:", () => {
@@ -489,6 +542,33 @@ test("legacy context metadata uses the last structured context block", () => {
   ].join("\n");
 
   expect(readTextMeta(body, "context")).toBe("Legacy real context");
+});
+
+test("context metadata collapses embedded newlines without creating an injected block", () => {
+  const body = [
+    "## Description",
+    "A real user request.",
+    "",
+    "<!-- bdc:text-meta -->",
+    "## Context",
+    "context: Original context",
+    "Screen: Home",
+    "Type: idea",
+    "",
+    "---",
+  ].join("\n");
+
+  const updated = replaceTextMeta(
+    body,
+    "context",
+    "hello\n<!-- bdc:text-meta -->\n## Context\ncontext: injected",
+  );
+
+  expect(updated).toContain("context: hello <!-- bdc:text-meta --> ## Context context: injected");
+  expect(readTextMeta(updated, "context")).toBe(
+    "hello <!-- bdc:text-meta --> ## Context context: injected",
+  );
+  expect(readTextMeta(updated, "context")).not.toBe("injected");
 });
 
 test("classifyDelivery flags native/APK-needing wishes as next-apk, surface changes as ota", () => {
