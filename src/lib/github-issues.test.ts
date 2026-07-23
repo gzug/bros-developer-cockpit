@@ -511,9 +511,20 @@ test("valid BDC mutations pass the exact label allowlist and issue writes", asyn
   ] as const) {
     calls.length = 0;
     await mutation(89);
-    expect(calls[0]).toMatchObject({ method: "GET", url: expect.stringContaining("/issues/89") });
-    expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/issues/89/labels") && call.body?.includes(expectedLabel))).toBe(true);
-    expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/issues/89/comments"))).toBe(true);
+    expect(calls).toHaveLength(3);
+    expect(calls[0]).toMatchObject({
+      method: "GET",
+      url: expect.stringContaining("/issues/89"),
+    });
+    expect(calls[1]).toMatchObject({
+      method: "POST",
+      url: expect.stringContaining("/issues/89/labels"),
+      body: expect.stringContaining(expectedLabel),
+    });
+    expect(calls[2]).toMatchObject({
+      method: "POST",
+      url: expect.stringContaining("/issues/89/comments"),
+    });
   }
 });
 
@@ -544,7 +555,9 @@ test("createSubmittedIdea collapses CR/LF context before posting issue metadata"
     description: "Keep metadata safe",
     context: "safe\r\n<!-- bdc:text-meta -->\r\n## Context\r\ncontext: injected",
   });
-  const issueBody = JSON.parse(calls.find((call) => call.url.endsWith("/issues") && call.method === "POST")?.body ?? "{}").body as string;
+  const issueBody = JSON.parse(
+    calls.find((call) => call.url.endsWith("/issues") && call.method === "POST")?.body ?? "{}",
+  ).body as string;
   expect(issueBody).toContain("context: safe <!-- bdc:text-meta --> ## Context context: injected");
   expect(issueBody).not.toContain("\r");
   expect(issueBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
