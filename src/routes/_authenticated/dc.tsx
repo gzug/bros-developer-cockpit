@@ -37,7 +37,7 @@ import {
 import { getDb } from "@/lib/db";
 import { runs } from "@/lib/db/schema";
 import { listMemoryRuns } from "@/lib/db/runs.server";
-import { formatDcCost } from "@/lib/dc-display";
+import { formatDcCost, getDcQueueCardState } from "@/lib/dc-display";
 import type { DCIdea } from "@/lib/github-issues.server";
 import type { RunRow } from "@/lib/runs.functions";
 import { desc } from "drizzle-orm";
@@ -52,6 +52,8 @@ type DcDashboardData = {
   };
   githubConnected: boolean;
   githubError: string | null;
+  queueUnavailable: boolean;
+  queueError: string | null;
   dbConnected: boolean;
   queue: DCIdea[];
   runs: RunRow[];
@@ -69,10 +71,17 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(
     };
     let githubConnected = true;
     let githubError: string | null = null;
+    // Distinct from a real zero-row result: this flag is set only when the
+    // queue load itself throws, so a GitHub outage or missing token cannot
+    // masquerade as a genuinely empty queue in the UI.
+    let queueUnavailable = false;
+    let queueError: string | null = null;
     const { listIdeas } = await import("@/lib/github-issues.server");
     const queue = await listIdeas().catch((error) => {
       githubConnected = false;
       githubError = error instanceof Error ? error.message : String(error);
+      queueUnavailable = true;
+      queueError = githubError;
       return [];
     });
 
@@ -82,6 +91,8 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(
         envStatus,
         githubConnected,
         githubError,
+        queueUnavailable,
+        queueError,
         dbConnected: false,
         queue,
         runs: listMemoryRuns()
@@ -101,6 +112,8 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(
         envStatus,
         githubConnected,
         githubError,
+        queueUnavailable,
+        queueError,
         dbConnected: true,
         queue,
         runs: runsData.map((run) => ({
@@ -115,6 +128,8 @@ export const getDcDashboardData = createServerFn({ method: "GET" }).handler(
         envStatus,
         githubConnected,
         githubError,
+        queueUnavailable,
+        queueError,
         dbConnected: false,
         queue,
         runs: listMemoryRuns()
@@ -233,6 +248,10 @@ function DcOperationalDashboard() {
   const runsList = data?.runs ?? [];
   const dbConnected = data?.dbConnected ?? false;
   const githubConnected = data?.githubConnected ?? false;
+  const queueUnavailable = data?.queueUnavailable ?? false;
+  // Three-way: a failed load ("unavailable") stays distinct from a successful
+  // zero-row load ("empty"). "No ideas collected yet" is reserved for "empty".
+  const queueCardState = getDcQueueCardState({ queueUnavailable, queueCount: queue.length });
   const envStatus = data?.envStatus;
   const dashboardState = getUiDataState({
     status: dashboard.status,
@@ -390,13 +409,35 @@ function DcOperationalDashboard() {
                       are working states, not publication.
                     </CardDescription>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {queue.length} entries
+                  <Badge
+                    variant={queueCardState === "unavailable" ? "destructive" : "secondary"}
+                    className="text-xs"
+                  >
+                    {queueCardState === "unavailable" ? "Unavailable" : `${queue.length} entries`}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-auto p-0">
-                {queue.length === 0 ? (
+                {queueCardState === "unavailable" ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-rose-600">
+                      <AlertCircle className="h-5 w-5 shrink-0" />
+                      The idea queue could not be loaded.
+                    </div>
+                    <p className="max-w-md text-xs text-muted-foreground">
+                      This is a GitHub connection or credentials problem, not an empty queue. The
+                      list refreshes on its own, or you can retry now.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void dashboard.refetch()}
+                      disabled={dashboard.isFetching}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" /> Try again
+                    </Button>
+                  </div>
+                ) : queueCardState === "empty" ? (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                     No ideas collected yet. Once someone submits one, it appears here.
                   </div>
