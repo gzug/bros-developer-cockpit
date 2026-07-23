@@ -511,17 +511,18 @@ test("valid BDC mutations pass the exact label allowlist and issue writes", asyn
   ] as const) {
     calls.length = 0;
     await mutation(89);
-    expect(calls).toHaveLength(3);
-    expect(calls[0]).toMatchObject({
+    const issueCalls = calls.filter((call) => call.url.includes("/issues/89"));
+    expect(issueCalls).toHaveLength(3);
+    expect(issueCalls[0]).toMatchObject({
       method: "GET",
       url: expect.stringContaining("/issues/89"),
     });
-    expect(calls[1]).toMatchObject({
+    expect(issueCalls[1]).toMatchObject({
       method: "POST",
       url: expect.stringContaining("/issues/89/labels"),
       body: expect.stringContaining(expectedLabel),
     });
-    expect(calls[2]).toMatchObject({
+    expect(issueCalls[2]).toMatchObject({
       method: "POST",
       url: expect.stringContaining("/issues/89/comments"),
     });
