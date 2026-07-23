@@ -590,6 +590,7 @@ function issueBody(input: {
   context?: string;
 }): string {
   const screen = input.screen?.trim() || "not specified";
+  const context = input.context?.trim().replace(/[\r\n]+/g, " ");
   return [
     "## Description",
     input.description.trim(),
@@ -597,7 +598,7 @@ function issueBody(input: {
     TEXT_META_SENTINEL,
     "## Context",
     input.parkedAt ? `parked-at: ${input.parkedAt}` : null,
-    input.context?.trim() ? `context: ${input.context.trim()}` : null,
+    context ? `context: ${context}` : null,
     `Screen: ${screen}`,
     `Type: ${input.type}`,
     "",
