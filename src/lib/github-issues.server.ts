@@ -589,7 +589,7 @@ function issueBody(input: {
   parkedAt?: string;
   context?: string;
 }): string {
-  const screen = input.screen?.trim() || "not specified";
+  const screen = input.screen?.trim().replace(/[\r\n]+/g, " ") || "not specified";
   const context = input.context?.trim().replace(/[\r\n]+/g, " ");
   return [
     "## Description",

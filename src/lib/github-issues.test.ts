@@ -529,7 +529,7 @@ test("valid BDC mutations pass the exact label allowlist and issue writes", asyn
   }
 });
 
-test("createSubmittedIdea collapses CR/LF context before posting issue metadata", async () => {
+test("createSubmittedIdea collapses CR/LF metadata before posting an issue", async () => {
   process.env.GITHUB_TOKEN = "test-token";
   const calls: Array<{ method: string; url: string; body?: string }> = [];
   globalThis.fetch = (async (input, init) => {
@@ -550,18 +550,38 @@ test("createSubmittedIdea collapses CR/LF context before posting issue metadata"
     return new Response("{}", { status: 200 });
   }) as typeof fetch;
 
-  await createSubmittedIdea({
-    type: "idea",
-    title: "Context safety",
-    description: "Keep metadata safe",
+  const postedIssueBody = async (metadata: { context?: string; screen?: string }) => {
+    calls.length = 0;
+    await createSubmittedIdea({
+      type: "idea",
+      title: "Metadata safety",
+      description: "Keep metadata safe",
+      ...metadata,
+    });
+    return JSON.parse(
+      calls.find((call) => call.url.endsWith("/issues") && call.method === "POST")?.body ?? "{}",
+    ).body as string;
+  };
+
+  const contextBody = await postedIssueBody({
     context: "safe\r\n<!-- bdc:text-meta -->\r\n## Context\r\ncontext: injected",
   });
-  const issueBody = JSON.parse(
-    calls.find((call) => call.url.endsWith("/issues") && call.method === "POST")?.body ?? "{}",
-  ).body as string;
-  expect(issueBody).toContain("context: safe <!-- bdc:text-meta --> ## Context context: injected");
-  expect(issueBody).not.toContain("\r");
-  expect(issueBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
+  expect(contextBody).toContain(
+    "context: safe <!-- bdc:text-meta --> ## Context context: injected",
+  );
+  expect(contextBody).not.toContain("\r");
+  expect(contextBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
+  expect(readTextMeta(contextBody, "context")).not.toBe("injected");
+
+  const screenBody = await postedIssueBody({
+    screen: "Home\r\n<!-- bdc:text-meta -->\r\n## Context\r\ncontext: injected",
+  });
+  expect(screenBody).toContain(
+    "Screen: Home <!-- bdc:text-meta --> ## Context context: injected",
+  );
+  expect(screenBody).not.toContain("\r");
+  expect(screenBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
+  expect(readTextMeta(screenBody, "context")).toBeUndefined();
 });
 
 test("context metadata ignores a description line that literally starts with context:", () => {
