@@ -484,9 +484,11 @@ test("every exported lifecycle mutator rejects non-BDC issues before any write",
 
   // Ownership matrix: EVERY exported mutator that writes issue state (labels / body / close) by
   // number must run requireBdcPipelineIssue FIRST (a single GET) and reject a non-BDC issue before
-  // any write. A future state mutator added without the guard fails here — it resolves instead of
-  // rejecting. Comment-only telemetry helpers (addIdeaComment / addEngineRunComment) are excluded
-  // by design: they change no lifecycle state and are engine-internal.
+  // any write. This list is maintained BY HAND — when you add a lifecycle mutator, add it here; a
+  // mutator that skips the guard is only caught once it is listed (there is no reflection-based
+  // discovery). Comment-only telemetry helpers (addIdeaComment / addEngineRunComment) are excluded
+  // by design: they change no lifecycle state and every caller validates the issue first (see the
+  // note at their definition in github-issues.server.ts).
   const lifecycleMutators: Array<{ name: string; run: (issueNumber: number) => Promise<unknown> }> = [
     { name: "setIdeaStatus", run: (n) => setIdeaStatus(n, "processing") },
     { name: "setIdeaPipelineState", run: (n) => setIdeaPipelineState(n, "parked") },

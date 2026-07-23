@@ -830,6 +830,9 @@ export async function completeIdea(issueNumber: number, category: DoneCategorySl
   await closeIssue(issueNumber, "completed");
 }
 
+// No requireBdcPipelineIssue() gate like the by-number mutators: this takes no caller-supplied issue
+// number — it discovers issues itself via the `parked` label query below and only swaps
+// parked -> archived (not a sensitive transition).
 export async function autoArchiveParkedIdeas(now: Date = new Date()): Promise<number> {
   const issues = await listIssues({ labels: PARKED_LABEL, state: "open", sort: "created", direction: "desc", perPage: 100 });
   const realIssues = issues.filter((issue) => !issue.pull_request);
@@ -920,6 +923,11 @@ export async function listNewBdcIssues(): Promise<RepoIssue[]> {
   });
 }
 
+// Comment-only telemetry — intentionally NOT ownership-gated (they change no lifecycle state). Every
+// caller lives in engine.server.ts and validates the issue via getIdeaWithPull()/listNewBdcIssues()
+// before calling. Do NOT expose either through a server fn or route that forwards an untrusted issue
+// number without a requireBdcPipelineIssue() check first, or an authed user could comment on any
+// issue in the repo.
 export async function addIdeaComment(issueNumber: number, body: string): Promise<void> {
   await addIssueComment(issueNumber, body);
 }
