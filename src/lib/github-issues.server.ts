@@ -732,7 +732,7 @@ export async function setIdeaStatus(
   status: DCIdeaStatus,
   intent?: DCIdeaIntent,
 ): Promise<void> {
-  const issue = await getIssue(issueNumber);
+  const issue = await requireBdcPipelineIssue(issueNumber);
   const labels = issue.labels.map((label) => label.name);
   const next = labels.filter(
     (label) =>
@@ -866,10 +866,12 @@ export function getUndoLastChangeStatus(): UndoLastChangeStatus {
 }
 
 export async function claimIdeaForEngine(issueNumber: number): Promise<void> {
+  await requireBdcPipelineIssue(issueNumber);
   await addLabelsToIssue(issueNumber, [BDC_ENGINE_STARTED_LABEL]);
 }
 
 export async function markIdeaGuardrailBlocked(issueNumber: number, reason: string): Promise<void> {
+  await requireBdcPipelineIssue(issueNumber);
   await addLabelsToIssue(issueNumber, [BDC_BLOCKED_GUARDRAILS_LABEL]);
   await addIssueComment(issueNumber, blockReasonComment(`Blocked by BDC guardrails.\n\n${reason}`));
 }
