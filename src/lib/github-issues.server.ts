@@ -210,7 +210,7 @@ export function readTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number])
 export function replaceTextMeta(body: string, key: (typeof TEXT_META_KEYS)[number], value?: string): string {
   const lines = body.split(/\r?\n/);
   const index = contextMetaLineIndex(lines, key);
-  const normalized = value?.trim();
+  const normalized = value?.trim().replace(/[\r\n]+/g, " ");
   if (!normalized) {
     if (index >= 0) lines.splice(index, 1);
     return lines.join("\n");
@@ -589,7 +589,8 @@ function issueBody(input: {
   parkedAt?: string;
   context?: string;
 }): string {
-  const screen = input.screen?.trim() || "not specified";
+  const screen = input.screen?.trim().replace(/[\r\n]+/g, " ") || "not specified";
+  const context = input.context?.trim().replace(/[\r\n]+/g, " ");
   return [
     "## Description",
     input.description.trim(),
@@ -597,7 +598,7 @@ function issueBody(input: {
     TEXT_META_SENTINEL,
     "## Context",
     input.parkedAt ? `parked-at: ${input.parkedAt}` : null,
-    input.context?.trim() ? `context: ${input.context.trim()}` : null,
+    context ? `context: ${context}` : null,
     `Screen: ${screen}`,
     `Type: ${input.type}`,
     "",
@@ -874,6 +875,7 @@ export async function markIdeaGuardrailBlocked(issueNumber: number, reason: stri
 }
 
 export async function markIdeaApproved(issueNumber: number): Promise<void> {
+  await requireBdcPipelineIssue(issueNumber);
   await addLabelsToIssue(issueNumber, [BDC_APPROVED_LABEL]);
   await addIssueComment(
     issueNumber,
@@ -882,11 +884,13 @@ export async function markIdeaApproved(issueNumber: number): Promise<void> {
 }
 
 export async function markIdeaLive(issueNumber: number): Promise<void> {
+  await requireBdcPipelineIssue(issueNumber);
   await addLabelsToIssue(issueNumber, [BDC_LIVE_LABEL]);
   await addIssueComment(issueNumber, "Owner confirmed this OTA is live on the brother device.");
 }
 
 export async function requestIdeaChanges(issueNumber: number): Promise<void> {
+  await requireBdcPipelineIssue(issueNumber);
   await addLabelsToIssue(issueNumber, [BDC_CHANGES_REQUESTED_LABEL]);
   await addIssueComment(
     issueNumber,

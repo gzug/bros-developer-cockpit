@@ -1,9 +1,10 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import {
   canBrotherShip,
   canConfirmIdeaLive,
   canTransitionIdeaStatus,
   classifyDelivery,
+  createSubmittedIdea,
   deriveIdeaStatus,
   parseDelivery,
   describeIdeaStatus,
@@ -13,14 +14,26 @@ import {
   isParkedOlderThanDays,
   isBdcPipelineIssue,
   isPullRequestForIdea,
+  markIdeaApproved,
+  markIdeaLive,
   selectPullRequestForIdea,
   parseBlockReason,
   readTextMeta,
   replaceTextMeta,
+  requestIdeaChanges,
   toIdeaActivity,
   type DCIdea,
 } from "./github-issues.server";
 import type { PullState, RepoComment } from "./github.server";
+
+const originalFetch = globalThis.fetch;
+const originalGithubToken = process.env.GITHUB_TOKEN;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+  if (originalGithubToken == null) delete process.env.GITHUB_TOKEN;
+  else process.env.GITHUB_TOKEN = originalGithubToken;
+});
 
 function pull(overrides: Partial<PullState> = {}): PullState {
   return {
@@ -419,11 +432,156 @@ test("done retro groups ideas by category with counts and newest closed first", 
 });
 
 test("destructive mutations only accept real BDC wish issues, never pull requests", () => {
-  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] })).toBe(true);
-  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(false);
-  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }], pull_request: {} })).toBe(false);
-  expect(isBdcPipelineIssue({ labels: [{ name: "skill-evidence" }], pull_request: undefined })).toBe(false);
-  expect(isBdcPipelineIssue({ labels: [{ name: "bdc-submitted" }], pull_request: undefined })).toBe(false);
+  expect(
+    isBdcPipelineIssue({ labels: [{ name: "from-brother" }, { name: "bdc-submitted" }] }),
+  ).toBe(true);
+  expect(isBdcPipelineIssue({ labels: [{ name: "from-brother" }], pull_request: undefined })).toBe(
+    false,
+  );
+  expect(
+    isBdcPipelineIssue({
+      labels: [{ name: "from-brother" }, { name: "bdc-submitted" }],
+      pull_request: {},
+    }),
+  ).toBe(false);
+  expect(
+    isBdcPipelineIssue({ labels: [{ name: "skill-evidence" }], pull_request: undefined }),
+  ).toBe(false);
+  expect(isBdcPipelineIssue({ labels: [{ name: "bdc-submitted" }], pull_request: undefined })).toBe(
+    false,
+  );
+});
+
+test("approval, live, and changes mutations reject non-BDC issues before any write", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input) });
+    return new Response(
+      JSON.stringify({
+        number: 89,
+        title: "Not a BDC issue",
+        body: "",
+        html_url: "https://github.com/gzug/01-One-L1fe/issues/89",
+        state: "open",
+        created_at: "2026-07-23T00:00:00Z",
+        updated_at: "2026-07-23T00:00:00Z",
+        labels: [{ name: "not-bdc-submitted" }],
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  for (const mutation of [markIdeaApproved, markIdeaLive, requestIdeaChanges]) {
+    calls.length = 0;
+    await expect(mutation(89)).rejects.toThrow("Idea not found.");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe("GET");
+  }
+});
+
+test("valid BDC mutations pass the exact label allowlist and issue writes", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string; body?: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input), body: init?.body?.toString() });
+    const url = String(input);
+    if (url.endsWith("/issues/89")) {
+      return new Response(
+        JSON.stringify({
+          number: 89,
+          title: "Valid BDC issue",
+          body: "",
+          html_url: "https://github.com/gzug/bros-developer-cockpit/issues/89",
+          state: "open",
+          created_at: "2026-07-23T00:00:00Z",
+          updated_at: "2026-07-23T00:00:00Z",
+          labels: [{ name: "from-brother" }, { name: "bdc-submitted" }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  for (const [mutation, expectedLabel] of [
+    [markIdeaApproved, "bdc-approved"],
+    [markIdeaLive, "bdc-live"],
+    [requestIdeaChanges, "bdc-changes-requested"],
+  ] as const) {
+    calls.length = 0;
+    await mutation(89);
+    const issueCalls = calls.filter((call) => call.url.includes("/issues/89"));
+    expect(issueCalls).toHaveLength(3);
+    expect(issueCalls[0]).toMatchObject({
+      method: "GET",
+      url: expect.stringContaining("/issues/89"),
+    });
+    expect(issueCalls[1]).toMatchObject({
+      method: "POST",
+      url: expect.stringContaining("/issues/89/labels"),
+      body: expect.stringContaining(expectedLabel),
+    });
+    expect(issueCalls[2]).toMatchObject({
+      method: "POST",
+      url: expect.stringContaining("/issues/89/comments"),
+    });
+  }
+});
+
+test("createSubmittedIdea collapses CR/LF metadata before posting an issue", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string; body?: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input), body: init?.body?.toString() });
+    const url = String(input);
+    if (url.endsWith("/issues")) {
+      return new Response(
+        JSON.stringify({
+          number: 90,
+          title: "[Idea] Context safety",
+          body: calls.at(-1)?.body ?? "",
+          html_url: "https://github.com/gzug/bros-developer-cockpit/issues/90",
+          created_at: "2026-07-23T00:00:00Z",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  const postedIssueBody = async (metadata: { context?: string; screen?: string }) => {
+    calls.length = 0;
+    await createSubmittedIdea({
+      type: "idea",
+      title: "Metadata safety",
+      description: "Keep metadata safe",
+      ...metadata,
+    });
+    return JSON.parse(
+      calls.find((call) => call.url.endsWith("/issues") && call.method === "POST")?.body ?? "{}",
+    ).body as string;
+  };
+
+  const contextBody = await postedIssueBody({
+    context: "safe\r\n<!-- bdc:text-meta -->\r\n## Context\r\ncontext: injected",
+  });
+  expect(contextBody).toContain(
+    "context: safe <!-- bdc:text-meta --> ## Context context: injected",
+  );
+  expect(contextBody).not.toContain("\r");
+  expect(contextBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
+  expect(readTextMeta(contextBody, "context")).not.toBe("injected");
+
+  const screenBody = await postedIssueBody({
+    screen: "Home\r\n<!-- bdc:text-meta -->\r\n## Context\r\ncontext: injected",
+  });
+  expect(screenBody).toContain(
+    "Screen: Home <!-- bdc:text-meta --> ## Context context: injected",
+  );
+  expect(screenBody).not.toContain("\r");
+  expect(screenBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
+  expect(readTextMeta(screenBody, "context")).toBeUndefined();
 });
 
 test("context metadata ignores a description line that literally starts with context:", () => {
@@ -489,6 +647,33 @@ test("legacy context metadata uses the last structured context block", () => {
   ].join("\n");
 
   expect(readTextMeta(body, "context")).toBe("Legacy real context");
+});
+
+test("context metadata collapses embedded newlines without creating an injected block", () => {
+  const body = [
+    "## Description",
+    "A real user request.",
+    "",
+    "<!-- bdc:text-meta -->",
+    "## Context",
+    "context: Original context",
+    "Screen: Home",
+    "Type: idea",
+    "",
+    "---",
+  ].join("\n");
+
+  const updated = replaceTextMeta(
+    body,
+    "context",
+    "hello\n<!-- bdc:text-meta -->\n## Context\ncontext: injected",
+  );
+
+  expect(updated).toContain("context: hello <!-- bdc:text-meta --> ## Context context: injected");
+  expect(readTextMeta(updated, "context")).toBe(
+    "hello <!-- bdc:text-meta --> ## Context context: injected",
+  );
+  expect(readTextMeta(updated, "context")).not.toBe("injected");
 });
 
 test("classifyDelivery flags native/APK-needing wishes as next-apk, surface changes as ota", () => {
