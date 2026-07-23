@@ -4,6 +4,7 @@ import {
   canConfirmIdeaLive,
   canTransitionIdeaStatus,
   classifyDelivery,
+  createSubmittedIdea,
   deriveIdeaStatus,
   parseDelivery,
   describeIdeaStatus,
@@ -477,6 +478,76 @@ test("approval, live, and changes mutations reject non-BDC issues before any wri
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe("GET");
   }
+});
+
+test("valid BDC mutations pass the exact label allowlist and issue writes", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string; body?: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input), body: init?.body?.toString() });
+    const url = String(input);
+    if (url.endsWith("/issues/89")) {
+      return new Response(
+        JSON.stringify({
+          number: 89,
+          title: "Valid BDC issue",
+          body: "",
+          html_url: "https://github.com/gzug/bros-developer-cockpit/issues/89",
+          state: "open",
+          created_at: "2026-07-23T00:00:00Z",
+          updated_at: "2026-07-23T00:00:00Z",
+          labels: [{ name: "from-brother" }, { name: "bdc-submitted" }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  for (const [mutation, expectedLabel] of [
+    [markIdeaApproved, "bdc-approved"],
+    [markIdeaLive, "bdc-live"],
+    [requestIdeaChanges, "bdc-changes-requested"],
+  ] as const) {
+    calls.length = 0;
+    await mutation(89);
+    expect(calls[0]).toMatchObject({ method: "GET", url: expect.stringContaining("/issues/89") });
+    expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/issues/89/labels") && call.body?.includes(expectedLabel))).toBe(true);
+    expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/issues/89/comments"))).toBe(true);
+  }
+});
+
+test("createSubmittedIdea collapses CR/LF context before posting issue metadata", async () => {
+  process.env.GITHUB_TOKEN = "test-token";
+  const calls: Array<{ method: string; url: string; body?: string }> = [];
+  globalThis.fetch = (async (input, init) => {
+    calls.push({ method: init?.method ?? "GET", url: String(input), body: init?.body?.toString() });
+    const url = String(input);
+    if (url.endsWith("/issues")) {
+      return new Response(
+        JSON.stringify({
+          number: 90,
+          title: "[Idea] Context safety",
+          body: calls.at(-1)?.body ?? "",
+          html_url: "https://github.com/gzug/bros-developer-cockpit/issues/90",
+          created_at: "2026-07-23T00:00:00Z",
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+
+  await createSubmittedIdea({
+    type: "idea",
+    title: "Context safety",
+    description: "Keep metadata safe",
+    context: "safe\r\n<!-- bdc:text-meta -->\r\n## Context\r\ncontext: injected",
+  });
+  const issueBody = JSON.parse(calls.find((call) => call.url.endsWith("/issues") && call.method === "POST")?.body ?? "{}").body as string;
+  expect(issueBody).toContain("context: safe <!-- bdc:text-meta --> ## Context context: injected");
+  expect(issueBody).not.toContain("\r");
+  expect(issueBody).not.toMatch(/\n<!-- bdc:text-meta -->\n## Context\ncontext: injected/);
 });
 
 test("context metadata ignores a description line that literally starts with context:", () => {
