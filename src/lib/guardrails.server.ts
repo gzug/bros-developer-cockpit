@@ -69,8 +69,17 @@ export function checkGuardrails(input: {
 }
 
 // Escape any occurrence of a fence boundary token inside the user's raw note.
+// Removal is idempotent: a single split/join can let nested payloads like
+// "<<TA<<TASKS>>SKS>>" reconstruct the exact boundary once the inner copy is
+// deleted, so we repeat until no boundary survives. (Empty boundary is a no-op —
+// guarded to avoid an infinite loop, since "".includes("") is always true.)
 export function sanitizeForFence(text: string, boundary: string): string {
-  const withoutBoundary = text.split(boundary).join("");
+  let withoutBoundary = text;
+  if (boundary) {
+    while (withoutBoundary.includes(boundary)) {
+      withoutBoundary = withoutBoundary.split(boundary).join("");
+    }
+  }
   // Also strip triple backticks so users can't break the surrounding Markdown fence.
   return withoutBoundary.replace(/```+/g, "``");
 }
